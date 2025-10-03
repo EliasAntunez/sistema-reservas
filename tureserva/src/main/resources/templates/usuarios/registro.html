@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title>Registro de Cliente</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+
+        <div class="row justify-content-center">
+            <div class="col-lg-4 col-md-6">
+                <div class="card" style="border: 1px solid #dbdbdb; border-radius: 12px;">
+                    <div class="card-body p-4">
+                        <!-- Título del formulario -->
+                        <div class="text-center mb-4">
+                            <h1 class="fw-light mb-3" style="font-size: 2.5rem; font-family: 'Segoe UI', system-ui, sans-serif;">TuReserva</h1>
+                            <p class="text-muted" style="font-size: 16px; color: #8e8e8e;">Regístrate para gestionar tus reservas</p>
+                        </div>
+
+                        <!-- Mensaje de error si el email ya existe -->
+                        <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                            <span style="color: #ed4956; font-size: 14px;">El email ya está en uso</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <!-- Formulario de registro -->
+                        <form th:action="@{/usuarios/registro}" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            
+                            <!-- Campo Email -->
+                            <div class="mb-3">
+                                <input type="email" 
+                                       class="form-control" 
+                                       name="email"
+                                       placeholder="Correo electrónico"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       required>
+                            </div>
+                            
+                            <!-- Campo Nombre completo -->
+                            <div class="mb-3">
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="nombre"
+                                       placeholder="Nombre completo"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       required>
+                            </div>
+                            
+                            <!-- Campo Apellido -->
+                            <div class="mb-3">
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="apellido"
+                                       placeholder="Apellido"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       required>
+                            </div>
+                            
+                            <!-- Campo Contraseña -->
+                            <div class="mb-3">
+                                <input type="password" 
+                                       class="form-control" 
+                                       name="contrasena"
+                                       placeholder="Contraseña"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       minlength="6"
+                                       required>
+                            </div>
+                            
+                            <!-- Campo Teléfono (opcional) si no es vacío validar formato -->
+                            <div class="mb-4">
+                                <input type="tel" 
+                                       class="form-control" 
+                                       name="telefono"
+                                       placeholder="Teléfono (opcional)"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       pattern="\+?\d{7,15}"
+                                       title="El teléfono debe contener entre 7 y 15 dígitos, puede incluir un '+' al inicio.">
+                            </div>
+
+                            <!-- Botón de registro -->
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-primary"
+                                        style="background-color: #0095f6; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; height: 44px;">
+                                    Registrarse
+                                </button>
+                            </div>
+                            
+                            <!-- Términos y condiciones -->
+                            <p class="text-center text-muted small mb-0">
+                                Al registrarte, aceptas nuestros 
+                                <a href="#" class="text-decoration-none">términos y condiciones</a> 
+                                y nuestra 
+                                <a href="#" class="text-decoration-none">política de privacidad</a>.
+                            </p>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Enlaces adicionales -->
+                <div class="text-center mt-4">
+                    <div class="card" style="border: 1px solid #dbdbdb; border-radius: 12px; padding: 20px;">
+                        <p class="mb-0" style="color: #262626; font-size: 14px;">
+                            ¿Ya tienes una cuenta? 
+                            <a th:href="@{/usuarios/login}" class="text-decoration-none" style="color: #0095f6; font-weight: 600;">
+                                Inicia sesión
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
