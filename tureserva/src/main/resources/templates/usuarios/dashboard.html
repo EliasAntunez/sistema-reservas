@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title>Dashboard</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Bienvenida -->
+            <div class="col-12">
+                <div class="jumbotron bg-white p-5 rounded shadow-sm mb-4">
+                    <h1 class="display-4">¡Bienvenido a TuReserva!</h1>
+                    <!-- <p>Rol: <span sec:authentication="authorities" class="badge bg-primary">ROLE_CLIENTE</span></p> -->
+                    <hr class="my-4">
+                    <p>Desde aquí podrás gestionar tus reservas y configurar tu perfil.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Panel de acciones rápidas -->
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-plus fa-3x text-primary mb-3"></i>
+                        <h5>Nueva Reserva</h5>
+                        <p class="text-muted">Crear una nueva reserva</p>
+                        <button class="btn btn-primary" disabled>
+                            Próximamente
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="fas fa-list fa-3x text-success mb-3"></i>
+                        <h5>Mis Reservas</h5>
+                        <p class="text-muted">Ver reservas existentes</p>
+                        <button class="btn btn-success" disabled>
+                            Próximamente
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="fas fa-user-cog fa-3x text-warning mb-3"></i>
+                        <h5>Mi Perfil</h5>
+                        <p class="text-muted">Configurar perfil</p>
+                        <a href="/perfil" class="btn btn-warning">
+                            Configurar Perfil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

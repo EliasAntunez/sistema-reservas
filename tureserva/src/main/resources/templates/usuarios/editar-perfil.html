@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title>Editar Perfil</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-pencil-square me-2"></i>Editar Mi Perfil
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/perfil/editar}" th:object="${cliente}" method="post" novalidate>
+                            <!-- Token CSRF para seguridad -->
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombre" class="form-label">
+                                        <i class="bi bi-person me-1"></i>Nombre completo <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           th:field="*{nombre}"
+                                           th:class="${#fields.hasErrors('nombre')} ? 'form-control is-invalid' : 'form-control'"
+                                           id="nombre" 
+                                           placeholder="Ingresa tu nombre completo"
+                                           required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">
+                                        Error en el nombre
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="telefono" class="form-label">
+                                        <i class="bi bi-telephone me-1"></i>Teléfono <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="tel" 
+                                           class="form-control" 
+                                           th:field="*{telefono}"
+                                           th:class="${#fields.hasErrors('telefono')} ? 'form-control is-invalid' : 'form-control'"
+                                           id="telefono" 
+                                           placeholder="+54 11 1234-5678"
+                                           required>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('telefono')}" th:errors="*{telefono}">
+                                        Error en el teléfono
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       th:field="*{email}"
+                                       th:class="${#fields.hasErrors('email')} ? 'form-control is-invalid' : 'form-control'"
+                                       id="email" 
+                                       placeholder="tu@email.com"
+                                       required>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
+                                    Error en el email
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Si cambias tu email, tendrás que usarlo para iniciar sesión la próxima vez.
+                                </div>
+                            </div>
+
+                            <!-- Sección de contraseña (opcional) -->
+                            <div class="card bg-light mt-4 mb-4">
+                                <div class="card-header">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-shield-lock me-2"></i>Cambiar Contraseña (Opcional)
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="contrasena" class="form-label">Nueva Contraseña</label>
+                                            <input type="password" 
+                                                   class="form-control" 
+                                                   th:field="*{contrasena}"
+                                                   th:class="${#fields.hasErrors('contrasena')} ? 'form-control is-invalid' : 'form-control'"
+                                                   id="contrasena" 
+                                                   placeholder="Deja en blanco para mantener la actual">
+                                            <div class="invalid-feedback" th:if="${#fields.hasErrors('contrasena')}" th:errors="*{contrasena}">
+                                                Error en la contraseña
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label for="confirmarPassword" class="form-label">Confirmar Nueva Contraseña</label>
+                                            <input type="password" 
+                                                   class="form-control" 
+                                                   name="confirmarPassword"
+                                                   id="confirmarPassword" 
+                                                   placeholder="Confirma la nueva contraseña">
+                                        </div>
+                                    </div>
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        La contraseña debe tener al menos 6 caracteres. Deja estos campos vacíos si no quieres cambiarla.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Información adicional -->
+                            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                <i class="bi bi-calendar-check me-2"></i>
+                                <strong>Fecha de registro:</strong> 
+                                <span th:text="${#temporals.format(cliente.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+
+                            <!-- Botones de acción -->
+                            <div class="d-flex justify-content-between">
+                                <a href="/perfil" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left me-2"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-lg me-2"></i>Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <!-- Script para validar confirmación de contraseña -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordField = document.getElementById('contrasena');
+            const confirmPasswordField = document.getElementById('confirmarPassword');
+            const form = document.querySelector('form');
+
+            function validatePasswordMatch() {
+                const password = passwordField.value;
+                const confirmPassword = confirmPasswordField.value;
+
+                if (password && confirmPassword && password !== confirmPassword) {
+                    confirmPasswordField.setCustomValidity('Las contraseñas no coinciden');
+                    confirmPasswordField.classList.add('is-invalid');
+                } else {
+                    confirmPasswordField.setCustomValidity('');
+                    confirmPasswordField.classList.remove('is-invalid');
+                }
+            }
+
+            passwordField.addEventListener('input', validatePasswordMatch);
+            confirmPasswordField.addEventListener('input', validatePasswordMatch);
+
+            form.addEventListener('submit', function(e) {
+                validatePasswordMatch();
+                if (!form.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+        });
+    </script>
+</th:block>
