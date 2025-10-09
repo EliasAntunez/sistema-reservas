@@ -49,7 +49,17 @@ public class ControladorUsuario {
     
     // Dashboard (página principal después del login)
     @GetMapping("/dashboard")
-    public String dashboard() {
+    public String dashboard(Authentication authentication) {
+        // Redirigir según el rol del usuario
+        if (authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
+            return "redirect:/super-admin/dashboard";
+        } else if (authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_CLIENTE"))) {
+            return "usuarios/dashboard";
+        }
+        
+        // Si no tiene rol reconocido, ir al dashboard default
         return "usuarios/dashboard";
     }
 
@@ -164,6 +174,9 @@ public class ControladorUsuario {
         if (clienteFormulario.getNombre() == null || clienteFormulario.getNombre().trim().isEmpty()) {
             bindingResult.rejectValue("nombre", "error.cliente", "El nombre es obligatorio");
         }
+        if (clienteFormulario.getApellido() == null || clienteFormulario.getApellido().trim().isEmpty()) {
+            bindingResult.rejectValue("apellido", "error.cliente", "El apellido es obligatorio");
+        }
         if (clienteFormulario.getEmail() == null || clienteFormulario.getEmail().trim().isEmpty()) {
             bindingResult.rejectValue("email", "error.cliente", "El email es obligatorio");
         }
@@ -191,6 +204,7 @@ public class ControladorUsuario {
         try {
             // Copiar datos del formulario al cliente existente
             clienteExistente.setNombre(clienteFormulario.getNombre()); // Actualizar nombre
+            clienteExistente.setApellido(clienteFormulario.getApellido()); // Actualizar apellido
             clienteExistente.setEmail(clienteFormulario.getEmail()); // Actualizar email
             clienteExistente.setTelefono(clienteFormulario.getTelefono()); // Actualizar teléfono
             
@@ -256,5 +270,69 @@ public class ControladorUsuario {
     @GetMapping("/perfil/baja-exitosa")
     public String bajaExitosa() {
         return "usuarios/baja-exitosa";
+    }
+
+    // ===== RUTAS DE CAMBIO DE CONTRASEÑA =====
+
+    // Mostrar formulario de cambio de contraseña
+    @GetMapping("/perfil/cambiar-contrasena")
+    public String mostrarFormularioCambioContrasena() {
+        return "usuarios/cambiar-contrasena";
+    }
+
+    // Procesar cambio de contraseña
+    @PostMapping("/perfil/cambiar-contrasena")
+    public String procesarCambioContrasena(
+            @RequestParam("contrasenaActual") String contrasenaActual,
+            @RequestParam("nuevaContrasena") String nuevaContrasena,
+            @RequestParam("confirmarContrasena") String confirmarContrasena,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+        
+        String email = authentication.getName();
+        Cliente cliente = servicioCliente.obtenerClientePorEmail(email);
+        
+        if (cliente == null) {
+            redirectAttributes.addFlashAttribute("error", "No se pudo encontrar el cliente");
+            return "redirect:/perfil/cambiar-contrasena";
+        }
+
+        // Validaciones
+        if (contrasenaActual == null || contrasenaActual.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "La contraseña actual es obligatoria");
+            return "redirect:/perfil/cambiar-contrasena";
+        }
+
+        if (nuevaContrasena == null || nuevaContrasena.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "La nueva contraseña es obligatoria");
+            return "redirect:/perfil/cambiar-contrasena";
+        }
+
+        if (nuevaContrasena.length() < 6) {
+            redirectAttributes.addFlashAttribute("error", "La nueva contraseña debe tener al menos 6 caracteres");
+            return "redirect:/perfil/cambiar-contrasena";
+        }
+
+        if (!nuevaContrasena.equals(confirmarContrasena)) {
+            redirectAttributes.addFlashAttribute("error", "Las contraseñas no coinciden");
+            return "redirect:/perfil/cambiar-contrasena";
+        }
+
+        try {
+            // Verificar la contraseña actual y cambiar por la nueva
+            boolean actualizada = servicioCliente.cambiarContrasena(cliente.getId(), contrasenaActual, nuevaContrasena);
+            
+            if (actualizada) {
+                redirectAttributes.addFlashAttribute("mensaje", "Contraseña actualizada correctamente");
+                return "redirect:/perfil";
+            } else {
+                redirectAttributes.addFlashAttribute("error", "La contraseña actual no es correcta");
+                return "redirect:/perfil/cambiar-contrasena";
+            }
+            
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al cambiar la contraseña. Inténtelo de nuevo.");
+            return "redirect:/perfil/cambiar-contrasena";
+        }
     }
 }

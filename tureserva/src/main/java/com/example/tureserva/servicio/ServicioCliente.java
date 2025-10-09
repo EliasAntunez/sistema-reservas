@@ -122,4 +122,29 @@ public class ServicioCliente {
     public boolean verificarEmail(String email) {
         return repositorioCliente.existsByEmail(email);
     }
+
+    // cambiar contraseña del cliente
+    @Transactional
+    public boolean cambiarContrasena(Long clienteId, String contrasenaActual, String nuevaContrasena) {
+        try {
+            Cliente cliente = repositorioCliente.findById(clienteId).orElse(null);
+            if (cliente == null) {
+                return false;
+            }
+
+            // Verificar que la contraseña actual sea correcta
+            if (!passwordEncoder.matches(contrasenaActual, cliente.getContrasena())) {
+                return false;
+            }
+
+            // Encriptar la nueva contraseña y guardar
+            String nuevaContrasenaEncriptada = passwordEncoder.encode(nuevaContrasena);
+            cliente.setContrasena(nuevaContrasenaEncriptada);
+            repositorioCliente.save(cliente);
+            
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

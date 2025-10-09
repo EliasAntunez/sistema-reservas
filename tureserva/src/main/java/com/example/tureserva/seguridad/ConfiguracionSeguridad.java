@@ -44,6 +44,10 @@ public class ConfiguracionSeguridad {
                 // Rutas públicas (sin autenticación)
                 .requestMatchers("/", "/usuarios/registro").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                // Rutas para SuperAdministrador
+                .requestMatchers("/super-admin/**").hasRole("SUPER_ADMIN")
+                // Rutas para perfil (accesible por todos los usuarios autenticados)
+                .requestMatchers("/perfil/**", "/dashboard").authenticated()
                 // Todas las demás rutas requieren autenticación
                 .anyRequest().authenticated()
             )

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title>Cambiar Contraseña</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-6 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0">
+                            <i class="bi bi-shield-lock me-2"></i>Cambiar Contraseña
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Mostrar mensajes de éxito -->
+                        <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <span th:text="${mensaje}">Mensaje de éxito</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+
+                        <!-- Mostrar errores -->
+                        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <span th:text="${error}">Mensaje de error</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+
+                        <form th:action="@{/perfil/cambiar-contrasena}" method="post" novalidate id="cambiarContrasenaForm">
+                            <!-- Token CSRF para seguridad -->
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            
+                            <div class="mb-3">
+                                <label for="contrasenaActual" class="form-label">
+                                    <i class="bi bi-lock me-1"></i>Contraseña Actual <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="contrasenaActual" 
+                                       name="contrasenaActual"
+                                       placeholder="Ingresa tu contraseña actual"
+                                       required>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa tu contraseña actual.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="nuevaContrasena" class="form-label">
+                                    <i class="bi bi-key me-1"></i>Nueva Contraseña <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="nuevaContrasena" 
+                                       name="nuevaContrasena"
+                                       placeholder="Ingresa tu nueva contraseña"
+                                       minlength="6"
+                                       required>
+                                <div class="invalid-feedback">
+                                    La nueva contraseña debe tener al menos 6 caracteres.
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    La contraseña debe tener al menos 6 caracteres.
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="confirmarContrasena" class="form-label">
+                                    <i class="bi bi-check2-square me-1"></i>Confirmar Nueva Contraseña <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="confirmarContrasena" 
+                                       name="confirmarContrasena"
+                                       placeholder="Confirma tu nueva contraseña"
+                                       required>
+                                <div class="invalid-feedback">
+                                    Las contraseñas no coinciden.
+                                </div>
+                            </div>
+
+                            <!-- Información de seguridad -->
+                            <div class="alert alert-info" role="alert">
+                                <i class="bi bi-shield-check me-2"></i>
+                                <strong>Recomendaciones de seguridad:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Usa una contraseña de al menos 8 caracteres</li>
+                                    <li>Incluye letras mayúsculas, minúsculas y números</li>
+                                    <li>No reutilices contraseñas de otras cuentas</li>
+                                </ul>
+                            </div>
+
+                            <!-- Botones de acción -->
+                            <div class="d-flex justify-content-between">
+                                <a href="/perfil" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left me-2"></i>Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-shield-check me-2"></i>Cambiar Contraseña
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <!-- Script para validar confirmación de contraseña -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const nuevaContrasenaField = document.getElementById('nuevaContrasena');
+            const confirmarContrasenaField = document.getElementById('confirmarContrasena');
+            const form = document.getElementById('cambiarContrasenaForm');
+
+            function validatePasswordMatch() {
+                const nuevaContrasena = nuevaContrasenaField.value;
+                const confirmarContrasena = confirmarContrasenaField.value;
+
+                if (confirmarContrasena && nuevaContrasena !== confirmarContrasena) {
+                    confirmarContrasenaField.setCustomValidity('Las contraseñas no coinciden');
+                    confirmarContrasenaField.classList.add('is-invalid');
+                } else {
+                    confirmarContrasenaField.setCustomValidity('');
+                    confirmarContrasenaField.classList.remove('is-invalid');
+                }
+            }
+
+            // Validar mientras el usuario escribe
+            nuevaContrasenaField.addEventListener('input', validatePasswordMatch);
+            confirmarContrasenaField.addEventListener('input', validatePasswordMatch);
+
+            // Validar al enviar el formulario
+            form.addEventListener('submit', function(e) {
+                validatePasswordMatch();
+                
+                if (!form.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                form.classList.add('was-validated');
+            });
+        });
+    </script>
+</th:block>
