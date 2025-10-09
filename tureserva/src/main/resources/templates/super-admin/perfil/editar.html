@@ -4,7 +4,7 @@
       layout:decorate="~{layouts/base}">
 
 <head>
-    <title>Editar Perfil</title>
+    <title>Editar Perfil - Super Administrador</title>
 </head>
 
 <div layout:fragment="content">
@@ -15,11 +15,11 @@
                 <div class="card">
                     <div class="card-header bg-primary text-white">
                         <h4 class="mb-0">
-                            <i class="bi bi-pencil-square me-2"></i>Editar Mi Perfil
+                            <i class="bi bi-pencil-square me-2"></i>Editar Mi Perfil - Super Administrador
                         </h4>
                     </div>
                     <div class="card-body">
-                        <form th:action="@{/perfil/editar}" th:object="${cliente}" method="post" novalidate>
+                        <form th:action="@{/super-admin/perfil/editar}" th:object="${superAdmin}" method="post" novalidate>
                             <!-- Token CSRF para seguridad -->
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             
@@ -58,25 +58,6 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="telefono" class="form-label">
-                                    <i class="bi bi-telephone me-1"></i>Teléfono
-                                </label>
-                                <input type="tel" 
-                                       class="form-control" 
-                                       th:field="*{telefono}"
-                                       th:class="${#fields.hasErrors('telefono')} ? 'form-control is-invalid' : 'form-control'"
-                                       id="telefono" 
-                                       placeholder="+54 11 1234-5678">
-                                <div class="invalid-feedback" th:if="${#fields.hasErrors('telefono')}" th:errors="*{telefono}">
-                                    Error en el teléfono
-                                </div>
-                                <div class="form-text">
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    El teléfono es opcional, pero nos ayuda a contactarte si es necesario.
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
                                 <label for="email" class="form-label">
                                     <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
                                 </label>
@@ -96,9 +77,17 @@
                                 </div>
                             </div>
 
+                            <!-- Información adicional -->
+                            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                <i class="bi bi-calendar-check me-2"></i>
+                                <strong>Fecha de registro:</strong> 
+                                <span th:text="${#temporals.format(superAdmin.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+
                             <!-- Botones de acción -->
                             <div class="d-flex justify-content-between">
-                                <a href="/perfil" class="btn btn-secondary">
+                                <a href="/super-admin/perfil" class="btn btn-secondary">
                                     <i class="bi bi-arrow-left me-2"></i>Cancelar
                                 </a>
                                 <button type="submit" class="btn btn-primary">
@@ -112,4 +101,3 @@
         </div>
     </div>
 </div>
-
