@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title>Ver Administrador - Super Administrador</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4 role-super-admin">
+        <!-- Título -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2><i class="bi bi-person-circle text-role"></i> Detalles del Administrador</h2>
+                <p class="text-muted">Información completa del administrador de complejo</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a th:href="@{/super-admin/administradores-complejo/editar/{id}(id=${administradorComplejo.id})}" 
+                   class="btn btn-role-accent me-2">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <a href="/super-admin/administradores-complejo" class="btn btn-outline-role">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Detalles del administrador -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-role text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información del Administrador</h5>
+            </div>
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-badge"></i> 
+                    <span th:text="${administradorComplejo.nombre + ' ' + administradorComplejo.apellido}">Nombre Apellido</span>
+                    <span th:if="${administradorComplejo.activo}" class="badge bg-success ms-2">Activo</span>
+                    <span th:unless="${administradorComplejo.activo}" class="badge bg-danger ms-2">Inactivo</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <!-- Información básica -->
+                        <h6 class="text-primary"><i class="bi bi-info-circle"></i> Información Básica</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold text-muted">ID:</td>
+                                <td th:text="${administradorComplejo.id}">1</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Nombre:</td>
+                                <td th:text="${administradorComplejo.nombre}">Juan</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Apellido:</td>
+                                <td th:text="${administradorComplejo.apellido}">Pérez</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Email:</td>
+                                <td th:text="${administradorComplejo.email}">admin@ejemplo.com</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">DNI:</td>
+                                <td th:text="${administradorComplejo.dni}">12345678</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <!-- Información del sistema -->
+                        <h6 class="text-primary"><i class="bi bi-gear"></i> Información del Sistema</h6>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td class="fw-bold text-muted">Estado:</td>
+                                <td>
+                                    <span th:if="${administradorComplejo.activo}" class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Activo
+                                    </span>
+                                    <span th:unless="${administradorComplejo.activo}" class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> Inactivo
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Fecha de Registro:</td>
+                                <td>
+                                    <i class="bi bi-calendar"></i>
+                                    <span th:text="${#temporals.format(administradorComplejo.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Tipo de Usuario:</td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-person-gear"></i> Administrador de Complejo
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Acciones -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-primary mb-0"><i class="bi bi-lightning"></i> Acciones Rápidas</h6>
+                        <small class="text-muted">Operaciones disponibles para este administrador</small>
+                    </div>
+                    <div>
+                        <!-- Editar -->
+                        <a th:href="@{/super-admin/administradores-complejo/editar/{id}(id=${administradorComplejo.id})}" 
+                           class="btn btn-outline-warning me-2">
+                            <i class="bi bi-pencil"></i> Editar Datos
+                        </a>
+                        
+                        <!-- Cambiar estado -->
+                        <form th:action="@{/super-admin/administradores-complejo/cambiar-estado/{id}(id=${administradorComplejo.id})}" 
+                              method="post" style="display: inline;">
+                            <button type="submit" 
+                                    th:class="${administradorComplejo.activo} ? 'btn btn-outline-danger' : 'btn btn-outline-success'"
+                                    th:onclick="'return confirm(\'' + (${administradorComplejo.activo} ? '¿Desactivar' : '¿Activar') + ' este administrador?\')'"
+                                    th:text="${administradorComplejo.activo} ? 'Desactivar' : 'Activar'">
+                                <i th:class="${administradorComplejo.activo} ? 'bi bi-toggle-off' : 'bi bi-toggle-on'"></i>
+                                Estado
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información adicional -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Nota:</strong> 
+                    Este administrador puede iniciar sesión con su email y contraseña para gestionar complejos deportivos.
+                    Solo los administradores activos pueden acceder al sistema.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

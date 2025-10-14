@@ -37,6 +37,9 @@ public abstract class Usuario {
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(name = "dni", nullable = false, unique = true, length = 20)
+    private String dni;
+
     @Column(name = "contrasena", nullable = false)
     private String contrasena;
 

@@ -20,9 +20,34 @@
                             <p class="text-muted" style="font-size: 16px; color: #8e8e8e;">Regístrate para gestionar tus reservas</p>
                         </div>
 
-                        <!-- Mensaje de error si el email ya existe -->
-                        <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                        <!-- Mensajes de error según el tipo -->
+                        <div th:if="${param.error != null and param.error[0] == 'email'}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
                             <span style="color: #ed4956; font-size: 14px;">El email ya está en uso</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <div th:if="${param.error != null and param.error[0] == 'dni'}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                            <span style="color: #ed4956; font-size: 14px;">El DNI ya está en uso</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <div th:if="${param.error != null and param.error[0] == 'formato_dni'}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                            <span style="color: #ed4956; font-size: 14px;">El DNI debe contener solo números y tener entre 7 y 8 dígitos</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <div th:if="${param.error != null and param.error[0] == 'formato_email'}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                            <span style="color: #ed4956; font-size: 14px;">El formato del email no es válido</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <div th:if="${param.error != null and param.error[0] == 'contrasena'}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                            <span style="color: #ed4956; font-size: 14px;">La contraseña debe tener al menos 6 caracteres</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <div th:if="${param.error != null and not (#lists.contains({'email','dni','formato_dni','formato_email','contrasena'}, param.error[0]))}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                            <span style="color: #ed4956; font-size: 14px;">Error en el registro. Inténtalo de nuevo.</span>
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                         
@@ -45,7 +70,7 @@
                                 <input type="text" 
                                        class="form-control" 
                                        name="nombre"
-                                       placeholder="Nombre completo"
+                                       placeholder="Nombre"
                                        style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
                                        required>
                             </div>
@@ -57,6 +82,20 @@
                                        name="apellido"
                                        placeholder="Apellido"
                                        style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       required>
+                            </div>
+                            
+                            <!-- Campo DNI -->
+                            <div class="mb-3">
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="dni"
+                                       placeholder="DNI (7-8 dígitos)"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       pattern="[0-9]{7,8}"
+                                       title="Solo números, entre 7 y 8 dígitos"
+                                       minlength="7"
+                                       maxlength="8"
                                        required>
                             </div>
                             

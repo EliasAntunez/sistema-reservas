@@ -16,11 +16,17 @@ public interface RepositorioCliente extends JpaRepository<Cliente, Long> {
     // Buscar por email
     Optional<Cliente> findByEmail(String email);
 
+    // Buscar por DNI
+    Optional<Cliente> findByDni(String dni);
+
     // Encuentra todos los clientes activos
     List<Cliente> findByActivoTrue();
 
     // Verificar si existe por email
     boolean existsByEmail(String email);
+    
+    // Verificar si existe por DNI
+    boolean existsByDni(String dni);
     
     // Encontrar cliente activo por email (evitar clientes dados de baja)
     @Query("SELECT c FROM Cliente c WHERE c.email = :email AND c.activo = true")

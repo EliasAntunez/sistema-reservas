@@ -8,13 +8,13 @@
 </head>
 
 <div layout:fragment="content">
-    <div class="container mt-4">
+    <div class="container mt-4 role-cliente">
 
         <div class="row">
             <div class="col-lg-8 mx-auto">
                 <!-- Encabezado del perfil -->
                 <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-role text-white">
                         <h4 class="mb-0">
                             <i class="bi bi-person-circle me-2"></i>Mi Perfil
                         </h4>
@@ -23,16 +23,24 @@
                         <div class="row">
                             <div class="col-md-4 text-center mb-3">
                                 <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
-                                    <i class="bi bi-person-fill" style="font-size: 3rem; color: #6c757d;"></i>
+                                    <i class="bi bi-person-fill text-role" style="font-size: 3rem;"></i>
                                 </div>
-                                <h5 class="mt-3 mb-1" th:text="${cliente.nombre}">Nombre Cliente</h5>
+                                <h5 class="mt-3 mb-1" th:text="${cliente.nombre + ' ' + cliente.apellido}">Nombre Cliente</h5>
                             </div>
                             <div class="col-md-8">
-                                <h6 class="text-primary">Información Personal</h6>
+                                <h6 class="text-role">Información Personal</h6>
                                 <table class="table table-borderless">
                                     <tr>
                                         <td><strong>Nombre:</strong></td>
                                         <td th:text="${cliente.nombre}">Nombre del cliente</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Apellido:</strong></td>
+                                        <td th:text="${cliente.apellido}">Apellido del cliente</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>DNI:</strong></td>
+                                        <td th:text="${cliente.dni}">12345678</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Email:</strong></td>
@@ -63,22 +71,22 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <div class="d-grid">
-                                    <a href="/perfil/editar" class="btn btn-outline-primary btn-lg">
+                                    <a href="/perfil/editar" class="btn btn-outline-role btn-lg">
                                         <i class="bi bi-pencil-square me-2"></i>Editar Perfil
                                     </a>
                                 </div>
-                                <small class="text-primary">
+                                <small class="text-role">
                                     <i class="bi bi-info-circle me-1"></i>
                                     Modifica tu información personal
                                 </small>
                             </div>
                             <div class="col-md-4">
                                 <div class="d-grid">
-                                    <a href="/perfil/cambiar-contrasena" class="btn btn-outline-warning btn-lg">
+                                    <a href="/perfil/cambiar-contrasena" class="btn btn-outline-role-accent btn-lg">
                                         <i class="bi bi-shield-lock me-2"></i>Cambiar Contraseña
                                     </a>
                                 </div>
-                                <small class="text-warning">
+                                <small class="text-role-accent">
                                     <i class="bi bi-key me-1"></i>
                                     Actualiza tu contraseña de acceso
                                 </small>

@@ -56,6 +56,9 @@ public class ServicioCliente {
         if (cliente.getApellido() != null) {
             cliente.setApellido(cliente.getApellido().trim().toUpperCase());
         }
+        if (cliente.getDni() != null) {
+            cliente.setDni(cliente.getDni().trim().toUpperCase());
+        }
         
         // encriptar la contraseña antes de guardar
         if (cliente.getContrasena() != null && !cliente.getContrasena().isEmpty()) {
@@ -84,6 +87,9 @@ public class ServicioCliente {
             }
             if (cliente.getApellido() != null) {
                 clienteExistente.setApellido(cliente.getApellido().trim().toUpperCase());
+            }
+            if (cliente.getDni() != null) {
+                clienteExistente.setDni(cliente.getDni().trim().toUpperCase());
             }
             
             clienteExistente.setEmail(cliente.getEmail());
@@ -121,6 +127,16 @@ public class ServicioCliente {
     // verificar si existe email
     public boolean verificarEmail(String email) {
         return repositorioCliente.existsByEmail(email);
+    }
+
+    // verificar si existe DNI
+    public boolean verificarDni(String dni) {
+        return repositorioCliente.existsByDni(dni);
+    }
+
+    // obtener cliente por DNI
+    public Cliente obtenerClientePorDni(String dni) {
+        return repositorioCliente.findByDni(dni).orElse(null);
     }
 
     // cambiar contraseña del cliente

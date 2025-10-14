@@ -4,24 +4,24 @@
       layout:decorate="~{layouts/base}">
 
 <head>
-    <title>Mi Perfil - Super Administrador</title>
+    <title>Mi Perfil - Administrador de Complejo</title>
 </head>
 
 <div layout:fragment="content">
-    <div class="container mt-4 role-super-admin">
+    <div class="container mt-4 role-admin-complejo">
 
         <div class="row">
             <div class="col-lg-8 mx-auto">
                 
                 <!-- Mensajes de alerta -->
                 <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle me-2"></i>
+                    <i class="fas fa-check-circle me-2"></i>
                     <span th:text="${mensaje}">Mensaje de éxito</span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 
                 <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <i class="fas fa-exclamation-triangle me-2"></i>
                     <span th:text="${error}">Mensaje de error</span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
@@ -30,46 +30,46 @@
                 <div class="card mb-4">
                     <div class="card-header bg-role text-white">
                         <h4 class="mb-0">
-                            <i class="bi bi-shield-check me-2"></i>Mi Perfil - Super Administrador
+                            <i class="fas fa-user-cog me-2"></i>Mi Perfil - Administrador de Complejo
                         </h4>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 text-center mb-3">
                                 <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
-                                    <i class="bi bi-shield-check text-role" style="font-size: 3rem;"></i>
+                                    <i class="fas fa-user-cog text-role" style="font-size: 3rem;"></i>
                                 </div>
-                                <h5 class="mt-3 mb-1" th:text="${superAdmin.nombre + ' ' + superAdmin.apellido}">Super Admin</h5>
-                                <span class="badge bg-primary">Super Administrador</span>
+                                <h5 class="mt-3 mb-1" th:text="${adminComplejo.nombre + ' ' + adminComplejo.apellido}">Admin Complejo</h5>
+                                <span class="badge bg-role">Administrador de Complejo</span>
                             </div>
                             <div class="col-md-8">
                                 <h6 class="text-role">Información Personal</h6>
                                 <table class="table table-borderless">
                                     <tr>
                                         <td><strong>Nombre:</strong></td>
-                                        <td th:text="${superAdmin.nombre}">Nombre del super admin</td>
+                                        <td th:text="${adminComplejo.nombre}">Nombre del admin</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Apellido:</strong></td>
-                                        <td th:text="${superAdmin.apellido}">Apellido del super admin</td>
+                                        <td th:text="${adminComplejo.apellido}">Apellido del admin</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Email:</strong></td>
-                                        <td th:text="${superAdmin.email}">admin@tureserva.com</td>
+                                        <td th:text="${adminComplejo.email}">admin@tureserva.com</td>
                                     </tr>
                                     <tr>
                                         <td><strong>DNI:</strong></td>
-                                        <td th:text="${superAdmin.dni}">12345678</td>
+                                        <td th:text="${adminComplejo.dni}">12345678</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Fecha de registro:</strong></td>
-                                        <td th:text="${#temporals.format(superAdmin.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</td>
+                                        <td th:text="${#temporals.format(adminComplejo.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Estado:</strong></td>
                                         <td>
-                                            <span class="badge bg-success" th:if="${superAdmin.activo}">Activo</span>
-                                            <span class="badge bg-danger" th:unless="${superAdmin.activo}">Inactivo</span>
+                                            <span class="badge bg-success" th:if="${adminComplejo.activo}">Activo</span>
+                                            <span class="badge bg-danger" th:unless="${adminComplejo.activo}">Inactivo</span>
                                         </td>
                                     </tr>
                                 </table>
@@ -82,30 +82,30 @@
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="bi bi-gear-fill me-2"></i>Configuración de Cuenta
+                            <i class="fas fa-cogs me-2"></i>Configuración de Cuenta
                         </h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="d-grid">
-                                    <a href="/super-admin/perfil/editar" class="btn btn-outline-role btn-lg">
-                                        <i class="bi bi-pencil-square me-2"></i>Editar Perfil
+                                    <a href="/admin-complejo/perfil/editar" class="btn btn-outline-role btn-lg">
+                                        <i class="fas fa-edit me-2"></i>Editar Perfil
                                     </a>
                                 </div>
                                 <small class="text-role">
-                                    <i class="bi bi-info-circle me-1"></i>
+                                    <i class="fas fa-info-circle me-1"></i>
                                     Modifica tu información personal
                                 </small>
                             </div>
                             <div class="col-md-6">
                                 <div class="d-grid">
-                                    <a href="/super-admin/perfil/cambiar-contrasena" class="btn btn-outline-role-accent btn-lg">
-                                        <i class="bi bi-shield-lock me-2"></i>Cambiar Contraseña
+                                    <a href="/admin-complejo/perfil/cambiar-contrasena" class="btn btn-outline-role-accent btn-lg">
+                                        <i class="fas fa-lock me-2"></i>Cambiar Contraseña
                                     </a>
                                 </div>
-                                <small class="text-role-accent">
-                                    <i class="bi bi-key me-1"></i>
+                                <small class="text-warning">
+                                    <i class="fas fa-key me-1"></i>
                                     Actualiza tu contraseña por seguridad
                                 </small>
                             </div>
@@ -115,8 +115,8 @@
                         
                         <div class="row">
                             <div class="col-12">
-                                <a href="/super-admin/dashboard" class="btn btn-outline-secondary">
-                                    <i class="bi bi-arrow-left me-2"></i>Volver al Dashboard
+                                <a href="/admin-complejo/dashboard" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
                                 </a>
                             </div>
                         </div>
@@ -126,3 +126,4 @@
         </div>
     </div>
 </div>
+</html>

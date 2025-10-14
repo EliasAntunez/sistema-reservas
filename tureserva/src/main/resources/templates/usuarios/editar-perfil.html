@@ -58,6 +58,30 @@
                             </div>
 
                             <div class="mb-3">
+                                <label for="dni" class="form-label">
+                                    <i class="bi bi-card-text me-1"></i>DNI <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       th:field="*{dni}"
+                                       th:class="${#fields.hasErrors('dni')} ? 'form-control is-invalid' : 'form-control'"
+                                       id="dni" 
+                                       placeholder="12345678"
+                                       pattern="[0-9]{7,8}"
+                                       title="Solo números, entre 7 y 8 dígitos"
+                                       minlength="7"
+                                       maxlength="8"
+                                       required>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('dni')}" th:errors="*{dni}">
+                                    Error en el DNI
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Solo números, entre 7 y 8 dígitos (obligatorio)
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label for="telefono" class="form-label">
                                     <i class="bi bi-telephone me-1"></i>Teléfono
                                 </label>
