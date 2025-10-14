@@ -48,6 +48,11 @@ public class ServicioSuperAdministrador {
         return repositorioSuperAdministrador.findByEmailAndActivoTrue(email).orElse(null);
     }
 
+    // Obtener SuperAdministrador por DNI
+    public SuperAdministrador obtenerSuperAdministradorPorDni(String dni) {
+        return repositorioSuperAdministrador.findByDni(dni).orElse(null);
+    }
+
     // Guardar SuperAdministrador
     @Transactional
     public SuperAdministrador guardarSuperAdministrador(SuperAdministrador superAdmin) {
@@ -60,6 +65,9 @@ public class ServicioSuperAdministrador {
         }
         if (superAdmin.getEmail() != null) {
             superAdmin.setEmail(superAdmin.getEmail().trim().toLowerCase());
+        }
+        if (superAdmin.getDni() != null) {
+            superAdmin.setDni(superAdmin.getDni().trim().toUpperCase());
         }
         
         // Encriptar la contraseña antes de guardar
@@ -93,6 +101,9 @@ public class ServicioSuperAdministrador {
             }
             if (superAdmin.getEmail() != null) {
                 existente.setEmail(superAdmin.getEmail().trim().toLowerCase());
+            }
+            if (superAdmin.getDni() != null) {
+                existente.setDni(superAdmin.getDni().trim().toUpperCase());
             }
             
             // Si la contraseña ha cambiado, encriptarla antes de actualizar
@@ -166,6 +177,11 @@ public class ServicioSuperAdministrador {
     // Verificar si existe email
     public boolean verificarEmail(String email) {
         return repositorioSuperAdministrador.existsByEmail(email);
+    }
+
+    // Verificar si existe DNI
+    public boolean verificarDni(String dni) {
+        return repositorioSuperAdministrador.existsByDni(dni);
     }
 
     // Contar SuperAdministradores activos

@@ -4,7 +4,7 @@
       layout:decorate="~{layouts/base}">
 
 <head>
-    <title>Editar Perfil - Super Administrador</title>
+    <title>Editar Perfil - Administrador de Complejo</title>
 </head>
 
 <div layout:fragment="content">
@@ -13,20 +13,20 @@
         <div class="row">
             <div class="col-lg-8 mx-auto">
                 <div class="card">
-                    <div class="card-header bg-primary text-white">
+                    <div class="card-header bg-info text-white">
                         <h4 class="mb-0">
-                            <i class="bi bi-pencil-square me-2"></i>Editar Mi Perfil - Super Administrador
+                            <i class="fas fa-edit me-2"></i>Editar Mi Perfil - Administrador de Complejo
                         </h4>
                     </div>
                     <div class="card-body">
-                        <form th:action="@{/super-admin/perfil/editar}" th:object="${superAdmin}" method="post" novalidate>
+                        <form th:action="@{/admin-complejo/perfil/editar}" th:object="${adminComplejo}" method="post" novalidate>
                             <!-- Token CSRF para seguridad -->
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="nombre" class="form-label">
-                                        <i class="bi bi-person me-1"></i>Nombre <span class="text-danger">*</span>
+                                        <i class="fas fa-user me-1"></i>Nombre <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" 
                                            class="form-control" 
@@ -42,7 +42,7 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label for="apellido" class="form-label">
-                                        <i class="bi bi-person me-1"></i>Apellido <span class="text-danger">*</span>
+                                        <i class="fas fa-user me-1"></i>Apellido <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" 
                                            class="form-control" 
@@ -60,7 +60,7 @@
                             <div class="row">
                                 <div class="col-md-8 mb-3">
                                     <label for="email" class="form-label">
-                                        <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
+                                        <i class="fas fa-envelope me-1"></i>Email <span class="text-danger">*</span>
                                     </label>
                                     <input type="email" 
                                            class="form-control" 
@@ -73,14 +73,14 @@
                                         Error en el email
                                     </div>
                                     <div class="form-text">
-                                        <i class="bi bi-info-circle me-1"></i>
+                                        <i class="fas fa-info-circle me-1"></i>
                                         Si cambias tu email, tendrás que usarlo para iniciar sesión la próxima vez.
                                     </div>
                                 </div>
 
                                 <div class="col-md-4 mb-3">
                                     <label for="dni" class="form-label">
-                                        <i class="bi bi-card-text me-1"></i>DNI <span class="text-danger">*</span>
+                                        <i class="fas fa-id-card me-1"></i>DNI <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" 
                                            class="form-control" 
@@ -97,7 +97,7 @@
                                         Error en el DNI
                                     </div>
                                     <div class="form-text">
-                                        <i class="bi bi-info-circle me-1"></i>
+                                        <i class="fas fa-info-circle me-1"></i>
                                         Solo números, entre 7 y 8 dígitos (obligatorio)
                                     </div>
                                 </div>
@@ -105,19 +105,19 @@
 
                             <!-- Información adicional -->
                             <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                <i class="bi bi-calendar-check me-2"></i>
+                                <i class="fas fa-calendar-check me-2"></i>
                                 <strong>Fecha de registro:</strong> 
-                                <span th:text="${#temporals.format(superAdmin.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
+                                <span th:text="${#temporals.format(adminComplejo.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
 
                             <!-- Botones de acción -->
                             <div class="d-flex justify-content-between">
-                                <a href="/super-admin/perfil" class="btn btn-secondary">
-                                    <i class="bi bi-arrow-left me-2"></i>Cancelar
+                                <a href="/admin-complejo/perfil" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Cancelar
                                 </a>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-check-lg me-2"></i>Guardar Cambios
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-check me-2"></i>Guardar Cambios
                                 </button>
                             </div>
                         </form>
@@ -127,3 +127,4 @@
         </div>
     </div>
 </div>
+</html>

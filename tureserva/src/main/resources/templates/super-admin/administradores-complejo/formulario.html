@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title th:text="${administradorComplejo.id != null ? 'Editar Administrador - Super Administrador' : 'Nuevo Administrador - Super Administrador'}">Administrador - Super Administrador</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4 role-super-admin">
+        <!-- Título -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2>
+                    <i class="bi bi-person-plus text-role" th:if="${administradorComplejo.id == null}"></i>
+                    <i class="bi bi-person-gear text-role" th:if="${administradorComplejo.id != null}"></i>
+                    <span th:text="${administradorComplejo.id != null ? 'Editar Administrador' : 'Nuevo Administrador'}">Administrador</span>
+                </h2>
+                <p class="text-muted" th:text="${administradorComplejo.id != null ? 'Modificar datos del administrador de complejo' : 'Crear nuevo administrador de complejo'}">Descripción</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="/super-admin/administradores-complejo" class="btn btn-outline-role">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Mensajes de error general -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span th:text="${error}">Error</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Formulario -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-role text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-lines-fill"></i> 
+                    <span th:text="${administradorComplejo.id != null ? 'Datos del Administrador' : 'Datos del Nuevo Administrador'}">Datos</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <form th:action="${administradorComplejo.id != null ? '/super-admin/administradores-complejo/actualizar' : '/super-admin/administradores-complejo/guardar'}" 
+                      th:object="${administradorComplejo}" method="post">
+                    
+                    <!-- ID oculto para edición -->
+                    <input type="hidden" th:field="*{id}" th:if="${administradorComplejo.id != null}">
+                    
+                    <div class="row">
+                        <!-- Nombre -->
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   th:class="${#fields.hasErrors('nombre')} ? 'form-control is-invalid' : 'form-control'"
+                                   id="nombre" 
+                                   th:field="*{nombre}" 
+                                   placeholder="Ingrese el nombre"
+                                   maxlength="50"
+                                   required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">
+                                Error en nombre
+                            </div>
+                        </div>
+
+                        <!-- Apellido -->
+                        <div class="col-md-6 mb-3">
+                            <label for="apellido" class="form-label">Apellido <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   th:class="${#fields.hasErrors('apellido')} ? 'form-control is-invalid' : 'form-control'"
+                                   id="apellido" 
+                                   th:field="*{apellido}" 
+                                   placeholder="Ingrese el apellido"
+                                   maxlength="50"
+                                   required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('apellido')}" th:errors="*{apellido}">
+                                Error en apellido
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Email -->
+                        <div class="col-md-8 mb-3">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   th:class="${#fields.hasErrors('email')} ? 'form-control is-invalid' : 'form-control'"
+                                   id="email" 
+                                   th:field="*{email}" 
+                                   placeholder="administrador@ejemplo.com"
+                                   maxlength="100"
+                                   required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
+                                Error en email
+                            </div>
+                            <div class="form-text">Se usará como nombre de usuario para iniciar sesión</div>
+                        </div>
+
+                        <!-- DNI -->
+                        <div class="col-md-4 mb-3">
+                            <label for="dni" class="form-label">DNI <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   th:class="${#fields.hasErrors('dni')} ? 'form-control is-invalid' : 'form-control'"
+                                   id="dni" 
+                                   th:field="*{dni}" 
+                                   placeholder="12345678"
+                                   pattern="[0-9]{7,8}"
+                                   title="Solo números, entre 7 y 8 dígitos"
+                                   minlength="7"
+                                   maxlength="8"
+                                   required>
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('dni')}" th:errors="*{dni}">
+                                Error en DNI
+                            </div>
+                            <div class="form-text">Solo números, entre 7 y 8 dígitos (obligatorio)</div>
+                        </div>
+                    </div>
+
+                    <!-- Contraseña -->
+                    <div class="mb-3" th:if="${administradorComplejo.id == null}">
+                        <label for="contrasena" class="form-label">Contraseña <span class="text-danger">*</span></label>
+                        <input type="password" 
+                               class="form-control" 
+                               th:class="${#fields.hasErrors('contrasena')} ? 'form-control is-invalid' : 'form-control'"
+                               id="contrasena" 
+                               th:field="*{contrasena}" 
+                               placeholder="Mínimo 6 caracteres"
+                               minlength="6"
+                               required>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('contrasena')}" th:errors="*{contrasena}">
+                            Error en contraseña
+                        </div>
+                        <div class="form-text">Debe tener al menos 6 caracteres</div>
+                    </div>
+
+                    <!-- Nota para edición -->
+                    <div class="alert alert-info" th:if="${administradorComplejo.id != null}">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Nota:</strong> Para cambiar la contraseña, el administrador debe hacerlo desde su perfil una vez que inicie sesión.
+                    </div>
+
+                    <hr>
+
+                    <!-- Botones -->
+                    <div class="d-flex justify-content-between">
+                        <a href="/super-admin/administradores-complejo" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </a>
+                        <button type="submit" 
+                                class="btn btn-role"
+                                th:text="${administradorComplejo.id != null ? 'Actualizar Administrador' : 'Crear Administrador'}">
+                            <i class="bi bi-check-circle"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

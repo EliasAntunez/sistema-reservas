@@ -12,6 +12,9 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.ui.Model;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import com.example.tureserva.utiles.ValidadorFormulario;
+import com.example.tureserva.utiles.ManejadorMensajes;
+import com.example.tureserva.utiles.ValidadorContrasena;
 
 
 @Controller
@@ -55,6 +58,9 @@ public class ControladorUsuario {
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
             return "redirect:/super-admin/dashboard";
         } else if (authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN_COMPLEJO"))) {
+            return "redirect:/admin-complejo/dashboard";
+        } else if (authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_CLIENTE"))) {
             return "usuarios/dashboard";
         }
@@ -83,6 +89,7 @@ public class ControladorUsuario {
             @RequestParam("email") String email, // @RequestParam para capturar los datos del formulario
             @RequestParam("nombre") String nombre,
             @RequestParam("apellido") String apellido,
+            @RequestParam("dni") String dni,
             @RequestParam("contrasena") String contrasena,
             @RequestParam(value = "telefono", required = false) String telefono) {
         
@@ -92,9 +99,29 @@ public class ControladorUsuario {
             return "redirect:/dashboard";
         }
         
+        // Validar formato de DNI
+        if (!ValidadorFormulario.validarFormatoDni(dni)) {
+            return "redirect:/usuarios/registro?error=formato_dni";
+        }
+        
+        // Validar formato de email
+        if (!ValidadorFormulario.validarFormatoEmail(email)) {
+            return "redirect:/usuarios/registro?error=formato_email";
+        }
+        
+        // Validar longitud de contraseña
+        if (!ValidadorFormulario.validarLongitudContrasena(contrasena)) {
+            return "redirect:/usuarios/registro?error=contrasena";
+        }
+        
         // Verificar si el email ya existe
         if (servicioCliente.verificarEmail(email)) {
-            return "redirect:/usuarios/registro?error";
+            return "redirect:/usuarios/registro?error=email";
+        }
+
+        // Verificar si el DNI ya existe
+        if (servicioCliente.verificarDni(dni)) {
+            return "redirect:/usuarios/registro?error=dni";
         }
 
         //si el teléfono es vacío, asignar null
@@ -108,6 +135,7 @@ public class ControladorUsuario {
             cliente.setEmail(email);
             cliente.setNombre(nombre);
             cliente.setApellido(apellido);
+            cliente.setDni(dni);
             cliente.setContrasena(contrasena);
             cliente.setTelefono(telefono);
             
@@ -170,21 +198,31 @@ public class ControladorUsuario {
             return "redirect:/perfil";
         }
 
-        // Validaciones básicas
-        if (clienteFormulario.getNombre() == null || clienteFormulario.getNombre().trim().isEmpty()) {
-            bindingResult.rejectValue("nombre", "error.cliente", "El nombre es obligatorio");
-        }
-        if (clienteFormulario.getApellido() == null || clienteFormulario.getApellido().trim().isEmpty()) {
-            bindingResult.rejectValue("apellido", "error.cliente", "El apellido es obligatorio");
-        }
-        if (clienteFormulario.getEmail() == null || clienteFormulario.getEmail().trim().isEmpty()) {
-            bindingResult.rejectValue("email", "error.cliente", "El email es obligatorio");
-        }
+        // Validaciones completas usando utilidad (incluyendo DNI)
+        ValidadorFormulario.validarCamposCompletosUsuario(
+            clienteFormulario.getNombre(), 
+            clienteFormulario.getApellido(), 
+            clienteFormulario.getEmail(), 
+            clienteFormulario.getDni(),
+            bindingResult
+        );
 
         // Verificar si el email cambió y si ya existe
-        if (!clienteFormulario.getEmail().equals(emailActual) && // si el email del formulario es diferente al actual
-            servicioCliente.verificarEmail(clienteFormulario.getEmail())) { // y si el email ya existe en la base de datos
-            bindingResult.rejectValue("email", "error.cliente", "El email ya está en uso"); // mensaje de error
+        if (!clienteFormulario.getEmail().equals(emailActual) && 
+            servicioCliente.verificarEmail(clienteFormulario.getEmail())) {
+            bindingResult.rejectValue("email", "error.cliente", ManejadorMensajes.EMAIL_EN_USO);
+        }
+
+        // Verificar si el DNI cambió y si ya existe
+        if (!clienteFormulario.getDni().equals(clienteExistente.getDni()) && 
+            servicioCliente.verificarDni(clienteFormulario.getDni())) {
+            bindingResult.rejectValue("dni", "error.cliente", "El DNI ya está en uso");
+        }
+
+        // Verificar si el DNI cambió y si ya existe
+        if (!clienteFormulario.getDni().equals(clienteExistente.getDni()) && 
+            servicioCliente.verificarDni(clienteFormulario.getDni())) {
+            bindingResult.rejectValue("dni", "error.cliente", "El DNI ya está en uso por otro usuario");
         }
 
         // Validar contraseña solo si se proporcionó una nueva
@@ -205,6 +243,7 @@ public class ControladorUsuario {
             // Copiar datos del formulario al cliente existente
             clienteExistente.setNombre(clienteFormulario.getNombre()); // Actualizar nombre
             clienteExistente.setApellido(clienteFormulario.getApellido()); // Actualizar apellido
+            clienteExistente.setDni(clienteFormulario.getDni()); // Actualizar DNI
             clienteExistente.setEmail(clienteFormulario.getEmail()); // Actualizar email
             clienteExistente.setTelefono(clienteFormulario.getTelefono()); // Actualizar teléfono
             
@@ -214,11 +253,11 @@ public class ControladorUsuario {
             }
 
             servicioCliente.actualizarCliente(clienteExistente);
-            redirectAttributes.addFlashAttribute("mensaje", "Perfil actualizado correctamente");
+            ManejadorMensajes.agregarMensajeExito(redirectAttributes, ManejadorMensajes.PERFIL_ACTUALIZADO);
             return "redirect:/perfil";
             
         } catch (Exception e) {
-            model.addAttribute("error", "Error al actualizar el perfil. Inténtelo de nuevo.");
+            ManejadorMensajes.agregarMensajeError(model, ManejadorMensajes.ERROR_GENERICO);
             return "usuarios/editar-perfil";
         }
     }
@@ -297,25 +336,14 @@ public class ControladorUsuario {
             return "redirect:/perfil/cambiar-contrasena";
         }
 
-        // Validaciones
-        if (contrasenaActual == null || contrasenaActual.trim().isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "La contraseña actual es obligatoria");
-            return "redirect:/perfil/cambiar-contrasena";
-        }
-
-        if (nuevaContrasena == null || nuevaContrasena.trim().isEmpty()) {
-            redirectAttributes.addFlashAttribute("error", "La nueva contraseña es obligatoria");
-            return "redirect:/perfil/cambiar-contrasena";
-        }
-
-        if (nuevaContrasena.length() < 6) {
-            redirectAttributes.addFlashAttribute("error", "La nueva contraseña debe tener al menos 6 caracteres");
-            return "redirect:/perfil/cambiar-contrasena";
-        }
-
-        if (!nuevaContrasena.equals(confirmarContrasena)) {
-            redirectAttributes.addFlashAttribute("error", "Las contraseñas no coinciden");
-            return "redirect:/perfil/cambiar-contrasena";
+        // Usar validador unificado de contraseñas
+        String errorValidacion = ValidadorContrasena.validarCambioContrasena(
+            contrasenaActual, nuevaContrasena, confirmarContrasena, 
+            null, redirectAttributes, "/perfil/cambiar-contrasena"
+        );
+        
+        if (errorValidacion != null) {
+            return errorValidacion;
         }
 
         try {
@@ -323,15 +351,15 @@ public class ControladorUsuario {
             boolean actualizada = servicioCliente.cambiarContrasena(cliente.getId(), contrasenaActual, nuevaContrasena);
             
             if (actualizada) {
-                redirectAttributes.addFlashAttribute("mensaje", "Contraseña actualizada correctamente");
+                ManejadorMensajes.agregarMensajeExito(redirectAttributes, ManejadorMensajes.CONTRASENA_ACTUALIZADA);
                 return "redirect:/perfil";
             } else {
-                redirectAttributes.addFlashAttribute("error", "La contraseña actual no es correcta");
+                ManejadorMensajes.agregarMensajeError(redirectAttributes, ManejadorMensajes.CONTRASENA_ACTUAL_INCORRECTA);
                 return "redirect:/perfil/cambiar-contrasena";
             }
             
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Error al cambiar la contraseña. Inténtelo de nuevo.");
+            ManejadorMensajes.agregarMensajeError(redirectAttributes, ManejadorMensajes.ERROR_GENERICO);
             return "redirect:/perfil/cambiar-contrasena";
         }
     }

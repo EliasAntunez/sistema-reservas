@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title>Administradores de Complejo - Super Administrador</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4 role-super-admin">
+        <!-- Título y botón nuevo -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2><i class="bi bi-people-fill text-role"></i> Administradores de Complejo</h2>
+                <p class="text-muted">Gestionar administradores de complejos deportivos</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="/super-admin/administradores-complejo/nuevo" class="btn btn-role">
+                    <i class="bi bi-plus-circle"></i> Nuevo Administrador
+                </a>
+                <a href="/super-admin/dashboard" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+
+        <!-- Mensajes de alerta -->
+        <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i>
+            <span th:text="${mensaje}">Mensaje</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span th:text="${error}">Error</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Tabla de administradores -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-role text-white">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Lista de Administradores</h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${administradores != null and !administradores.empty}">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Apellido</th>
+                                    <th>DNI</th>
+                                    <th>Email</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Registro</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="admin : ${administradores}">
+                                    <td th:text="${admin.id}">1</td>
+                                    <td th:text="${admin.nombre}">Juan</td>
+                                    <td th:text="${admin.apellido}">Pérez</td>
+                                    <td th:text="${admin.dni}">12345678</td>
+                                    <td th:text="${admin.email}">admin@ejemplo.com</td>
+                                    <td>
+                                        <span th:if="${admin.activo}" class="badge bg-success">Activo</span>
+                                        <span th:unless="${admin.activo}" class="badge bg-danger">Inactivo</span>
+                                    </td>
+                                    <td th:text="${#temporals.format(admin.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</td>
+                                    <td class="text-center">
+                                        <!-- Ver -->
+                                        <a th:href="@{/super-admin/administradores-complejo/ver/{id}(id=${admin.id})}" 
+                                           class="btn btn-sm btn-outline-role me-1" title="Ver detalles">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <!-- Editar -->
+                                        <a th:href="@{/super-admin/administradores-complejo/editar/{id}(id=${admin.id})}" 
+                                           class="btn btn-sm btn-outline-role-accent me-1" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <!-- Cambiar estado -->
+                                        <form th:action="@{/super-admin/administradores-complejo/cambiar-estado/{id}(id=${admin.id})}" 
+                                              method="post" style="display: inline;">
+                                            <button type="submit" 
+                                                    th:class="${admin.activo} ? 'btn btn-sm btn-outline-danger' : 'btn btn-sm btn-outline-success'"
+                                                    th:title="${admin.activo} ? 'Desactivar' : 'Activar'"
+                                                    onclick="return confirm('¿Está seguro de cambiar el estado de este administrador?')">
+                                                <i th:class="${admin.activo} ? 'bi bi-toggle-on' : 'bi bi-toggle-off'"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Mensaje cuando no hay administradores -->
+                <div th:if="${administradores == null or administradores.empty}" class="text-center py-4">
+                    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
+                    <h5 class="text-muted mt-3">No hay administradores registrados</h5>
+                    <p class="text-muted">Comience creando el primer administrador de complejo.</p>
+                    <a href="/super-admin/administradores-complejo/nuevo" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Crear Primer Administrador
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</html>
