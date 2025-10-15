@@ -2,10 +2,12 @@ package com.example.tureserva.utiles;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 
 /**
  * Utilidades para manejo de autenticación
  */
+@Component
 public class UtilesAutenticacion {
     
     /**
@@ -27,5 +29,13 @@ public class UtilesAutenticacion {
             return auth.getName();
         }
         return null;
+    }
+    
+    /**
+     * Obtiene la autenticación actual
+     * @return Authentication object o null si no está autenticado
+     */
+    public static Authentication obtenerAutenticacion() {
+        return SecurityContextHolder.getContext().getAuthentication();
     }
 }
