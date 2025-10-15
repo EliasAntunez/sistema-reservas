@@ -1,19 +1,22 @@
 /* ===== COLORES POR ROL ===== */
 :root {
-    /* SuperAdmin - Azul Primario */
-    --super-admin-primary: #0d6efd;
-    --super-admin-secondary: #6f42c1;
-    --super-admin-accent: #0dcaf0;
+    /* SuperAdmin - Azul Oscuro Profesional */
+    --super-admin-primary: #1e3a8a;
+    --super-admin-secondary: #3730a3;
+    --super-admin-accent: #0ea5e9;
+    --super-admin-light: #e0f2fe;
     
-    /* AdminComplejo - Verde */
-    --admin-complejo-primary: #198754;
-    --admin-complejo-secondary: #20c997;
-    --admin-complejo-accent: #fd7e14;
+    /* AdminComplejo - Verde Esmeralda */
+    --admin-complejo-primary: #047857;
+    --admin-complejo-secondary: #059669;
+    --admin-complejo-accent: #f59e0b;
+    --admin-complejo-light: #ecfdf5;
     
-    /* Cliente - Azul Cyan */
-    --cliente-primary: #0dcaf0;
-    --cliente-secondary: #6f42c1;
-    --cliente-accent: #20c997;
+    /* Cliente - Morado Elegante */
+    --cliente-primary: #7c3aed;
+    --cliente-secondary: #8b5cf6;
+    --cliente-accent: #06b6d4;
+    --cliente-light: #f3e8ff;
 }
 
 /* ===== ESTILOS POR ROL ===== */

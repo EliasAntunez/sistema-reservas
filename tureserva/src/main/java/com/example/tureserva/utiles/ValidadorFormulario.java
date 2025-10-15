@@ -1,10 +1,12 @@
 package com.example.tureserva.utiles;
 
+import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 
 /**
  * Clase utilitaria para validaciones comunes en formularios
  */
+@Component
 public class ValidadorFormulario {
 
     /**

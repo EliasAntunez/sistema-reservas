@@ -1,21 +1,19 @@
 package com.example.tureserva.modelo;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "administrador_complejo")
 @PrimaryKeyJoinColumn(name = "usuario_id")
+@Getter @Setter
+@NoArgsConstructor
 public class AdministradorComplejo extends Usuario {
     
     // Por ahora no necesita campos adicionales
     // La funcionalidad viene de la herencia de Usuario
-    
-    /**
-     * Constructor vacío requerido por JPA
-     */
-    public AdministradorComplejo() {
-        super();
-    }
     
     /**
      * Constructor con parámetros
