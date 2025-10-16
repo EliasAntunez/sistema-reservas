@@ -19,14 +19,27 @@
                         </h4>
                     </div>
                     <div class="card-body">
+                        <!-- Información para usuarios OAuth2 -->
+                        <div class="alert alert-info d-flex align-items-center" th:if="${esOAuth2}">
+                            <i class="bi bi-google me-2"></i>
+                            <div>
+                                <strong>Cuenta vinculada con Google</strong><br>
+                                Algunos datos se sincronizan automáticamente desde tu cuenta de Google y no pueden editarse aquí. 
+                                Solo puedes modificar tu <strong>teléfono</strong> y el <strong>DNI</strong> (si aún no lo has establecido).
+                            </div>
+                        </div>
+
                         <form th:action="@{/perfil/editar}" th:object="${cliente}" method="post" novalidate>
                             <!-- Token CSRF para seguridad -->
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             
+                            <!-- NOMBRES - Comportamiento diferente para OAuth2 -->
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="nombre" class="form-label">
-                                        <i class="bi bi-person me-1"></i>Nombre <span class="text-danger">*</span>
+                                        <i class="bi bi-person me-1"></i>Nombre 
+                                        <span class="text-danger" th:unless="${esOAuth2}">*</span>
+                                        <span class="badge bg-info ms-2" th:if="${esOAuth2}">Desde Google</span>
                                     </label>
                                     <input type="text" 
                                            class="form-control" 
@@ -34,15 +47,21 @@
                                            th:class="${#fields.hasErrors('nombre')} ? 'form-control is-invalid' : 'form-control'"
                                            id="nombre" 
                                            placeholder="Ingresa tu nombre"
-                                           required>
+                                           th:readonly="${esOAuth2}"
+                                           th:required="${!esOAuth2}">
                                     <div class="invalid-feedback" th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}">
                                         Error en el nombre
+                                    </div>
+                                    <div class="form-text text-muted" th:if="${esOAuth2}">
+                                        <i class="bi bi-lock me-1"></i>Este campo se sincroniza automáticamente desde tu cuenta de Google
                                     </div>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
                                     <label for="apellido" class="form-label">
-                                        <i class="bi bi-person me-1"></i>Apellido <span class="text-danger">*</span>
+                                        <i class="bi bi-person me-1"></i>Apellido 
+                                        <span class="text-danger" th:unless="${esOAuth2}">*</span>
+                                        <span class="badge bg-info ms-2" th:if="${esOAuth2}">Desde Google</span>
                                     </label>
                                     <input type="text" 
                                            class="form-control" 
@@ -50,13 +69,18 @@
                                            th:class="${#fields.hasErrors('apellido')} ? 'form-control is-invalid' : 'form-control'"
                                            id="apellido" 
                                            placeholder="Ingresa tu apellido"
-                                           required>
+                                           th:readonly="${esOAuth2}"
+                                           th:required="${!esOAuth2}">
                                     <div class="invalid-feedback" th:if="${#fields.hasErrors('apellido')}" th:errors="*{apellido}">
                                         Error en el apellido
+                                    </div>
+                                    <div class="form-text text-muted" th:if="${esOAuth2}">
+                                        <i class="bi bi-lock me-1"></i>Este campo se sincroniza automáticamente desde tu cuenta de Google
                                     </div>
                                 </div>
                             </div>
 
+                            <!-- DNI - Solo editable si está vacío en OAuth2 -->
                             <div class="mb-3">
                                 <label for="dni" class="form-label">
                                     <i class="bi bi-card-text me-1"></i>DNI <span class="text-danger">*</span>
@@ -71,13 +95,17 @@
                                        title="Solo números, entre 7 y 8 dígitos"
                                        minlength="7"
                                        maxlength="8"
+                                       th:readonly="${esOAuth2 && cliente.dni != null && !cliente.dni.isEmpty()}"
                                        required>
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('dni')}" th:errors="*{dni}">
                                     Error en el DNI
                                 </div>
-                                <div class="form-text">
+                                <div class="form-text" th:unless="${esOAuth2 && cliente.dni != null && !cliente.dni.isEmpty()}">
                                     <i class="bi bi-info-circle me-1"></i>
                                     Solo números, entre 7 y 8 dígitos (obligatorio)
+                                </div>
+                                <div class="form-text text-muted" th:if="${esOAuth2 && cliente.dni != null && !cliente.dni.isEmpty()}">
+                                    <i class="bi bi-lock me-1"></i>El DNI no se puede modificar una vez establecido
                                 </div>
                             </div>
 
@@ -100,9 +128,12 @@
                                 </div>
                             </div>
 
+                            <!-- EMAIL - Solo lectura para OAuth2 -->
                             <div class="mb-3">
                                 <label for="email" class="form-label">
-                                    <i class="bi bi-envelope me-1"></i>Email <span class="text-danger">*</span>
+                                    <i class="bi bi-envelope me-1"></i>Email 
+                                    <span class="text-danger" th:unless="${esOAuth2}">*</span>
+                                    <span class="badge bg-info ms-2" th:if="${esOAuth2}">Desde Google</span>
                                 </label>
                                 <input type="email" 
                                        class="form-control" 
@@ -110,13 +141,17 @@
                                        th:class="${#fields.hasErrors('email')} ? 'form-control is-invalid' : 'form-control'"
                                        id="email" 
                                        placeholder="tu@email.com"
-                                       required>
+                                       th:readonly="${esOAuth2}"
+                                       th:required="${!esOAuth2}">
                                 <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">
                                     Error en el email
                                 </div>
-                                <div class="form-text">
+                                <div class="form-text" th:unless="${esOAuth2}">
                                     <i class="bi bi-info-circle me-1"></i>
                                     Si cambias tu email, tendrás que usarlo para iniciar sesión la próxima vez.
+                                </div>
+                                <div class="form-text text-muted" th:if="${esOAuth2}">
+                                    <i class="bi bi-lock me-1"></i>El email se sincroniza automáticamente desde tu cuenta de Google y no puede modificarse
                                 </div>
                             </div>
 

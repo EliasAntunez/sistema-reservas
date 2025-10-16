@@ -1,5 +1,6 @@
 package com.example.tureserva.seguridad;
 
+import com.example.tureserva.servicio.ServicioOAuth2Usuario;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,10 +17,12 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 public class ConfiguracionSeguridad {
 
     private final ServicioAutenticacion servicioAutenticacion;
+    private final ServicioOAuth2Usuario servicioOAuth2Usuario;
 
     // Constructor injection (más moderno que @Autowired)
-    public ConfiguracionSeguridad(ServicioAutenticacion servicioAutenticacion) {
+    public ConfiguracionSeguridad(ServicioAutenticacion servicioAutenticacion, ServicioOAuth2Usuario servicioOAuth2Usuario) {
         this.servicioAutenticacion = servicioAutenticacion;
+        this.servicioOAuth2Usuario = servicioOAuth2Usuario;
     }
 
     @Bean
@@ -39,39 +42,55 @@ public class ConfiguracionSeguridad {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-            .authorizeHttpRequests(authz -> authz
-                // Rutas públicas (sin autenticación)
-                .requestMatchers("/", "/usuarios/registro").permitAll()
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
-                // Rutas para SuperAdministrador
-                .requestMatchers("/super-admin/**").hasRole("SUPER_ADMIN")
-                // Rutas para AdministradorComplejo
-                .requestMatchers("/admin-complejo/**").hasRole("ADMIN_COMPLEJO")
-                // Rutas para perfil (accesible por todos los usuarios autenticados)
-                .requestMatchers("/perfil/**", "/dashboard").authenticated()
-                // Todas las demás rutas requieren autenticación
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                .loginPage("/login")
-                .defaultSuccessUrl("/dashboard", true)
-                .failureUrl("/login?error=true")
-                .usernameParameter("username") // Coincide con el formulario HTML
-                .passwordParameter("password") // Coincide con el formulario HTML
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout=true") // Redirigir después del logout
-                .invalidateHttpSession(true) // Invalidar sesión
-                .deleteCookies("JSESSIONID") // Eliminar cookies
-                .permitAll()
-            )
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            ); // CSRF habilitado con token en cookie
-
-        return http.build();
+        return http
+            .authorizeHttpRequests(this::configurarAutorizaciones)
+            .formLogin(this::configurarFormLogin)
+            .oauth2Login(this::configurarOAuth2Login)
+            .logout(this::configurarLogout)
+            .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+            .build();
+    }
+    
+    private void configurarAutorizaciones(org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authz) {
+        authz
+            // Rutas públicas
+            .requestMatchers("/", "/usuarios/registro").permitAll()
+            .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+            .requestMatchers("/debug/**").permitAll()
+            // Rutas OAuth2
+            .requestMatchers("/completar-datos").hasAnyAuthority("ROLE_OAUTH2_USER", "OIDC_USER")
+            // Rutas de administración
+            .requestMatchers("/super-admin/**").hasRole("SUPER_ADMIN")
+            .requestMatchers("/admin-complejo/**").hasRole("ADMIN_COMPLEJO")
+            // Rutas autenticadas
+            .requestMatchers("/perfil/**", "/dashboard").authenticated()
+            .anyRequest().authenticated();
+    }
+    
+    private void configurarFormLogin(org.springframework.security.config.annotation.web.configurers.FormLoginConfigurer<HttpSecurity> form) {
+        form
+            .loginPage("/login")
+            .defaultSuccessUrl("/dashboard", true)
+            .failureUrl("/login?error=true")
+            .usernameParameter("username")
+            .passwordParameter("password")
+            .permitAll();
+    }
+    
+    private void configurarOAuth2Login(org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer<HttpSecurity> oauth2) {
+        oauth2
+            .loginPage("/login")
+            .defaultSuccessUrl("/dashboard", true)
+            .failureUrl("/login?error=oauth2")
+            .userInfoEndpoint(userInfo -> userInfo.userService(servicioOAuth2Usuario));
+    }
+    
+    private void configurarLogout(org.springframework.security.config.annotation.web.configurers.LogoutConfigurer<HttpSecurity> logout) {
+        logout
+            .logoutUrl("/logout")
+            .logoutSuccessUrl("/login?logout=true")
+            .invalidateHttpSession(true)
+            .deleteCookies("JSESSIONID")
+            .permitAll();
     }
 }

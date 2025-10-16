@@ -103,6 +103,18 @@ public class ServicioCliente {
             }
             
             clienteExistente.setActivo(cliente.isActivo());
+            
+            // Actualizar campos OAuth2 específicos
+            if (cliente.getProveedorOAuth2() != null) {
+                clienteExistente.setProveedorOAuth2(cliente.getProveedorOAuth2());
+            }
+            if (cliente.getIdOAuth2() != null) {
+                clienteExistente.setIdOAuth2(cliente.getIdOAuth2());
+            }
+            if (cliente.getRequiereCompletarDatos() != null) {
+                clienteExistente.setRequiereCompletarDatos(cliente.getRequiereCompletarDatos());
+            }
+            
             return repositorioCliente.save(clienteExistente);
         }
         return null;

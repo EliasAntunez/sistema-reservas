@@ -80,7 +80,7 @@
                                     Modifica tu información personal
                                 </small>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4" th:unless="${esOAuth2}">
                                 <div class="d-grid">
                                     <a href="/perfil/cambiar-contrasena" class="btn btn-outline-role-accent btn-lg">
                                         <i class="bi bi-shield-lock me-2"></i>Cambiar Contraseña

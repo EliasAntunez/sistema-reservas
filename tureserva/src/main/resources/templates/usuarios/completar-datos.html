@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+
+<head>
+    <title>Completar Datos</title>
+</head>
+
+<div layout:fragment="content">
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-4 col-md-6">
+                <div class="card" style="border: 1px solid #dbdbdb; border-radius: 12px;">
+                    <div class="card-body p-4">
+                        <!-- Título del formulario -->
+                        <div class="text-center mb-4">
+                            <h1 class="fw-light mb-3" style="font-size: 2rem; font-family: 'Segoe UI', system-ui, sans-serif;">¡Bienvenido!</h1>
+                            <p class="text-muted" style="font-size: 16px; color: #8e8e8e;">Para completar tu registro, necesitamos algunos datos adicionales</p>
+                        </div>
+                        
+                        <!-- Mensaje de error -->
+                        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
+                            <span th:text="${error}" style="color: #ed4956; font-size: 14px;"></span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        
+                        <!-- Formulario de completar datos -->
+                        <form th:action="@{/completar-datos}" method="post">
+                            <!-- Información del usuario (solo lectura) -->
+                            <div class="mb-3">
+                                <label class="form-label" style="color: #262626; font-size: 14px; font-weight: 600;">Nombre completo</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       th:value="${cliente.nombre + ' ' + cliente.apellido}"
+                                       style="background-color: #f5f5f5; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #8e8e8e;"
+                                       readonly>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label" style="color: #262626; font-size: 14px; font-weight: 600;">Email</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       th:value="${cliente.email}"
+                                       style="background-color: #f5f5f5; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #8e8e8e;"
+                                       readonly>
+                            </div>
+                            
+                            <!-- Campo DNI (obligatorio) -->
+                            <div class="mb-3">
+                                <label for="dni" class="form-label" style="color: #262626; font-size: 14px; font-weight: 600;">DNI *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="dni" 
+                                       name="dni" 
+                                       placeholder="Ingresa tu DNI"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       maxlength="20"
+                                       required>
+                                <small class="text-muted">Necesitamos tu DNI para completar tu registro</small>
+                            </div>
+                            
+                            <!-- Campo Teléfono (opcional) -->
+                            <div class="mb-4">
+                                <label for="telefono" class="form-label" style="color: #262626; font-size: 14px; font-weight: 600;">Teléfono (opcional)</label>
+                                <input type="tel" 
+                                       class="form-control" 
+                                       id="telefono" 
+                                       name="telefono" 
+                                       placeholder="Ingresa tu teléfono"
+                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
+                                       maxlength="20">
+                            </div>
+                            
+                            <!-- Botón de completar -->
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary"
+                                        style="background-color: #0095f6; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; height: 44px;">
+                                    Completar registro
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Información adicional -->
+                <div class="text-center mt-4">
+                    <div class="card" style="border: 1px solid #dbdbdb; border-radius: 12px; padding: 15px;">
+                        <p class="mb-0" style="color: #8e8e8e; font-size: 12px;">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Tus datos están seguros y solo se utilizan para mejorar tu experiencia
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
