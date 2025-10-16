@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 
 @Controller
 public class ControladorUsuario {
@@ -356,7 +359,8 @@ public class ControladorUsuario {
 
     // Procesar baja del cliente
     @PostMapping("/perfil/eliminar")
-    public String procesarBajaCliente(Authentication authentication, RedirectAttributes redirectAttributes) {
+    public String procesarBajaCliente(Authentication authentication, RedirectAttributes redirectAttributes, 
+                                     HttpServletRequest request, HttpServletResponse response) {
         System.out.println("=== DEBUG PROCESAR BAJA ===");
         System.out.println("Authentication type: " + authentication.getClass().getSimpleName());
         
@@ -386,8 +390,8 @@ public class ControladorUsuario {
             boolean eliminado = servicioCliente.eliminarCliente(cliente.getId());
             
             if (eliminado) {
-                // Redirigir a una página especial que haga logout automático
-                return "redirect:/perfil/baja-exitosa";
+                // Redirigir a página intermedia que muestre alerta y haga logout
+                return "usuarios/baja-exitosa-redirect";
             } else {
                 redirectAttributes.addFlashAttribute("error", "No se pudo dar de baja la cuenta");
                 return "redirect:/perfil";
@@ -397,12 +401,6 @@ public class ControladorUsuario {
             redirectAttributes.addFlashAttribute("error", "Error al procesar la baja. Inténtelo de nuevo.");
             return "redirect:/perfil";
         }
-    }
-
-    // Página de confirmación de baja exitosa
-    @GetMapping("/perfil/baja-exitosa")
-    public String bajaExitosa() {
-        return "usuarios/baja-exitosa";
     }
 
     // ===== RUTAS DE CAMBIO DE CONTRASEÑA =====

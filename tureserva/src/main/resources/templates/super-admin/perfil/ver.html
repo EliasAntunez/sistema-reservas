@@ -8,27 +8,27 @@
 </head>
 
 <div layout:fragment="content">
-    <div class="container mt-4 role-super-admin">
+    <div class="container mt-4">
 
         <div class="row">
             <div class="col-lg-8 mx-auto">
                 
                 <!-- Mensajes de alerta -->
-                <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <div th:if="${mensaje}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
                     <i class="bi bi-check-circle me-2"></i>
                     <span th:text="${mensaje}">Mensaje de éxito</span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 
-                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <div th:if="${error}" class="alert alert-danger-unified alert-dismissible fade show" role="alert">
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     <span th:text="${error}">Mensaje de error</span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 
                 <!-- Encabezado del perfil -->
-                <div class="card mb-4">
-                    <div class="card-header bg-role text-white">
+                <div class="card card-unified mb-4">
+                    <div class="card-header-unified">
                         <h4 class="mb-0">
                             <i class="bi bi-shield-check me-2"></i>Mi Perfil - Super Administrador
                         </h4>
@@ -37,21 +37,17 @@
                         <div class="row">
                             <div class="col-md-4 text-center mb-3">
                                 <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px;">
-                                    <i class="bi bi-shield-check text-role" style="font-size: 3rem;"></i>
+                                    <i class="bi bi-shield-check text-primary-unified" style="font-size: 3rem;"></i>
                                 </div>
                                 <h5 class="mt-3 mb-1" th:text="${superAdmin.nombre + ' ' + superAdmin.apellido}">Super Admin</h5>
-                                <span class="badge bg-primary">Super Administrador</span>
+                                <span class="badge badge-primary-unified">Super Administrador</span>
                             </div>
                             <div class="col-md-8">
-                                <h6 class="text-role">Información Personal</h6>
+                                <h6 class="text-primary-unified">Información Personal</h6>
                                 <table class="table table-borderless">
                                     <tr>
-                                        <td><strong>Nombre:</strong></td>
-                                        <td th:text="${superAdmin.nombre}">Nombre del super admin</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Apellido:</strong></td>
-                                        <td th:text="${superAdmin.apellido}">Apellido del super admin</td>
+                                        <td><strong>Nombre completo:</strong></td>
+                                        <td th:text="${superAdmin.nombre + ' ' + superAdmin.apellido}">Nombre del super admin</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Email:</strong></td>
@@ -61,17 +57,6 @@
                                         <td><strong>DNI:</strong></td>
                                         <td th:text="${superAdmin.dni}">12345678</td>
                                     </tr>
-                                    <tr>
-                                        <td><strong>Fecha de registro:</strong></td>
-                                        <td th:text="${#temporals.format(superAdmin.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Estado:</strong></td>
-                                        <td>
-                                            <span class="badge bg-success" th:if="${superAdmin.activo}">Activo</span>
-                                            <span class="badge bg-danger" th:unless="${superAdmin.activo}">Inactivo</span>
-                                        </td>
-                                    </tr>
                                 </table>
                             </div>
                         </div>
@@ -79,8 +64,8 @@
                 </div>
 
                 <!-- Acciones del perfil -->
-                <div class="card">
-                    <div class="card-header">
+                <div class="card card-unified">
+                    <div class="card-header-unified">
                         <h5 class="mb-0">
                             <i class="bi bi-gear-fill me-2"></i>Configuración de Cuenta
                         </h5>
@@ -89,22 +74,22 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="d-grid">
-                                    <a href="/super-admin/perfil/editar" class="btn btn-outline-role btn-lg">
+                                    <a href="/super-admin/perfil/editar" class="btn btn-outline-primary-unified btn-lg">
                                         <i class="bi bi-pencil-square me-2"></i>Editar Perfil
                                     </a>
                                 </div>
-                                <small class="text-role">
+                                <small class="text-primary-unified">
                                     <i class="bi bi-info-circle me-1"></i>
                                     Modifica tu información personal
                                 </small>
                             </div>
                             <div class="col-md-6">
                                 <div class="d-grid">
-                                    <a href="/super-admin/perfil/cambiar-contrasena" class="btn btn-outline-role-accent btn-lg">
+                                    <a href="/super-admin/perfil/cambiar-contrasena" class="btn btn-outline-accent btn-lg">
                                         <i class="bi bi-shield-lock me-2"></i>Cambiar Contraseña
                                     </a>
                                 </div>
-                                <small class="text-role-accent">
+                                <small class="text-accent">
                                     <i class="bi bi-key me-1"></i>
                                     Actualiza tu contraseña por seguridad
                                 </small>
