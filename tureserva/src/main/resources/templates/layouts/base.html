@@ -25,7 +25,7 @@
 </head>
 <body class="bg-light d-flex flex-column min-vh-100">
     <!-- Header/Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: var(--primary-color);">
         <div class="container">
             <!-- Logo/Brand -->
             <a class="navbar-brand d-flex align-items-center" th:href="@{/dashboard}">
@@ -105,7 +105,7 @@
                                 <span class="fw-bold" th:text="${@servicioUsuarioUnificado.obtenerNombreParaMostrar(#authentication)}">usuario@ejemplo.com</span>
                                 <small class="text-light opacity-75" 
                                        th:unless="${@servicioUsuarioUnificado.obtenerRolEfectivo(#authentication) == 'ROLE_OAUTH2_TEMPORAL'}"
-                                       th:text="${@servicioUsuarioUnificado.obtenerRolEfectivo(#authentication)}">ROLE_CLIENTE</small>
+                                       th:text="${@servicioUsuarioUnificado.obtenerRolFormateado(#authentication)}">Cliente</small>
                             </div>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
@@ -165,28 +165,28 @@
     <!-- Mensajes Flash -->
     <div class="container mt-3">
         <!-- Mensaje de éxito -->
-        <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <div th:if="${mensaje}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>
             <span th:text="${mensaje}">Mensaje de éxito</span>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
         <!-- Mensaje de error -->
-        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <div th:if="${error}" class="alert alert-danger-unified alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <span th:text="${error}">Mensaje de error</span>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
         <!-- Mensaje de información -->
-        <div th:if="${info}" class="alert alert-info alert-dismissible fade show" role="alert">
+        <div th:if="${info}" class="alert alert-primary-unified alert-dismissible fade show" role="alert">
             <i class="bi bi-info-circle-fill me-2"></i>
             <span th:text="${info}">Mensaje informativo</span>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
 
         <!-- Mensaje de advertencia -->
-        <div th:if="${warning}" class="alert alert-warning alert-dismissible fade show" role="alert">
+        <div th:if="${warning}" class="alert alert-warning-unified alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <span th:text="${warning}">Mensaje de advertencia</span>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -225,8 +225,11 @@
                     }
                 }, 3000);
             });
+
+
         });
     </script>
+
     
     <!-- JavaScript adicional específico de cada página -->
     <th:block layout:fragment="scripts">

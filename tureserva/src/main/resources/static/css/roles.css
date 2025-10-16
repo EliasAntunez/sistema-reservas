@@ -1,85 +1,100 @@
-/* ===== COLORES POR ROL ===== */
+/* ===== PALETA MODERNA UNIFICADA ===== */
 :root {
-    /* SuperAdmin - Azul Oscuro Profesional */
-    --super-admin-primary: #1e3a8a;
-    --super-admin-secondary: #3730a3;
-    --super-admin-accent: #0ea5e9;
-    --super-admin-light: #e0f2fe;
+    /* Colores principales */
+    --primary-color: #2563eb;
+    --secondary-color: #64748b;
+    --accent-color: #0ea5e9;
     
-    /* AdminComplejo - Verde Esmeralda */
-    --admin-complejo-primary: #047857;
-    --admin-complejo-secondary: #059669;
-    --admin-complejo-accent: #f59e0b;
-    --admin-complejo-light: #ecfdf5;
+    /* Colores de estado */
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
     
-    /* Cliente - Morado Elegante */
-    --cliente-primary: #7c3aed;
-    --cliente-secondary: #8b5cf6;
-    --cliente-accent: #06b6d4;
-    --cliente-light: #f3e8ff;
+    /* Colores de fondo */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-accent: #f1f5f9;
+    --bg-light: #e0f2fe;
+    
+    /* Colores de texto */
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    
+    /* Colores de borde */
+    --border-primary: #e2e8f0;
+    --border-secondary: #cbd5e1;
 }
 
-/* ===== ESTILOS POR ROL ===== */
+/* ===== ESTILOS UNIFICADOS ===== */
 
-/* SuperAdmin */
-.role-super-admin .bg-role {
-    background-color: var(--super-admin-primary) !important;
+/* Fondos principales */
+.bg-role, .bg-primary-unified {
+    background-color: var(--primary-color) !important;
     color: white !important;
 }
 
-.role-super-admin .card-header.bg-role {
-    background-color: var(--super-admin-primary) !important;
+.card-header.bg-role {
+    background-color: var(--primary-color) !important;
+    color: white !important;
 }
 
-.role-super-admin .btn-role {
-    background-color: var(--super-admin-primary);
-    border-color: var(--super-admin-primary);
+/* Botones principales */
+.btn-role, .btn-primary-unified {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
 }
 
-.role-super-admin .btn-role:hover {
-    background-color: var(--super-admin-secondary);
-    border-color: var(--super-admin-secondary);
+.btn-role:hover, .btn-primary-unified:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
 }
 
-.role-super-admin .btn-outline-role {
-    border-color: var(--super-admin-primary);
-    color: var(--super-admin-primary);
+.btn-outline-role, .btn-outline-primary-unified {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: transparent;
 }
 
-.role-super-admin .btn-outline-role:hover {
-    background-color: var(--super-admin-primary);
-    border-color: var(--super-admin-primary);
+.btn-outline-role:hover, .btn-outline-primary-unified:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
 }
 
-.role-super-admin .btn-role-accent {
-    background-color: var(--super-admin-accent);
-    border-color: var(--super-admin-accent);
+/* Botones de acento */
+.btn-role-accent, .btn-accent {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
     color: white;
 }
 
-.role-super-admin .btn-outline-role-accent {
-    border-color: var(--super-admin-accent);
-    color: var(--super-admin-accent);
+.btn-outline-role-accent, .btn-outline-accent {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background-color: transparent;
 }
 
-.role-super-admin .btn-outline-role-accent:hover {
-    background-color: var(--super-admin-accent);
-    border-color: var(--super-admin-accent);
+.btn-outline-role-accent:hover, .btn-outline-accent:hover {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
     color: white;
 }
 
-.role-super-admin .text-role {
-    color: var(--super-admin-primary) !important;
+/* Texto */
+.text-role, .text-primary-unified {
+    color: var(--primary-color) !important;
 }
 
-.role-super-admin .text-role-accent {
-    color: var(--super-admin-accent) !important;
+.text-role-accent, .text-accent {
+    color: var(--accent-color) !important;
 }
 
-.role-super-admin .badge-role {
-    background-color: var(--super-admin-primary) !important;
+/* Badges */
+.badge-role, .badge-primary-unified {
+    background-color: var(--primary-color) !important;
+    color: white !important;
 }
 
 /* AdminComplejo */
@@ -103,129 +118,143 @@
     border-color: var(--admin-complejo-secondary);
 }
 
-.role-admin-complejo .btn-outline-role {
-    border-color: var(--admin-complejo-primary);
-    color: var(--admin-complejo-primary);
-}
-
-.role-admin-complejo .btn-outline-role:hover {
-    background-color: var(--admin-complejo-primary);
-    border-color: var(--admin-complejo-primary);
+/* Botones de estado adicionales */
+.btn-success-unified {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
     color: white;
 }
 
-.role-admin-complejo .btn-role-accent {
-    background-color: var(--admin-complejo-accent);
-    border-color: var(--admin-complejo-accent);
+.btn-warning-unified {
+    background-color: var(--warning-color);
+    border-color: var(--warning-color);
     color: white;
 }
 
-.role-admin-complejo .btn-outline-role-accent {
-    border-color: var(--admin-complejo-accent);
-    color: var(--admin-complejo-accent);
-}
-
-.role-admin-complejo .btn-outline-role-accent:hover {
-    background-color: var(--admin-complejo-accent);
-    border-color: var(--admin-complejo-accent);
+.btn-danger-unified {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
     color: white;
 }
 
-.role-admin-complejo .text-role {
-    color: var(--admin-complejo-primary) !important;
+/* Cards y componentes */
+.card-unified {
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-primary);
 }
 
-.role-admin-complejo .text-role-accent {
-    color: var(--admin-complejo-accent) !important;
+.card-header-unified {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-primary);
+    color: var(--text-primary);
 }
 
-.role-admin-complejo .badge-role {
-    background-color: var(--admin-complejo-primary) !important;
+/* Alertas */
+.alert-primary-unified {
+    background-color: var(--bg-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
 }
 
-/* Cliente */
-.role-cliente .bg-role {
-    background-color: var(--cliente-primary) !important;
-    color: white !important;
+.alert-success-unified {
+    background-color: #f0fdf4;
+    border-color: var(--success-color);
+    color: var(--success-color);
 }
 
-.role-cliente .card-header.bg-role {
-    background-color: var(--cliente-primary) !important;
+.alert-warning-unified {
+    background-color: #fffbeb;
+    border-color: var(--warning-color);
+    color: var(--warning-color);
 }
 
-.role-cliente .btn-role {
-    background-color: var(--cliente-primary);
-    border-color: var(--cliente-primary);
+.alert-danger-unified {
+    background-color: #fef2f2;
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+/* ===== SIDEBAR UNIFICADO ===== */
+.sidebar-brand, .sidebar-brand-unified {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
 }
 
-.role-cliente .btn-role:hover {
-    background-color: var(--cliente-secondary);
-    border-color: var(--cliente-secondary);
+.sidebar-nav-unified {
+    background-color: var(--bg-secondary);
 }
 
-.role-cliente .btn-outline-role {
-    border-color: var(--cliente-primary);
-    color: var(--cliente-primary);
+.nav-link-unified {
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
 }
 
-.role-cliente .btn-outline-role:hover {
-    background-color: var(--cliente-primary);
-    border-color: var(--cliente-primary);
-    color: white;
+.nav-link-unified:hover {
+    color: var(--primary-color);
+    background-color: var(--bg-accent);
 }
 
-.role-cliente .btn-role-accent {
-    background-color: var(--cliente-accent);
-    border-color: var(--cliente-accent);
-    color: white;
+.nav-link-unified.active {
+    color: var(--primary-color);
+    background-color: var(--bg-light);
+    font-weight: 600;
 }
 
-.role-cliente .btn-outline-role-accent {
-    border-color: var(--cliente-accent);
-    color: var(--cliente-accent);
+/* ===== UTILIDADES UNIFICADAS ===== */
+.border-primary-unified {
+    border-color: var(--primary-color) !important;
 }
 
-.role-cliente .btn-outline-role-accent:hover {
-    background-color: var(--cliente-accent);
-    border-color: var(--cliente-accent);
-    color: white;
+.border-secondary-unified {
+    border-color: var(--secondary-color) !important;
 }
 
-.role-cliente .text-role {
-    color: var(--cliente-primary) !important;
+.border-accent-unified {
+    border-color: var(--accent-color) !important;
 }
 
-.role-cliente .text-role-accent {
-    color: var(--cliente-accent) !important;
+.text-muted-unified {
+    color: var(--text-muted) !important;
 }
 
-.role-cliente .badge-role {
-    background-color: var(--cliente-primary) !important;
+.text-secondary-unified {
+    color: var(--text-secondary) !important;
 }
 
-/* ===== SIDEBAR POR ROL ===== */
-.role-super-admin .sidebar-brand {
-    background: linear-gradient(135deg, var(--super-admin-primary), var(--super-admin-secondary));
+/* ===== FORMULARIOS ===== */
+.form-control-unified:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
-.role-admin-complejo .sidebar-brand {
-    background: linear-gradient(135deg, var(--admin-complejo-primary), var(--admin-complejo-secondary));
+.form-select-unified:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
-.role-cliente .sidebar-brand {
-    background: linear-gradient(135deg, var(--cliente-primary), var(--cliente-secondary));
+/* ===== TABLAS ===== */
+.table-unified thead {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
-/* ===== UTILIDADES ===== */
-.border-role-super-admin {
-    border-color: var(--super-admin-primary) !important;
+.table-unified tbody tr:hover {
+    background-color: var(--bg-accent);
 }
 
-.border-role-admin-complejo {
-    border-color: var(--admin-complejo-primary) !important;
+/* ===== BADGES ADICIONALES ===== */
+.badge-success-unified {
+    background-color: var(--success-color) !important;
 }
 
-.border-role-cliente {
-    border-color: var(--cliente-primary) !important;
+.badge-warning-unified {
+    background-color: var(--warning-color) !important;
+}
+
+.badge-danger-unified {
+    background-color: var(--danger-color) !important;
+}
+
+.badge-secondary-unified {
+    background-color: var(--secondary-color) !important;
 }

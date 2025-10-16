@@ -111,6 +111,51 @@ public class ServicioUsuarioUnificado {
     }
     
     /**
+     * Obtiene el rol formateado de manera amigable para mostrar al usuario
+     */
+    public String obtenerRolFormateado(Authentication authentication) {
+        String rolEfectivo = obtenerRolEfectivo(authentication);
+        
+        switch (rolEfectivo) {
+            case "ROLE_SUPER_ADMIN":
+                return "SuperAdmin";
+            case "ROLE_ADMIN_COMPLEJO":
+                return "AdminComplejo";
+            case "ROLE_CLIENTE":
+                return "Cliente";
+            case "ROLE_OAUTH2_TEMPORAL":
+                return "Completar registro";
+            default:
+                // Fallback: remove ROLE_ prefix and capitalize
+                return rolEfectivo.startsWith("ROLE_") 
+                    ? formatearRol(rolEfectivo.substring(5))
+                    : formatearRol(rolEfectivo);
+        }
+    }
+    
+    /**
+     * Método auxiliar para formatear roles personalizados
+     */
+    private String formatearRol(String rol) {
+        if (rol == null || rol.isEmpty()) {
+            return "Usuario";
+        }
+        
+        // Convierte SUPER_ADMIN -> SuperAdmin, ADMIN_COMPLEJO -> AdminComplejo
+        StringBuilder resultado = new StringBuilder();
+        String[] partes = rol.toLowerCase().split("_");
+        
+        for (String parte : partes) {
+            if (!parte.isEmpty()) {
+                resultado.append(Character.toUpperCase(parte.charAt(0)))
+                        .append(parte.substring(1));
+            }
+        }
+        
+        return resultado.toString();
+    }
+    
+    /**
      * Verifica si el usuario OAuth2 necesita completar datos
      */
     public boolean necesitaCompletarDatos(Authentication authentication) {

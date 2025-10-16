@@ -103,14 +103,6 @@
                                 </div>
                             </div>
 
-                            <!-- Información adicional -->
-                            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                <i class="bi bi-calendar-check me-2"></i>
-                                <strong>Fecha de registro:</strong> 
-                                <span th:text="${#temporals.format(superAdmin.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</span>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-
                             <!-- Botones de acción -->
                             <div class="d-flex justify-content-between">
                                 <a href="/super-admin/perfil" class="btn btn-secondary">

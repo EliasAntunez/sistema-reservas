@@ -35,18 +35,12 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                         
-                        <!-- Mensaje de éxito después del logout -->
-                        <div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #00ba7c; background-color: #f0fdf4;">
-                            <span style="color: #00ba7c; font-size: 14px;">Sesión cerrada exitosamente</span>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                        
                         <!-- Mensaje de error OAuth2 -->
                         <div th:if="${param.error == 'oauth2'}" class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 8px; border: 1px solid #ed4956; background-color: #ffeef0;">
                             <span style="color: #ed4956; font-size: 14px;">Error al iniciar sesión con Google</span>
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                        
+
                         <!-- Formulario de login -->
                         <form th:action="@{/login}" method="post">
                             <!-- Campo Email -->
