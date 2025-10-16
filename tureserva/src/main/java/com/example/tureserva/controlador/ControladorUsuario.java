@@ -2,12 +2,14 @@ package com.example.tureserva.controlador;
 
 import com.example.tureserva.modelo.Cliente;
 import com.example.tureserva.servicio.ServicioCliente;
+import com.example.tureserva.servicio.ServicioUsuarioUnificado;
 import com.example.tureserva.utiles.ManejadorMensajes;
 import com.example.tureserva.utiles.UtilesAutenticacion;
 import com.example.tureserva.utiles.ValidadorContrasena;
 import com.example.tureserva.utiles.ValidadorFormulario;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -22,10 +24,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class ControladorUsuario {
     
     private final ServicioCliente servicioCliente;
+    private final ServicioUsuarioUnificado servicioUsuarioUnificado;
     
     // Constructor injection (más moderno que @Autowired)
-    public ControladorUsuario(ServicioCliente servicioCliente) {
+    public ControladorUsuario(ServicioCliente servicioCliente, ServicioUsuarioUnificado servicioUsuarioUnificado) {
         this.servicioCliente = servicioCliente;
+        this.servicioUsuarioUnificado = servicioUsuarioUnificado;
     }
 
     // ===== RUTAS DE INICIO Y NAVEGACIÓN =====
@@ -54,20 +58,22 @@ public class ControladorUsuario {
     // Dashboard (página principal después del login)
     @GetMapping("/dashboard")
     public String dashboard(Authentication authentication) {
-        // Redirigir según el rol del usuario
-        if (authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_SUPER_ADMIN"))) {
-            return "redirect:/super-admin/dashboard";
-        } else if (authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN_COMPLEJO"))) {
-            return "redirect:/admin-complejo/dashboard";
-        } else if (authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_CLIENTE"))) {
-            return "usuarios/dashboard";
+        // Si necesita completar datos, redirigir
+        if (servicioUsuarioUnificado.necesitaCompletarDatos(authentication)) {
+            return "redirect:/completar-datos";
         }
         
-        // Si no tiene rol reconocido, ir al dashboard default
-        return "usuarios/dashboard";
+        // Redirigir según el rol efectivo del usuario
+        String rolEfectivo = servicioUsuarioUnificado.obtenerRolEfectivo(authentication);
+        switch (rolEfectivo) {
+            case "ROLE_SUPER_ADMIN":
+                return "redirect:/super-admin/dashboard";
+            case "ROLE_ADMIN_COMPLEJO":
+                return "redirect:/admin-complejo/dashboard";
+            case "ROLE_CLIENTE":
+            default:
+                return "usuarios/dashboard";
+        }
     }
 
     // ===== RUTAS DE REGISTRO =====
@@ -153,32 +159,55 @@ public class ControladorUsuario {
     // Mostrar perfil del cliente autenticado
     @GetMapping("/perfil")
     public String mostrarPerfil(Authentication authentication, Model model) {
-        String email = authentication.getName(); // Email del usuario logueado
-        Cliente cliente = servicioCliente.obtenerClientePorEmail(email);
+        Cliente cliente = servicioUsuarioUnificado.obtenerCliente(authentication);
         
         if (cliente == null) {
             model.addAttribute("error", "No se pudo cargar el perfil del cliente");
             return "redirect:/dashboard";
         }
         
+        // Verificar si es OAuth2 y necesita completar datos
+        if (servicioUsuarioUnificado.necesitaCompletarDatos(authentication)) {
+            return "redirect:/completar-datos";
+        }
+        
         model.addAttribute("cliente", cliente);
+        model.addAttribute("esOAuth2", servicioUsuarioUnificado.esUsuarioOAuth2(authentication));
         return "usuarios/ver-perfil";
     }
 
     // Mostrar formulario de edición de perfil
     @GetMapping("/perfil/editar")
     public String mostrarFormularioEdicion(Authentication authentication, Model model) {
-        String email = authentication.getName();
+        System.out.println("=== DEBUG EDITAR PERFIL ===");
+        System.out.println("Authentication type: " + authentication.getClass().getSimpleName());
+        
+        String email;
+        
+        // Obtener email según el tipo de autenticación
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
+            email = oauth2Token.getPrincipal().getAttribute("email");
+            System.out.println("Usuario OAuth2 - Email: " + email);
+        } else {
+            email = authentication.getName(); // Email del usuario logueado tradicional
+            System.out.println("Usuario tradicional - Email: " + email);
+        }
+        
         Cliente cliente = servicioCliente.obtenerClientePorEmail(email);
         
         if (cliente == null) {
+            System.out.println("Cliente no encontrado para email: " + email);
             model.addAttribute("error", "No se pudo cargar el perfil del cliente");
             return "redirect:/dashboard";
         }
         
+        System.out.println("Cliente encontrado para edición - DNI: " + cliente.getDni());
+        
         // Limpiar la contraseña para no mostrarla en el formulario
         cliente.setContrasena("");
         model.addAttribute("cliente", cliente);
+        model.addAttribute("esOAuth2", authentication instanceof OAuth2AuthenticationToken);
         return "usuarios/editar-perfil";
     }
 
@@ -191,7 +220,15 @@ public class ControladorUsuario {
             Model model, // Modelo para pasar datos a la vista
             RedirectAttributes redirectAttributes) { // RedirectAttributes para mensajes flash
         
-        String emailActual = authentication.getName(); // Obtenemos el email del usuario logueado
+        // Obtener email según el tipo de autenticación
+        String emailActual;
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
+            emailActual = oauth2Token.getPrincipal().getAttribute("email");
+        } else {
+            emailActual = authentication.getName(); // Email del usuario logueado tradicional
+        }
+        
         Cliente clienteExistente = servicioCliente.obtenerClientePorEmail(emailActual); // Obtenemos el cliente existente en base al email
         
         if (clienteExistente == null) {
@@ -199,22 +236,45 @@ public class ControladorUsuario {
             return "redirect:/perfil";
         }
 
-        // Validaciones completas usando utilidad (incluyendo DNI)
-        ValidadorFormulario.validarCamposCompletosUsuario(
-            clienteFormulario.getNombre(), 
-            clienteFormulario.getApellido(), 
-            clienteFormulario.getEmail(), 
-            clienteFormulario.getDni(),
-            bindingResult
-        );
-
-        // Verificar si el email cambió y si ya existe
-        if (!clienteFormulario.getEmail().equals(emailActual) && 
-            servicioCliente.verificarEmail(clienteFormulario.getEmail())) {
-            bindingResult.rejectValue("email", "error.cliente", ManejadorMensajes.EMAIL_EN_USO);
+        boolean esUsuarioOAuth2 = authentication instanceof OAuth2AuthenticationToken;
+        
+        // Para usuarios OAuth2, proteger campos que no deben cambiar
+        if (esUsuarioOAuth2) {
+            // Restaurar datos originales para campos protegidos
+            clienteFormulario.setEmail(clienteExistente.getEmail()); // Email no cambia
+            clienteFormulario.setNombre(clienteExistente.getNombre()); // Nombre no cambia
+            clienteFormulario.setApellido(clienteExistente.getApellido()); // Apellido no cambia
+            
+            // DNI solo cambia si estaba vacío
+            if (clienteExistente.getDni() != null && !clienteExistente.getDni().isEmpty()) {
+                clienteFormulario.setDni(clienteExistente.getDni());
+            }
         }
 
-        // Verificar si el DNI cambió y si ya existe
+        // Validaciones según el tipo de usuario
+        if (esUsuarioOAuth2) {
+            // Para OAuth2, solo validar teléfono y DNI (si está permitido cambiarlo)
+            if (clienteFormulario.getDni() == null || clienteFormulario.getDni().trim().isEmpty()) {
+                bindingResult.rejectValue("dni", "error.cliente", "El DNI es obligatorio");
+            }
+        } else {
+            // Validaciones completas para usuarios tradicionales
+            ValidadorFormulario.validarCamposCompletosUsuario(
+                clienteFormulario.getNombre(), 
+                clienteFormulario.getApellido(), 
+                clienteFormulario.getEmail(), 
+                clienteFormulario.getDni(),
+                bindingResult
+            );
+            
+            // Verificar si el email cambió y si ya existe
+            if (!clienteFormulario.getEmail().equals(emailActual) && 
+                servicioCliente.verificarEmail(clienteFormulario.getEmail())) {
+                bindingResult.rejectValue("email", "error.cliente", ManejadorMensajes.EMAIL_EN_USO);
+            }
+        }
+
+        // Verificar DNI solo si cambió
         if (!clienteFormulario.getDni().equals(clienteExistente.getDni()) && 
             servicioCliente.verificarDni(clienteFormulario.getDni())) {
             bindingResult.rejectValue("dni", "error.cliente", "El DNI ya está en uso");
@@ -266,14 +326,30 @@ public class ControladorUsuario {
     // Mostrar confirmación de baja
     @GetMapping("/perfil/eliminar")
     public String mostrarConfirmacionBaja(Authentication authentication, Model model) {
-        String email = authentication.getName();
+        System.out.println("=== DEBUG CONFIRMAR BAJA ===");
+        System.out.println("Authentication type: " + authentication.getClass().getSimpleName());
+        
+        String email;
+        
+        // Obtener email según el tipo de autenticación
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
+            email = oauth2Token.getPrincipal().getAttribute("email");
+            System.out.println("Usuario OAuth2 - Email: " + email);
+        } else {
+            email = authentication.getName(); // Email del usuario logueado tradicional
+            System.out.println("Usuario tradicional - Email: " + email);
+        }
+        
         Cliente cliente = servicioCliente.obtenerClientePorEmail(email);
         
         if (cliente == null) {
+            System.out.println("Cliente no encontrado para email: " + email);
             model.addAttribute("error", "No se pudo cargar el perfil del cliente");
             return "redirect:/dashboard";
         }
         
+        System.out.println("Cliente encontrado para baja - DNI: " + cliente.getDni());
         model.addAttribute("cliente", cliente);
         return "usuarios/confirmar-baja";
     }
@@ -281,13 +357,30 @@ public class ControladorUsuario {
     // Procesar baja del cliente
     @PostMapping("/perfil/eliminar")
     public String procesarBajaCliente(Authentication authentication, RedirectAttributes redirectAttributes) {
-        String email = authentication.getName();
+        System.out.println("=== DEBUG PROCESAR BAJA ===");
+        System.out.println("Authentication type: " + authentication.getClass().getSimpleName());
+        
+        String email;
+        
+        // Obtener email según el tipo de autenticación
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            OAuth2AuthenticationToken oauth2Token = (OAuth2AuthenticationToken) authentication;
+            email = oauth2Token.getPrincipal().getAttribute("email");
+            System.out.println("Usuario OAuth2 - Email: " + email);
+        } else {
+            email = authentication.getName(); // Email del usuario logueado tradicional
+            System.out.println("Usuario tradicional - Email: " + email);
+        }
+        
         Cliente cliente = servicioCliente.obtenerClientePorEmail(email);
         
         if (cliente == null) {
+            System.out.println("Cliente no encontrado para email: " + email);
             redirectAttributes.addFlashAttribute("error", "No se pudo encontrar el cliente");
             return "redirect:/perfil";
         }
+        
+        System.out.println("Procediendo a eliminar cliente - ID: " + cliente.getId());
 
         try {
             boolean eliminado = servicioCliente.eliminarCliente(cliente.getId());
@@ -316,7 +409,13 @@ public class ControladorUsuario {
 
     // Mostrar formulario de cambio de contraseña
     @GetMapping("/perfil/cambiar-contrasena")
-    public String mostrarFormularioCambioContrasena() {
+    public String mostrarFormularioCambioContrasena(Authentication authentication, Model model) {
+        // Los usuarios OAuth2 no pueden cambiar contraseña
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            model.addAttribute("error", "Los usuarios que inician sesión con Google no pueden cambiar contraseña desde aquí. Tu contraseña se gestiona a través de tu cuenta de Google.");
+            return "redirect:/perfil";
+        }
+        
         return "usuarios/cambiar-contrasena";
     }
 
@@ -329,7 +428,13 @@ public class ControladorUsuario {
             Authentication authentication,
             RedirectAttributes redirectAttributes) {
         
-        String email = authentication.getName();
+        // Los usuarios OAuth2 no pueden cambiar contraseña
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            redirectAttributes.addFlashAttribute("error", "Los usuarios que inician sesión con Google no pueden cambiar contraseña desde aquí.");
+            return "redirect:/perfil";
+        }
+        
+        String email = authentication.getName(); // Solo usuarios tradicionales llegan hasta aquí
         Cliente cliente = servicioCliente.obtenerClientePorEmail(email);
         
         if (cliente == null) {
@@ -362,6 +467,62 @@ public class ControladorUsuario {
         } catch (Exception e) {
             ManejadorMensajes.agregarMensajeError(redirectAttributes, ManejadorMensajes.ERROR_GENERICO);
             return "redirect:/perfil/cambiar-contrasena";
+        }
+    }
+
+    // ===== RUTAS PARA COMPLETAR DATOS OAUTH2 =====
+
+    // Mostrar formulario para completar datos después de OAuth2
+    @GetMapping("/completar-datos")
+    public String mostrarCompletarDatos(Authentication authentication, Model model) {
+        if (!servicioUsuarioUnificado.esUsuarioOAuth2(authentication)) {
+            return "redirect:/dashboard";
+        }
+
+        Cliente clienteTemp = servicioUsuarioUnificado.crearClienteTemporal(authentication);
+        model.addAttribute("cliente", clienteTemp);
+        return "usuarios/completar-datos";
+    }
+
+    // Procesar formulario de completar datos
+    @PostMapping("/completar-datos")
+    public String procesarCompletarDatos(
+            @RequestParam("dni") String dni,
+            @RequestParam(value = "telefono", required = false) String telefono,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+
+        if (!servicioUsuarioUnificado.esUsuarioOAuth2(authentication)) {
+            return "redirect:/dashboard";
+        }
+
+        // Validaciones
+        if (dni == null || dni.trim().isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "El DNI es obligatorio");
+            return "redirect:/completar-datos";
+        }
+
+        if (servicioCliente.verificarDni(dni.trim().toUpperCase())) {
+            redirectAttributes.addFlashAttribute("error", "El DNI ya está registrado");
+            return "redirect:/completar-datos";
+        }
+
+        String email = servicioUsuarioUnificado.obtenerEmail(authentication);
+        if (servicioCliente.verificarEmail(email)) {
+            redirectAttributes.addFlashAttribute("error", "El email ya está registrado");
+            return "redirect:/completar-datos";
+        }
+
+        try {
+            Cliente nuevoCliente = servicioUsuarioUnificado.crearClienteOAuth2(authentication, dni, telefono);
+            servicioCliente.guardarCliente(nuevoCliente);
+
+            ManejadorMensajes.agregarMensajeExito(redirectAttributes, "¡Registro completado exitosamente!");
+            return "redirect:/dashboard";
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al completar el registro: " + e.getMessage());
+            return "redirect:/completar-datos";
         }
     }
 }

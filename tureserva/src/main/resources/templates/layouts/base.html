@@ -102,8 +102,10 @@
                            id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-person-circle me-2" style="font-size: 1.5rem;"></i>
                             <div class="d-flex flex-column align-items-start">
-                                <span class="fw-bold" sec:authentication="name">usuario@ejemplo.com</span>
-                                <!--<small class="text-light opacity-75" sec:authentication="authorities">ROLE_CLIENTE</small> -->
+                                <span class="fw-bold" th:text="${@servicioUsuarioUnificado.obtenerNombreParaMostrar(#authentication)}">usuario@ejemplo.com</span>
+                                <small class="text-light opacity-75" 
+                                       th:unless="${@servicioUsuarioUnificado.obtenerRolEfectivo(#authentication) == 'ROLE_OAUTH2_TEMPORAL'}"
+                                       th:text="${@servicioUsuarioUnificado.obtenerRolEfectivo(#authentication)}">ROLE_CLIENTE</small>
                             </div>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
