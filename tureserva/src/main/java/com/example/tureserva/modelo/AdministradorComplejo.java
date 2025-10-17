@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Entity
 @Table(name = "administrador_complejo")
@@ -12,8 +13,8 @@ import lombok.Setter;
 @NoArgsConstructor
 public class AdministradorComplejo extends Usuario {
     
-    // Por ahora no necesita campos adicionales
-    // La funcionalidad viene de la herencia de Usuario
+    @OneToMany(mappedBy = "administradorComplejo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ComplejoDeportivo> complejosDeportivos;
     
     /**
      * Constructor con parámetros

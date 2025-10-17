@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Detalles del Complejo Deportivo</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="h3 mb-3">Detalles del Complejo Deportivo</h1>
+
+                    <!-- Breadcrumb -->
+                    <nav aria-label="breadcrumb" class="mb-4">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a th:href="@{/super-admin/dashboard}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a th:href="@{/super-admin/complejos/listar}">Complejos Deportivos</a></li>
+                            <li class="breadcrumb-item active" th:text="${complejo.nombre_complejo}">Complejo</li>
+                        </ol>
+                    </nav>
+
+                    <!-- Alertas -->
+                    <div th:if="${mensajeExito}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <span th:text="${mensajeExito}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${mensajeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <span th:text="${mensajeError}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Información del Complejo -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Información General</h5>
+                            <div class="d-flex gap-2">
+                                <span th:if="${complejo.activo}" class="badge bg-success fs-6">Activo</span>
+                                <span th:unless="${complejo.activo}" class="badge bg-danger fs-6">Inactivo</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Identificación</h6>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="fw-bold" style="width: 30%;">ID:</td>
+                                            <td th:text="${complejo.id_complejo}"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Nombre:</td>
+                                            <td th:text="${complejo.nombre_complejo}"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Dirección:</td>
+                                            <td th:text="${complejo.direccion_complejo}"></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Ubicación Geográfica</h6>
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="fw-bold" style="width: 30%;">País:</td>
+                                            <td>
+                                                <span th:text="${complejo.pais.nombre}"></span>
+                                                <small class="text-muted" th:text="'(ID: ' + ${complejo.pais.id} + ')'"></small>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Provincia:</td>
+                                            <td>
+                                                <span th:text="${complejo.provincia.nombre}"></span>
+                                                <small class="text-muted" th:text="'(ID: ' + ${complejo.provincia.id} + ')'"></small>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Localidad:</td>
+                                            <td>
+                                                <span th:text="${complejo.localidad.nombre}"></span>
+                                                <small class="text-muted" th:text="'(ID: ' + ${complejo.localidad.id} + ')'"></small>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información del Administrador -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Administrador del Complejo</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="fw-bold" style="width: 25%;">Nombre:</td>
+                                            <td th:text="${complejo.administradorComplejo.nombre + ' ' + complejo.administradorComplejo.apellido}"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Email:</td>
+                                            <td>
+                                                <a th:href="'mailto:' + ${complejo.administradorComplejo.email}" 
+                                                   th:text="${complejo.administradorComplejo.email}"></a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">DNI:</td>
+                                            <td th:text="${complejo.administradorComplejo.dni}"></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td class="fw-bold" style="width: 30%;">Fecha Registro:</td>
+                                            <td th:text="${#temporals.format(complejo.administradorComplejo.fecha_registro, 'dd/MM/yyyy HH:mm')}"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold">Estado:</td>
+                                            <td>
+                                                <span th:if="${complejo.administradorComplejo.activo}" class="badge bg-success">Activo</span>
+                                                <span th:unless="${complejo.administradorComplejo.activo}" class="badge bg-danger">Inactivo</span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estadísticas (si las hay) -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Estadísticas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="card border-primary">
+                                        <div class="card-body">
+                                            <h4 class="card-title text-primary">0</h4>
+                                            <p class="card-text">Canchas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-success">
+                                        <div class="card-body">
+                                            <h4 class="card-title text-success">0</h4>
+                                            <p class="card-text">Reservas Activas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-info">
+                                        <div class="card-body">
+                                            <h4 class="card-title text-info">0</h4>
+                                            <p class="card-text">Reservas Este Mes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card border-warning">
+                                        <div class="card-body">
+                                            <h4 class="card-title text-warning">$0</h4>
+                                            <p class="card-text">Ingresos Este Mes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Las estadísticas se mostrarán cuando se implementen las funcionalidades de canchas y reservas.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Acciones</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex gap-2">
+                                <a th:href="@{/super-admin/complejos/listar}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Volver a la Lista
+                                </a>
+                                
+                                <button th:if="${complejo.activo}" 
+                                        type="button" 
+                                        class="btn btn-danger" 
+                                        th:onclick="'confirmarBaja(' + ${complejo.id_complejo} + ', \'' + ${complejo.nombre_complejo} + '\')'">
+                                    <i class="fas fa-times me-2"></i>Dar de Baja
+                                </button>
+                                
+                                <button th:unless="${complejo.activo}" 
+                                        type="button" 
+                                        class="btn btn-success" 
+                                        disabled
+                                        title="Funcionalidad de reactivación no implementada">
+                                    <i class="fas fa-check me-2"></i>Reactivar (Próximamente)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de confirmación para dar de baja -->
+        <div class="modal fade" id="modalConfirmarBaja" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar Baja</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>¿Está seguro de que desea dar de baja el complejo deportivo <strong id="nombreComplejo"></strong>?</p>
+                        <p class="text-warning"><i class="fas fa-exclamation-triangle me-2"></i>Esta acción no se puede deshacer.</p>
+                        <p class="text-muted">El complejo y todas sus canchas quedarán inactivas.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <form id="formBaja" method="post" style="display: inline;">
+                            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                            <button type="submit" class="btn btn-danger">Dar de Baja</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script layout:fragment="scripts">
+        function confirmarBaja(id, nombre) {
+            document.getElementById('nombreComplejo').textContent = nombre;
+            document.getElementById('formBaja').action = '/super-admin/complejos/dar-baja/' + id;
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalConfirmarBaja'));
+            modal.show();
+        }
+    </script>
+</body>
+</html>

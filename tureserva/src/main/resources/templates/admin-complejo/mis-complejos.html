@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Mis Complejos Deportivos</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <h1 class="h3 mb-3">Mis Complejos Deportivos</h1>
+
+                    <!-- Alertas -->
+                    <div th:if="${mensajeExito}" class="alert alert-success alert-dismissible fade show" role="alert">
+                        <span th:text="${mensajeExito}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${mensajeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <span th:text="${mensajeError}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <div th:if="${mensajeInfo}" class="alert alert-info alert-dismissible fade show" role="alert">
+                        <span th:text="${mensajeInfo}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Lista de complejos -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div th:if="${#lists.isEmpty(complejos)}" class="text-center py-5">
+                                <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No tiene complejos deportivos asignados</h5>
+                                <p class="text-muted">Contacte al administrador del sistema para que le asigne complejos.</p>
+                            </div>
+
+                            <div th:if="${not #lists.isEmpty(complejos)}" class="row">
+                                <div th:each="complejo : ${complejos}" class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="card-title mb-0">
+                                                <i class="fas fa-building me-2"></i>
+                                                <span th:text="${complejo.nombre_complejo}"></span>
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <h6 class="text-muted mb-2">
+                                                    <i class="fas fa-map-marker-alt me-2"></i>Ubicación
+                                                </h6>
+                                                <p class="mb-1">
+                                                    <strong>Dirección:</strong>
+                                                    <span th:text="${complejo.direccion_complejo}"></span>
+                                                </p>
+                                                <p class="mb-1">
+                                                    <strong>Localidad:</strong> 
+                                                    <span th:text="${complejo.localidad?.nombre ?: 'N/A'}"></span>
+                                                </p>
+                                                <p class="mb-1">
+                                                    <strong>Provincia:</strong> 
+                                                    <span th:text="${complejo.provincia?.nombre ?: 'N/A'}"></span>
+                                                </p>
+                                                <p class="mb-0">
+                                                    <strong>País:</strong> 
+                                                    <span th:text="${complejo.pais?.nombre ?: 'N/A'}"></span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer">
+                                            <button type="button" 
+                                                    class="btn btn-primary btn-sm w-100" 
+                                                    disabled
+                                                    title="Funcionalidad próximamente disponible">
+                                                <i class="fas fa-cogs me-2"></i>Gestionar Complejo
+                                            </button>
+                                            <small class="text-muted d-block text-center mt-2">
+                                                <i class="fas fa-info-circle me-1"></i>Próximamente: ABM horarios y edición
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
