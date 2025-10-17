@@ -256,7 +256,6 @@ public class ControladorAdministradorComplejo {
             }
 
             model.addAttribute("complejo", complejo);
-            model.addAttribute("mensajeInfo", "Funcionalidad de gestión próximamente disponible");
             
             return "admin-complejo/gestionar";
         } catch (Exception e) {

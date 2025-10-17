@@ -70,15 +70,7 @@
                                             </div>
                                         </div>
                                         <div class="card-footer">
-                                            <button type="button" 
-                                                    class="btn btn-primary btn-sm w-100" 
-                                                    disabled
-                                                    title="Funcionalidad próximamente disponible">
-                                                <i class="fas fa-cogs me-2"></i>Gestionar Complejo
-                                            </button>
-                                            <small class="text-muted d-block text-center mt-2">
-                                                <i class="fas fa-info-circle me-1"></i>Próximamente: ABM horarios y edición
-                                            </small>
+                                            <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo.id_complejo})}" class="btn btn-primary btn-sm w-100">Gestionar Complejo</a>
                                         </div>
                                     </div>
                                 </div>

@@ -18,12 +18,6 @@
                     </div>
 
                     <!-- Alertas -->
-                    <div th:if="${mensajeInfo}" class="alert alert-info alert-dismissible fade show" role="alert">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <span th:text="${mensajeInfo}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-
                     <div th:if="${mensajeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
                         <span th:text="${mensajeError}"></span>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -50,15 +44,6 @@
                                     <p class="mb-2">
                                         <strong>Dirección:</strong> 
                                         <span th:text="${complejo?.direccion_complejo}"></span>
-                                    </p>
-                                    <p class="mb-0">
-                                        <strong>Estado:</strong>
-                                        <span th:if="${complejo?.activo}" class="badge bg-success ms-2">
-                                            <i class="fas fa-check-circle me-1"></i>Activo
-                                        </span>
-                                        <span th:unless="${complejo?.activo}" class="badge bg-danger ms-2">
-                                            <i class="fas fa-times-circle me-1"></i>Inactivo
-                                        </span>
                                     </p>
                                 </div>
                                 <div class="col-md-6">
