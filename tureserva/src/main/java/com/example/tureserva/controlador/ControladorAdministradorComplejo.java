@@ -8,19 +8,26 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.tureserva.servicio.ServicioAdministradorComplejo;
+import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.modelo.AdministradorComplejo;
+import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.utiles.ValidadorFormulario;
 import com.example.tureserva.utiles.ManejadorMensajes;
 import com.example.tureserva.utiles.ValidadorContrasena;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin-complejo")
 public class ControladorAdministradorComplejo {
 
     private final ServicioAdministradorComplejo servicioAdministradorComplejo;
+    private final ServicioComplejoDeportivo servicioComplejoDeportivo;
 
-    public ControladorAdministradorComplejo(ServicioAdministradorComplejo servicioAdministradorComplejo) {
+    public ControladorAdministradorComplejo(ServicioAdministradorComplejo servicioAdministradorComplejo,
+                                          ServicioComplejoDeportivo servicioComplejoDeportivo) {
         this.servicioAdministradorComplejo = servicioAdministradorComplejo;
+        this.servicioComplejoDeportivo = servicioComplejoDeportivo;
     }
 
     // ===== DASHBOARD ADMINISTRADOR COMPLEJO =====
@@ -176,6 +183,86 @@ public class ControladorAdministradorComplejo {
         } catch (Exception e) {
             ManejadorMensajes.agregarMensajeError(model, ManejadorMensajes.ERROR_GENERICO);
             return "admin-complejo/perfil/cambiar-contrasena";
+        }
+    }
+
+    // ===== GESTIÓN DE COMPLEJOS =====
+
+    /**
+     * Redirigir de /admin-complejo a /admin-complejo/mis-complejos
+     */
+    @GetMapping("")
+    public String redirectToMisComplejos() {
+        return "redirect:/admin-complejo/mis-complejos";
+    }
+
+    /**
+     * Mostrar los complejos del administrador logueado
+     */
+    @GetMapping("/mis-complejos")
+    public String misComplejos(Model model, Authentication authentication) {
+        try {
+            // Obtener el email del usuario autenticado
+            String emailUsuario = authentication.getName();
+            
+            // Buscar el administrador por email
+            AdministradorComplejo administrador = servicioAdministradorComplejo.obtenerAdministradorActivoPorEmail(emailUsuario);
+            if (administrador == null) {
+                ManejadorMensajes.agregarMensajeError(model, "No se encontró el administrador de complejo");
+                return "admin-complejo/mis-complejos";
+            }
+
+            // Obtener los complejos del administrador
+            List<ComplejoDeportivo> misComplejos = servicioComplejoDeportivo.obtenerComplejosPorAdministradorYActivoTrue(administrador.getId());
+            
+            System.out.println("DEBUG: Administrador ID: " + administrador.getId() + 
+                             ", Email: " + emailUsuario + 
+                             ", Complejos encontrados: " + misComplejos.size());
+
+            model.addAttribute("administrador", administrador);
+            model.addAttribute("complejos", misComplejos);
+            
+            return "admin-complejo/mis-complejos";
+        } catch (Exception e) {
+            e.printStackTrace();
+            ManejadorMensajes.agregarMensajeError(model, "Error al cargar sus complejos: " + e.getMessage());
+            return "admin-complejo/mis-complejos";
+        }
+    }
+
+    /**
+     * Gestionar complejo específico (proximamente)
+     */
+    @GetMapping("/gestionar/{id}")
+    public String gestionarComplejo(@PathVariable Long id, Model model, Authentication authentication) {
+        try {
+            // Obtener el email del usuario autenticado
+            String emailUsuario = authentication.getName();
+            
+            // Buscar el administrador por email
+            AdministradorComplejo administrador = servicioAdministradorComplejo.obtenerAdministradorActivoPorEmail(emailUsuario);
+            if (administrador == null) {
+                ManejadorMensajes.agregarMensajeError(model, "No se encontró el administrador de complejo");
+                return "redirect:/admin-complejo/mis-complejos";
+            }
+
+            // Verificar que el complejo pertenece al administrador
+            ComplejoDeportivo complejo = servicioComplejoDeportivo.obtenerPorId(id)
+                .orElseThrow(() -> new RuntimeException("Complejo no encontrado"));
+            
+            if (!complejo.getAdministradorComplejo().getId().equals(administrador.getId())) {
+                ManejadorMensajes.agregarMensajeError(model, "No tiene permisos para gestionar este complejo");
+                return "redirect:/admin-complejo/mis-complejos";
+            }
+
+            model.addAttribute("complejo", complejo);
+            model.addAttribute("mensajeInfo", "Funcionalidad de gestión próximamente disponible");
+            
+            return "admin-complejo/gestionar";
+        } catch (Exception e) {
+            e.printStackTrace();
+            ManejadorMensajes.agregarMensajeError(model, "Error al cargar el complejo: " + e.getMessage());
+            return "redirect:/admin-complejo/mis-complejos";
         }
     }
 }

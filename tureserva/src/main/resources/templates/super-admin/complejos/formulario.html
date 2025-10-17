@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Nuevo Complejo Deportivo</title>
+</head>
+<body>
+    <div layout:fragment="content" class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-building"></i>
+                            Crear Nuevo Complejo Deportivo
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Mostrar mensajes de error -->
+                        <div th:if="${mensajeError}" class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span th:text="${mensajeError}"></span>
+                        </div>
+
+                        <form id="formComplejo" th:action="@{/super-admin/complejos/crear}" method="post">
+                            <div class="row">
+                                <!-- Información Básica -->
+                                <div class="col-12 mb-4">
+                                    <h6 class="fw-bold text-primary">Información Básica</h6>
+                                </div>
+
+                                <!-- Nombre del Complejo -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombreComplejo" class="form-label">
+                                        Nombre del Complejo <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="nombreComplejo" 
+                                           name="nombreComplejo" 
+                                           required="required"
+                                           minlength="3"
+                                           maxlength="100"
+                                           placeholder="Ej: Complejo Deportivo Central" />
+                                    <div class="form-text">Nombre identificatorio del complejo</div>
+                                </div>
+
+                                <!-- Administrador -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="administradorId" class="form-label">
+                                        Administrador <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" 
+                                            id="administradorId" 
+                                            name="administradorId" 
+                                            required="required">
+                                        <option value="">Seleccione un administrador</option>
+                                        <option th:each="admin : ${administradores}" 
+                                                th:value="${admin.id}" 
+                                                th:text="${admin.nombre} + ' ' + ${admin.apellido}"></option>
+                                    </select>
+                                    <div class="form-text">Responsable del complejo</div>
+                                </div>
+
+                                <!-- Dirección -->
+                                <div class="col-12 mb-3">
+                                    <label for="direccionComplejo" class="form-label">
+                                        Dirección <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="direccionComplejo" 
+                                           name="direccionComplejo" 
+                                           required="required"
+                                           minlength="5"
+                                           maxlength="200"
+                                           placeholder="Ej: Av. Principal 123" />
+                                    <div class="form-text">Dirección física del complejo</div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <h6 class="fw-bold text-primary">Ubicación</h6>
+                                    <small class="text-muted">Seleccione la localidad</small>
+                                </div>
+                                
+                                <!-- Localidad -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="localidadId" class="form-label">
+                                        Localidad <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" 
+                                            id="localidadId" 
+                                            name="localidadId" 
+                                            required="required">
+                                        <option value="">Seleccione una localidad</option>
+                                        <option th:each="localidad : ${localidades}" 
+                                                th:value="${localidad.id}" 
+                                                th:text="${localidad.nombre}"></option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between">
+                                        <a th:href="@{/super-admin/complejos/listar}" 
+                                           class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left"></i> Volver
+                                        </a>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save"></i> Crear Complejo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script layout:fragment="scripts">
+        // Validación del formulario simplificada
+        document.getElementById('formComplejo').addEventListener('submit', function(e) {
+            const nombreComplejo = document.getElementById('nombreComplejo').value.trim();
+            const direccionComplejo = document.getElementById('direccionComplejo').value.trim();
+            const localidadId = document.getElementById('localidadId').value;
+            const administradorId = document.getElementById('administradorId').value;
+
+            if (!nombreComplejo || !direccionComplejo || !localidadId || !administradorId) {
+                e.preventDefault();
+                alert('Todos los campos marcados con (*) son obligatorios.');
+                return false;
+            }
+
+            if (nombreComplejo.length < 3) {
+                e.preventDefault();
+                alert('El nombre del complejo debe tener al menos 3 caracteres.');
+                return false;
+            }
+
+            if (direccionComplejo.length < 5) {
+                e.preventDefault();
+                alert('La dirección debe tener al menos 5 caracteres.');
+                return false;
+            }
+
+            return true;
+        });
+    </script>
+</body>
+</html>
