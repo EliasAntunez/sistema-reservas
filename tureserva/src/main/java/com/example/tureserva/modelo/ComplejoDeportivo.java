@@ -3,6 +3,7 @@ package com.example.tureserva.modelo;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import java.util.List;
 
 @Entity
 @Table(name = "complejo_deportivo")
@@ -37,4 +38,8 @@ public class ComplejoDeportivo {
     
     @Column(nullable = false)
     private boolean activo = true;
+
+    // Relación uno a muchos con HorarioComplejo
+    @OneToMany(mappedBy = "complejoDeportivo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<HorarioComplejo> horariosComplejo;
 }
