@@ -1,165 +1,267 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/base}">
+      layout:decorate="~{layouts/base}"> 
 <head>
-    <title>Horarios del Complejo</title>
+    <title layout:title-fragment>Horarios del Complejo</title>
+
+    <th:block layout:fragment="css">
+        <style>
+            /* Contenedor principal del contenido */
+            .main-content {
+                padding: 30px 0;
+            }
+
+            /* Grilla Desplazable */
+            .table-container {
+                max-height: 400px; /* Altura máxima antes de scrollear */
+                overflow-y: auto; /* Scroll vertical */
+                overflow-x: hidden; /* Elimina el scroll horizontal en la grilla */
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                margin-bottom: 25px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            }
+
+            /* Estilos de la Tabla */
+            .policy-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 0;
+            }
+
+            .policy-table th {
+                background-color: #007bff;
+                color: white;
+                position: sticky; /* Fija el encabezado */
+                top: 0;
+                z-index: 10;
+            }
+            
+            .policy-table th, .policy-table td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+                white-space: nowrap; 
+            }
+
+            /* Fila Seleccionable y Estado de Selección */
+            .selectable-row {
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+
+            .selectable-row:hover {
+                background-color: #e9f7ff;
+            }
+
+            .selectable-row.selected {
+                background-color: #cce5ff;
+                font-weight: 600;
+                border-left: 5px solid #0056b3; 
+            }
+
+            /* Estilos de Botones de Acción (ABM) */
+            .actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap; 
+                gap: 10px;
+                /* CORRECCIÓN: Agregamos margen inferior para separarlo del footer */
+                margin-bottom: 30px; 
+            }
+            
+            #abm-actions {
+                /* FUERZA LA VISIBILIDAD DE LOS BOTONES DE MODIFICAR/ELIMINAR */
+                display: flex !important; 
+                gap: 10px;
+            }
+            
+            .btn:disabled {
+                cursor: not-allowed;
+                opacity: 0.65;
+            }
+        </style>
+    </th:block>
 </head>
 <body>
-    <div layout:fragment="content">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h1 class="h3 mb-0">
-                            <i class="fas fa-clock me-2"></i>
-                            Horarios de <span th:text="${complejo?.nombre_complejo}"></span>
-                        </h1>
-                        <div>
-                            <a th:href="@{/admin-complejo/horarios/complejo/{id}/nuevo(id=${complejo?.id_complejo})}" 
-                               class="btn btn-primary me-2">
-                                <i class="fas fa-plus me-2"></i>Nuevo Horario
-                            </a>
-                            <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo?.id_complejo})}" 
-                               class="btn btn-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Volver
-                            </a>
-                        </div>
-                    </div>
+    <div layout:fragment="content" class="container">
+        
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+            <h1 class="h2 mb-0 text-primary">
+                <i class="fas fa-clock me-2"></i>
+                Horarios de <span th:text="${complejo?.nombre_complejo}"></span>
+            </h1>
+            <div>
+                <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo?.id_complejo})}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
 
-                    <!-- Alertas -->
-                    <div th:if="${mensajeExito}" class="alert alert-success alert-dismissible fade show" role="alert">
-                        <span th:text="${mensajeExito}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
+        <div th:if="${mensajeExito}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <span th:text="${mensajeExito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${mensajeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <span th:text="${mensajeError}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${mensajeInfo}" class="alert alert-info alert-dismissible fade show" role="alert">
+            <span th:text="${mensajeInfo}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
 
-                    <div th:if="${mensajeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <span th:text="${mensajeError}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar me-2"></i>Horarios de Funcionamiento
+                </h5>
+                <form th:action="@{/admin-complejo/horarios/complejo/{id}/crear-defecto(id=${complejo?.id_complejo})}" 
+                      method="post" style="display: inline;">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <button type="submit" class="btn btn-outline-primary btn-sm" 
+                            th:if="${#lists.isEmpty(horarios)}"
+                            onclick="return confirm('¿Desea crear horarios por defecto?')">
+                        <i class="fas fa-magic me-1"></i>Crear Horarios por Defecto
+                    </button>
+                </form>
+            </div>
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(horarios)}" class="text-center py-5">
+                    <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No hay horarios configurados</h5>
+                    <p class="text-muted">Agregue horarios de funcionamiento para cada día de la semana.</p>
+                </div>
 
-                    <div th:if="${mensajeInfo}" class="alert alert-info alert-dismissible fade show" role="alert">
-                        <span th:text="${mensajeInfo}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-
-                    <!-- Información del complejo -->
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h6 class="text-muted mb-2">
-                                <i class="fas fa-building me-2"></i>Complejo Deportivo
-                            </h6>
-                            <p class="mb-1">
-                                <strong>Nombre:</strong> <span th:text="${complejo?.nombre_complejo}"></span>
-                            </p>
-                            <p class="mb-0">
-                                <strong>Dirección:</strong> <span th:text="${complejo?.direccion_complejo}"></span>
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Lista de horarios -->
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">
-                                <i class="fas fa-calendar me-2"></i>Horarios de Funcionamiento
-                            </h5>
-                            <form th:action="@{/admin-complejo/horarios/complejo/{id}/crear-defecto(id=${complejo?.id_complejo})}" 
-                                  method="post" style="display: inline;">
-                                <button type="submit" class="btn btn-outline-primary btn-sm" 
-                                        th:if="${#lists.isEmpty(horarios)}"
-                                        onclick="return confirm('¿Desea crear horarios por defecto (Lunes a Viernes 8:00-22:00, Sábados y Domingos 9:00-20:00)?')">
-                                    <i class="fas fa-magic me-1"></i>Crear Horarios por Defecto
-                                </button>
-                            </form>
-                        </div>
-                        <div class="card-body">
-                            <div th:if="${#lists.isEmpty(horarios)}" class="text-center py-5">
-                                <i class="fas fa-clock fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">No hay horarios configurados</h5>
-                                <p class="text-muted">Agregue horarios de funcionamiento para cada día de la semana.</p>
-                                <a th:href="@{/admin-complejo/horarios/complejo/{id}/nuevo(id=${complejo?.id_complejo})}" 
-                                   class="btn btn-primary">
-                                    <i class="fas fa-plus me-2"></i>Agregar Primer Horario
-                                </a>
-                            </div>
-
-                            <div th:if="${not #lists.isEmpty(horarios)}">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th><i class="fas fa-calendar-day me-2"></i>Día</th>
-                                                <th><i class="fas fa-clock me-2"></i>Hora Apertura</th>
-                                                <th><i class="fas fa-clock me-2"></i>Hora Cierre</th>
-                                                <th class="text-center"><i class="fas fa-cogs me-2"></i>Acciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr th:each="horario : ${horarios}">
-                                                <td>
-                                                    <span class="badge bg-primary" th:text="${horario.diaSemana}"></span>
-                                                </td>
-                                                <td>
-                                                    <i class="fas fa-clock me-2 text-success"></i>
-                                                    <span th:text="${#temporals.format(horario.horaApertura, 'HH:mm')}"></span>
-                                                </td>
-                                                <td>
-                                                    <i class="fas fa-clock me-2 text-danger"></i>
-                                                    <span th:text="${#temporals.format(horario.horaCierre, 'HH:mm')}"></span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <div class="btn-group" role="group">
-                                                        <a th:href="@{/admin-complejo/horarios/editar/{id}(id=${horario.id})}" 
-                                                           class="btn btn-outline-warning btn-sm" 
-                                                           title="Editar horario">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
-                                                        <form th:action="@{/admin-complejo/horarios/eliminar/{id}(id=${horario.id})}" 
-                                                              method="post" style="display: inline;">
-                                                            <button type="submit" class="btn btn-outline-danger btn-sm" 
-                                                                    title="Eliminar horario"
-                                                                    onclick="return confirm('¿Está seguro de eliminar este horario?')">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <!-- Resumen semanal -->
-                                <div class="mt-4">
-                                    <h6 class="text-muted mb-3">
-                                        <i class="fas fa-chart-bar me-2"></i>Resumen Semanal
-                                    </h6>
-                                    <div class="row">
-                                        <div th:each="dia : ${diasSemana}" class="col-md-4 col-lg-3 mb-2">
-                                            <div class="card border-0 bg-light">
-                                                <div class="card-body p-2 text-center">
-                                                    <small class="text-muted" th:text="${dia}"></small>
-                                                    <br>
-                                                    <span th:if="${horarios.?[diaSemana == dia].size() > 0}"
-                                                          class="text-success small">
-                                                        <i class="fas fa-check-circle me-1"></i>Configurado
-                                                    </span>
-                                                    <span th:unless="${horarios.?[diaSemana == dia].size() > 0}"
-                                                          class="text-muted small">
-                                                        <i class="fas fa-times-circle me-1"></i>Sin configurar
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div th:if="${not #lists.isEmpty(horarios)}" class="table-container">
+                    <table class="policy-table table table-hover table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th><i class="fas fa-calendar-day me-2"></i>Día</th>
+                                <th><i class="fas fa-clock me-2"></i>Apertura</th>
+                                <th><i class="fas fa-clock me-2"></i>Cierre</th>
+                                <th>ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="horario : ${horarios}"
+                                class="selectable-row"
+                                th:data-id="${horario.id}"> 
+                                <td>
+                                    <span class="badge bg-primary" th:text="${horario.diaSemana}"></span>
+                                </td>
+                                <td>
+                                    <i class="fas fa-clock me-2 text-success"></i>
+                                    <span th:text="${#temporals.format(horario.horaApertura, 'HH:mm')}"></span>
+                                </td>
+                                <td>
+                                    <i class="fas fa-clock me-2 text-danger"></i>
+                                    <span th:text="${#temporals.format(horario.horaCierre, 'HH:mm')}"></span>
+                                </td>
+                                <td th:text="${horario.id}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+
+        <div class="actions mt-3 mb-5"> <a th:href="@{/admin-complejo/horarios/complejo/{id}/nuevo(id=${complejo?.id_complejo})}" 
+               class="btn btn-success d-flex align-items-center">
+                <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Horario
+            </a>
+
+            <div id="abm-actions"> 
+                <button id="edit-button" class="btn btn-warning d-flex align-items-center" disabled>
+                    <i class="fas fa-edit me-2"></i>Modificar
+                </button>
+                <button id="delete-button" class="btn btn-danger d-flex align-items-center" disabled>
+                    <i class="fas fa-trash me-2"></i>Eliminar
+                </button>
+            </div>
+        </div>
     </div>
+
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', () => {
+                const rows = document.querySelectorAll('.selectable-row');
+                const editButton = document.getElementById('edit-button');
+                const deleteButton = document.getElementById('delete-button');
+                
+                let selectedHorarioId = null;
+
+                // Obtener el token CSRF de las meta etiquetas añadidas en base.html
+                const csrfToken = document.querySelector('meta[name="_csrf"]').content;
+                const csrfHeaderName = document.querySelector('meta[name="_csrf_header"]').content;
+
+                rows.forEach(row => {
+                    row.addEventListener('click', () => {
+                        const currentId = row.getAttribute('data-id');
+                        
+                        // Lógica de selección/deselección
+                        if (row.classList.contains('selected')) {
+                            row.classList.remove('selected');
+                            selectedHorarioId = null;
+                        } else {
+                            rows.forEach(r => r.classList.remove('selected'));
+                            row.classList.add('selected');
+                            selectedHorarioId = currentId;
+                        }
+
+                        updateABMButtons();
+                    });
+                });
+
+                function updateABMButtons() {
+                    if (selectedHorarioId) {
+                        // HABILITAR botones
+                        editButton.disabled = false;
+                        deleteButton.disabled = false;
+
+                        // 1. Modificar (GET)
+                        editButton.onclick = () => {
+                            window.location.href = `/admin-complejo/horarios/editar/${selectedHorarioId}`;
+                        };
+                        
+                        // 2. Eliminar: CORRECCIÓN para usar POST y evitar el error 405
+                        deleteButton.onclick = () => {
+                            if (confirm(`¿Está seguro de que quiere eliminar el horario ID: ${selectedHorarioId}? Esta acción no se puede deshacer.`)) {
+                                
+                                // Crear un formulario dinámico y enviarlo como POST
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = `/admin-complejo/horarios/eliminar/${selectedHorarioId}`; 
+                                
+                                // Añadir el token CSRF
+                                const csrfInput = document.createElement('input');
+                                csrfInput.setAttribute('type', 'hidden');
+                                csrfInput.setAttribute('name', '_csrf'); // Spring Security espera el nombre del parámetro
+                                csrfInput.setAttribute('value', csrfToken); // Valor del token
+                                
+                                form.appendChild(csrfInput);
+                                
+                                document.body.appendChild(form);
+                                form.submit();
+                            }
+                        };
+
+                    } else {
+                        // DESHABILITAR botones
+                        editButton.disabled = true;
+                        deleteButton.disabled = true;
+                        
+                        editButton.onclick = null;
+                        deleteButton.onclick = null;
+                    }
+                }
+
+                updateABMButtons();
+            });
+        </script>
+    </th:block>
 </body>
 </html>

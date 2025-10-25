@@ -346,6 +346,7 @@ public class ControladorHorarioComplejo {
         }
 
         // Validar que la hora de cierre sea posterior a la de apertura
+/*
         if (horario.getHoraApertura() != null && horario.getHoraCierre() != null) {
             if (!horario.getHoraCierre().isAfter(horario.getHoraApertura())) {
                 bindingResult.rejectValue("horaCierre", "error.horario", 
@@ -353,7 +354,8 @@ public class ControladorHorarioComplejo {
                 esValido = false;
             }
         }
-
+*/
         return esValido;
+
     }
 }
