@@ -6,8 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "super_administradores")
+@Table(name = "super_administrador")
 @PrimaryKeyJoinColumn(name = "usuario_id")
+@DiscriminatorValue("SUPER_ADMIN")
 @Getter @Setter
 @NoArgsConstructor
 public class SuperAdministrador extends Usuario {

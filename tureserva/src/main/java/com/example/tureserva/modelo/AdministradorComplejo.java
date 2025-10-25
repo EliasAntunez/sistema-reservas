@@ -9,6 +9,7 @@ import java.util.List;
 @Entity
 @Table(name = "administrador_complejo")
 @PrimaryKeyJoinColumn(name = "usuario_id")
+@DiscriminatorValue("ADMIN_COMPLEJO")
 @Getter @Setter
 @NoArgsConstructor
 public class AdministradorComplejo extends Usuario {
