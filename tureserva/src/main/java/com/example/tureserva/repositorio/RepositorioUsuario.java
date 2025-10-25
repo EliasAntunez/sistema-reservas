@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import com.example.tureserva.modelo.Usuario;
 
 
@@ -20,4 +22,8 @@ public interface RepositorioUsuario extends JpaRepository<Usuario, Long> {
 
     //existe por email
     boolean existsByEmail(String email);
+    
+    // Consulta optimizada: obtener tipo de usuario por email
+    @Query("SELECT TYPE(u) FROM Usuario u WHERE u.email = :email")
+    Optional<Class<?>> findTipoUsuarioByEmail(@Param("email") String email);
 }

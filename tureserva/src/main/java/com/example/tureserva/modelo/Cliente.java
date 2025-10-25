@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorValue;
 
 // lombok
 import lombok.Getter;
@@ -12,8 +13,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "clientes")
+@Table(name = "cliente")
 @PrimaryKeyJoinColumn(name = "usuario_id")
+@DiscriminatorValue("CLIENTE")
 @Getter @Setter
 @NoArgsConstructor
 public class Cliente extends Usuario {
