@@ -28,53 +28,32 @@ public interface RepositorioHorarioComplejo extends JpaRepository<HorarioComplej
            "WHEN 'SABADO' THEN 6 " +
            "WHEN 'DOMINGO' THEN 7 " +
            "END, h.horaApertura")
-    List<HorarioComplejo> findByComplejoDeportivoOrderByDiaSemana(@Param("complejo") ComplejoDeportivo complejo);
+    List<HorarioComplejo> findByComplejoDeportivo(@Param("complejo") ComplejoDeportivo complejo);
 
     /**
      * Obtener TODOS los horarios de un complejo para un día específico (múltiples rangos)
      */
     @Query("SELECT h FROM HorarioComplejo h WHERE h.complejoDeportivo = :complejo AND h.diaSemana = :dia ORDER BY h.horaApertura")
-    List<HorarioComplejo> findAllByComplejoDeportivoAndDiaSemana(@Param("complejo") ComplejoDeportivo complejo, 
-                                                                @Param("dia") DiaSemana dia);
+    List<HorarioComplejo> findAllByComplejoDeportivoAndDiaSemana(@Param("complejo") ComplejoDeportivo complejo,
+                                                                  @Param("dia") DiaSemana dia);
 
     /**
      * Obtener horario específico de un complejo para un día determinado (primer resultado)
      */
     @Query("SELECT h FROM HorarioComplejo h WHERE h.complejoDeportivo = :complejo AND h.diaSemana = :dia ORDER BY h.horaApertura LIMIT 1")
-    Optional<HorarioComplejo> findByComplejoDeportivoAndDiaSemana(@Param("complejo") ComplejoDeportivo complejo, 
-                                                                  @Param("dia") DiaSemana dia);
+    Optional<HorarioComplejo> findByComplejoDeportivoAndDiaSemana(@Param("complejo") ComplejoDeportivo complejo,
+                                                                   @Param("dia") DiaSemana dia);
 
     /**
      * Verificar si existe un horario para un complejo en un día específico
      */
     @Query("SELECT COUNT(h) > 0 FROM HorarioComplejo h WHERE h.complejoDeportivo = :complejo AND h.diaSemana = :dia")
-    boolean existsByComplejoDeportivoAndDiaSemana(@Param("complejo") ComplejoDeportivo complejo, 
-                                                  @Param("dia") DiaSemana dia);
-
-    /**
-     * Obtener todos los horarios de un complejo por ID ordenados por día y hora
-     */
-    @Query("SELECT h FROM HorarioComplejo h WHERE h.complejoDeportivo.id = :complejoId ORDER BY " +
-           "CASE h.diaSemana " +
-           "WHEN 'LUNES' THEN 1 " +
-           "WHEN 'MARTES' THEN 2 " +
-           "WHEN 'MIERCOLES' THEN 3 " +
-           "WHEN 'JUEVES' THEN 4 " +
-           "WHEN 'VIERNES' THEN 5 " +
-           "WHEN 'SABADO' THEN 6 " +
-           "WHEN 'DOMINGO' THEN 7 " +
-           "END, h.horaApertura")
-    List<HorarioComplejo> findByComplejoDeportivoIdOrderByDiaSemana(@Param("complejoId") Long complejoId);
+    boolean existsByComplejoDeportivoAndDiaSemana(@Param("complejo") ComplejoDeportivo complejo,
+                                                   @Param("dia") DiaSemana dia);
 
     /**
      * Contar horarios configurados para un complejo
      */
     @Query("SELECT COUNT(h) FROM HorarioComplejo h WHERE h.complejoDeportivo = :complejo")
     long countByComplejoDeportivo(@Param("complejo") ComplejoDeportivo complejo);
-
-    /**
-     * Eliminar todos los horarios de un complejo
-     */
-    @Query("DELETE FROM HorarioComplejo h WHERE h.complejoDeportivo = :complejo")
-    void deleteByComplejoDeportivo(@Param("complejo") ComplejoDeportivo complejo);
 }
