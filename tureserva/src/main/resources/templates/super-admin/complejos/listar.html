@@ -62,9 +62,7 @@
                                                 <small class="text-muted" th:text="${complejo.direccion_complejo}"></small>
                                             </td>
                                             <td>
-                                                <span th:text="${complejo.localidad != null ? complejo.localidad.nombre : 'N/A'}"></span>,
-                                                <span th:text="${complejo.provincia != null ? complejo.provincia.nombre : 'N/A'}"></span><br />
-                                                <small class="text-muted" th:text="${complejo.pais != null ? complejo.pais.nombre : 'N/A'}"></small>
+                                                <span th:text="${complejo.localidad != null ? complejo.localidad.nombre : 'N/A'}"></span>
                                             </td>
                                             <td>
                                                 <span th:text="${complejo.administradorComplejo != null ? (complejo.administradorComplejo.nombre + ' ' + complejo.administradorComplejo.apellido) : 'N/A'}"></span><br />

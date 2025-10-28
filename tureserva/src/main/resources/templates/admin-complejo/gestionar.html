@@ -44,13 +44,27 @@
                             <div class="card h-100">
                                 <div class="card-body text-center">
                                     <i class="fas fa-edit fa-3x text-muted mb-3"></i>
-                                    <h5 class="card-title">Editar Datos Básicos</h5>
+                                    <h5 class="card-title">Gestionar Políticas de Seña</h5>
                                     <p class="card-text text-muted">
-                                        Modificar información del complejo
+                                        Crear y modificar las políticas de seña para este complejo
                                     </p>
-                                    <button class="btn btn-primary" disabled>
-                                        <i class="fas fa-edit me-2"></i>Próximamente
-                                    </button>
+                                    <a th:href="@{/admin-complejo/politicas-senia/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary">
+                                        <i class="fas fa-edit me-2"></i>Gestionar Políticas de Seña
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-edit fa-3x text-muted mb-3"></i>
+                                    <h5 class="card-title">Gestionar Políticas de Cancelación</h5>
+                                    <p class="card-text text-muted">
+                                        Crear y modificar las políticas de cancelación para este complejo
+                                    </p>
+                                    <a th:href="@{/admin-complejo/politicas-cancelacion/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary">
+                                        <i class="fas fa-edit me-2"></i>Gestionar Políticas de Cancelación
+                                    </a>
                                 </div>
                             </div>
                         </div>
