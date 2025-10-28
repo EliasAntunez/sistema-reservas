@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "politica_cancelacion",
-    uniqueConstraints = { @UniqueConstraint(name = "uk_nombre_politica_cancelacion", columnNames = {"nombre_politica_cancelacion"}) }
+    uniqueConstraints = { @UniqueConstraint(name = "uk_politica_cancelacion_nombre_complejo", columnNames = {"nombre_politica_cancelacion", "id_complejo"}) }
 )
 @Getter @Setter
 public class PoliticaCancelacion {

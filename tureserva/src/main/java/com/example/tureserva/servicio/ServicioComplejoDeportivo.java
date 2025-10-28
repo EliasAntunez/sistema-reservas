@@ -3,12 +3,8 @@ package com.example.tureserva.servicio;
 import com.example.tureserva.modelo.AdministradorComplejo;
 import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.modelo.Localidad;
-import com.example.tureserva.modelo.Pais;
-import com.example.tureserva.modelo.Provincia;
 import com.example.tureserva.repositorio.RepositorioComplejoDeportivo;
 import com.example.tureserva.repositorio.RepositorioLocalidad;
-import com.example.tureserva.repositorio.RepositorioPais;
-import com.example.tureserva.repositorio.RepositorioProvincia;
 import com.example.tureserva.repositorio.RepositorioAdministradorComplejo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,19 +17,13 @@ import java.util.Optional;
 public class ServicioComplejoDeportivo {
 
     private final RepositorioComplejoDeportivo repositorioComplejoDeportivo;
-    private final RepositorioPais repositorioPais;
-    private final RepositorioProvincia repositorioProvincia;
     private final RepositorioLocalidad repositorioLocalidad;
     private final RepositorioAdministradorComplejo repositorioAdministradorComplejo;
 
     public ServicioComplejoDeportivo(RepositorioComplejoDeportivo repositorioComplejoDeportivo,
-                                   RepositorioPais repositorioPais,
-                                   RepositorioProvincia repositorioProvincia,
                                    RepositorioLocalidad repositorioLocalidad,
                                    RepositorioAdministradorComplejo repositorioAdministradorComplejo) {
         this.repositorioComplejoDeportivo = repositorioComplejoDeportivo;
-        this.repositorioPais = repositorioPais;
-        this.repositorioProvincia = repositorioProvincia;
         this.repositorioLocalidad = repositorioLocalidad;
         this.repositorioAdministradorComplejo = repositorioAdministradorComplejo;
     }
@@ -55,8 +45,7 @@ public class ServicioComplejoDeportivo {
         ComplejoDeportivo complejo = new ComplejoDeportivo();
         complejo.setNombre_complejo(nombreComplejo);
         complejo.setDireccion_complejo(direccion);
-        complejo.setPais(localidad.getProvincia().getPais());
-        complejo.setProvincia(localidad.getProvincia());
+    // Ya no se asignan pais ni provincia, solo localidad
         complejo.setLocalidad(localidad);
         complejo.setAdministradorComplejo(administrador);
         complejo.setActivo(true);
@@ -75,16 +64,7 @@ public class ServicioComplejoDeportivo {
      * Obtener todas las localidades de Misiones, Argentina
      */
     public List<Localidad> obtenerLocalidadesDeMisiones() {
-        // Primero obtenemos Argentina
-        Pais argentina = repositorioPais.findByNombre("Argentina")
-            .orElseThrow(() -> new RuntimeException("País Argentina no encontrado en la base de datos"));
-        
-        // Luego obtenemos Misiones
-        Provincia misiones = repositorioProvincia.findByNombreAndPaisId("Misiones", argentina.getId())
-            .orElseThrow(() -> new RuntimeException("Provincia Misiones no encontrada en la base de datos"));
-        
-        // Retornamos las localidades de Misiones
-        return repositorioLocalidad.findByProvinciaId(misiones.getId());
+        throw new UnsupportedOperationException("Este método ya no es compatible: el complejo solo se relaciona con localidad.");
     }
 
     /**
@@ -122,7 +102,7 @@ public class ServicioComplejoDeportivo {
      * Actualizar complejo
      */
     public ComplejoDeportivo actualizar(Long id, String nombreComplejo, String direccion,
-                                      Long paisId, Long provinciaId, Long localidadId) {
+                                      Long localidadId) {
         ComplejoDeportivo complejo = repositorioComplejoDeportivo.findById(id)
             .orElseThrow(() -> new RuntimeException("Complejo no encontrado"));
 
@@ -131,18 +111,6 @@ public class ServicioComplejoDeportivo {
         complejo.setDireccion_complejo(direccion);
 
         // Actualizar ubicación si cambió
-        if (!complejo.getPais().getId().equals(paisId)) {
-            Pais pais = repositorioPais.findById(paisId)
-                .orElseThrow(() -> new RuntimeException("País no encontrado"));
-            complejo.setPais(pais);
-        }
-
-        if (!complejo.getProvincia().getId().equals(provinciaId)) {
-            Provincia provincia = repositorioProvincia.findById(provinciaId)
-                .orElseThrow(() -> new RuntimeException("Provincia no encontrada"));
-            complejo.setProvincia(provincia);
-        }
-
         if (!complejo.getLocalidad().getId().equals(localidadId)) {
             Localidad localidad = repositorioLocalidad.findById(localidadId)
                 .orElseThrow(() -> new RuntimeException("Localidad no encontrada"));
@@ -155,21 +123,4 @@ public class ServicioComplejoDeportivo {
     /**
      * Obtener todos los países
      */
-    public List<Pais> obtenerPaises() {
-        return repositorioPais.findAll();
-    }
-
-    /**
-     * Obtener provincias por país
-     */
-    public List<Provincia> obtenerProvinciasPorPais(Long paisId) {
-        return repositorioProvincia.findByPaisId(paisId);
-    }
-
-    /**
-     * Obtener localidades por provincia
-     */
-    public List<Localidad> obtenerLocalidadesPorProvincia(Long provinciaId) {
-        return repositorioLocalidad.findByProvinciaId(provinciaId);
-    }
 }

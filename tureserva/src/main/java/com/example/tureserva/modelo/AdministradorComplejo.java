@@ -8,15 +8,14 @@ import java.util.List;
 
 @Entity
 @Table(name = "administrador_complejo")
-@PrimaryKeyJoinColumn(name = "usuario_id")
+@PrimaryKeyJoinColumn(name = "usuario_id", foreignKey = @ForeignKey(name = "fk_admin_complejo_usuario"))
 @DiscriminatorValue("ADMIN_COMPLEJO")
 @Getter @Setter
 @NoArgsConstructor
 public class AdministradorComplejo extends Usuario {
-    
     @OneToMany(mappedBy = "administradorComplejo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ComplejoDeportivo> complejosDeportivos;
-    
+
     /**
      * Constructor con parámetros
      */

@@ -21,7 +21,7 @@ import jakarta.persistence.JoinColumn;
 
 @Entity
 @Table(name = "politica_senia",
-    uniqueConstraints = { @UniqueConstraint(name = "uk_nombre_politica_senia", columnNames = {"nombre_politica_senia"}) }
+    uniqueConstraints = { @UniqueConstraint(name = "uk_politica_senia_nombre_complejo", columnNames = {"nombre_politica_senia", "id_complejo"}) }
 )
 @Getter @Setter
 
