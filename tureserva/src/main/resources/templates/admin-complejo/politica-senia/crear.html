@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}"> 
+<head>
+    <title layout:title-fragment>Crear Política de Seña</title>
+
+    <th:block layout:fragment="css">
+        <style>
+            .form-group label {
+                font-weight: 600;
+            }
+            .main-form-card {
+                padding: 30px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+        </style>
+    </th:block>
+</head>
+
+<div layout:fragment="content" class="container mt-4 mb-5">
+    <!-- Mensajes de error y éxito -->
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+    <div th:if="${exito}" class="alert alert-success" th:text="${exito}"></div>
+    
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card main-form-card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0"><i class="bi bi-plus-circle me-2"></i>Crear Nueva Política de Seña</h2>
+                </div>
+                
+                <div class="card-body">
+                    
+                    <form th:action="@{/admin-complejo/politicas-senia/crear/{complejoId}(complejoId=${complejoId})}" 
+                          method="post">
+                        
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        
+                        <div class="mb-3 form-group">
+                            <label for="nombre" class="form-label">Nombre de la Política:</label>
+                            <input type="text" id="nombre" name="nombre" class="form-control" required
+                                   placeholder="Ej: Política Estándar Verano">
+                        </div>
+                        
+                        <div class="mb-3 form-group">
+                            <label for="porcentajeSenia" class="form-label">Porcentaje de Seña (%):</label>
+                            <input type="number" id="porcentajeSenia" name="porcentajeSenia" class="form-control" 
+                                   min="0" max="100" step="0.01" placeholder="Ej: 20">
+                            <small class="form-text text-muted">Ingresar un valor aquí deshabilita Monto Fijo.</small>
+                        </div>
+                        
+                        <div class="mb-3 form-group">
+                            <label for="montoFijo" class="form-label">Monto Fijo (Opcional):</label>
+                            <input type="number" id="montoFijo" name="montoFijo" class="form-control"
+                                   min="0" step="0.01" placeholder="Ej: 1500 (Dejar vacío si aplica solo porcentaje)">
+                            <small class="form-text text-muted">Ingresar un valor aquí deshabilita Porcentaje de Seña.</small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3 form-group">
+                                <label for="fechaInicioVigencia" class="form-label">Fecha Inicio de Vigencia:</label>
+                                <input type="date" id="fechaInicioVigencia" name="fechaInicioVigencia" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3 form-group">
+                                <label for="fechaFinVigencia" class="form-label">Fecha Fin de Vigencia:</label>
+                                <input type="date" id="fechaFinVigencia" name="fechaFinVigencia" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        
+                        <div class="d-flex justify-content-between">
+                            <a th:href="@{/admin-complejo/politicas-senia/listar/{id}(id=${complejoId})}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Volver al Listado
+                            </a>
+                            <button type="submit" class="btn btn-primary d-flex align-items-center">
+                                <i class="bi bi-floppy me-2"></i>Guardar Política
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const porcentajeInput = document.getElementById('porcentajeSenia');
+            const montoFijoInput = document.getElementById('montoFijo');
+
+            // Función principal para manejar la lógica de deshabilitación
+            function handleExclusion(changedInput, targetInput) {
+                // Si el campo modificado tiene un valor (no vacío o 0)
+                if (changedInput.value && parseFloat(changedInput.value) !== 0) {
+                    // Deshabilita el campo opuesto
+                    targetInput.disabled = true;
+                    // Asegura que no se envíe ningún valor en el campo deshabilitado
+                    targetInput.value = ''; 
+                    
+                } else {
+                    // Si el campo modificado está vacío o es 0, habilita el campo opuesto
+                    targetInput.disabled = false;
+                }
+            }
+
+            // Escuchar cambios en el campo de Porcentaje
+            porcentajeInput.addEventListener('input', function() {
+                handleExclusion(porcentajeInput, montoFijoInput);
+            });
+
+            // Escuchar cambios en el campo de Monto Fijo
+            montoFijoInput.addEventListener('input', function() {
+                handleExclusion(montoFijoInput, porcentajeInput);
+            });
+            
+            // Ejecutar al inicio por si hay valores precargados (ej. en edición)
+            // Se asume que en "Crear" ambos están vacíos, pero es buena práctica.
+            handleExclusion(porcentajeInput, montoFijoInput);
+            handleExclusion(montoFijoInput, porcentajeInput);
+        });
+    </script>
+</th:block>
+</html>
