@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "super_administrador")
-@PrimaryKeyJoinColumn(name = "usuario_id")
+@PrimaryKeyJoinColumn(name = "usuario_id", foreignKey = @ForeignKey(name = "fk_super_admin_usuario"))
 @DiscriminatorValue("SUPER_ADMIN")
 @Getter @Setter
 @NoArgsConstructor

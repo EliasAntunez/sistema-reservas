@@ -6,7 +6,9 @@ import lombok.Setter;
 import java.util.List;
 
 @Entity
-@Table(name = "pais")
+@Table(name = "pais",
+     uniqueConstraints = {@UniqueConstraint(name = "uk_pais_nombre", columnNames = {"nombre"})}
+)
 @Getter @Setter
 public class Pais {
 
