@@ -2,6 +2,7 @@ package com.example.tureserva.controlador;
 
 import java.util.List;
 import org.springframework.security.core.Authentication;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -10,6 +11,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.example.tureserva.servicio.ServicioAdministradorComplejo;
 import com.example.tureserva.servicio.ServicioSuperAdministrador;
+import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.modelo.AdministradorComplejo;
 import com.example.tureserva.modelo.SuperAdministrador;
 import com.example.tureserva.utiles.ValidadorFormulario;
@@ -21,11 +23,13 @@ public class ControladorSuperAdministrador {
 
     private final ServicioAdministradorComplejo servicioAdministradorComplejo;
     private final ServicioSuperAdministrador servicioSuperAdministrador;
+    private final ServicioComplejoDeportivo servicioComplejoDeportivo;
 
     public ControladorSuperAdministrador(ServicioAdministradorComplejo servicioAdministradorComplejo,
-                                        ServicioSuperAdministrador servicioSuperAdministrador) {
+                                        ServicioSuperAdministrador servicioSuperAdministrador, ServicioComplejoDeportivo servicioComplejoDeportivo) {
         this.servicioAdministradorComplejo = servicioAdministradorComplejo;
         this.servicioSuperAdministrador = servicioSuperAdministrador;
+        this.servicioComplejoDeportivo = servicioComplejoDeportivo;
     }
 
     // ===== DASHBOARD SUPER ADMINISTRADOR =====
@@ -202,9 +206,18 @@ public class ControladorSuperAdministrador {
     // ===== GESTIÓN DE ADMINISTRADORES DE COMPLEJO =====
 
     @GetMapping("/administradores-complejo")
-    public String listarAdministradoresComplejo(Model model) {
-        List<AdministradorComplejo> administradores = servicioAdministradorComplejo.obtenerTodosLosAdministradores();
-        model.addAttribute("administradores", administradores);
+    public String listarAdministradoresComplejo(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            Model model,
+            HttpServletRequest request) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<AdministradorComplejo> administradoresPage = servicioAdministradorComplejo.obtenerAdministradoresPaginados(pageable);
+        model.addAttribute("administradoresPage", administradoresPage);
+        String requestedWithHeader = request.getHeader("X-Requested-With");
+        if ("XMLHttpRequest".equals(requestedWithHeader)) {
+            return "super-admin/administradores-complejo/listar :: tabla-administradores";
+        }
         return "super-admin/administradores-complejo/listar";
     }
 
@@ -346,6 +359,23 @@ public class ControladorSuperAdministrador {
             redirectAttributes.addFlashAttribute("error", "Error al cambiar el estado del administrador");
         }
         
+        return "redirect:/super-admin/administradores-complejo";
+    }
+
+    @PostMapping("/administradores-complejo/eliminar/{id}")
+    public String eliminarAdministradorComplejo(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        // Verificar si tiene complejos asociados
+        List<com.example.tureserva.modelo.ComplejoDeportivo> complejos = servicioComplejoDeportivo.obtenerComplejosPorAdministradorYActivoTrue(id);
+        if (complejos != null && !complejos.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "No se puede eliminar el administrador porque tiene complejos asociados. Debe reasignar o dar de baja los complejos primero.");
+            return "redirect:/super-admin/administradores-complejo";
+        }
+        boolean eliminado = servicioAdministradorComplejo.eliminarAdministrador(id);
+        if (eliminado) {
+            redirectAttributes.addFlashAttribute("mensaje", "Administrador eliminado exitosamente.");
+        } else {
+            redirectAttributes.addFlashAttribute("error", "No se pudo eliminar el administrador. Intente nuevamente.");
+        }
         return "redirect:/super-admin/administradores-complejo";
     }
 }

@@ -68,6 +68,20 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-edit fa-3x text-muted mb-3"></i>
+                                    <h5 class="card-title">Gestionar Espacios Reservables</h5>
+                                    <p class="card-text text-muted">
+                                        Crear y modificar los espacios reservables para este complejo
+                                    </p>
+                                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary">
+                                        <i class="fas fa-edit me-2"></i>Gestionar Espacios Reservables
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -8,109 +8,205 @@
     <title>Administradores de Complejo - Super Administrador</title>
 </head>
 
-<div layout:fragment="content">
-    <div class="container mt-4">
-        <!-- Título y botón nuevo -->
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <h2><i class="bi bi-people-fill text-role"></i> Administradores de Complejo</h2>
-                <p class="text-muted">Gestionar administradores de complejos deportivos</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <a href="/super-admin/administradores-complejo/nuevo" class="btn btn-role">
-                    <i class="bi bi-plus-circle"></i> Nuevo Administrador
-                </a>
-                <a href="/super-admin/dashboard" class="btn btn-secondary">
-                    <i class="bi bi-arrow-left"></i> Volver
-                </a>
+<head>
+    <title>Administradores de Complejo - Super Administrador</title>
+    <th:block layout:fragment="css">
+        <style>
+            .main-content { padding: 30px 0; }
+            .table-container { max-height: 400px; overflow-y: auto; overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+            .admin-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+            .admin-table th { background-color: #007bff; color: white; position: sticky; top: 0; z-index: 10; }
+            .admin-table th, .admin-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
+            .selectable-row { cursor: pointer; transition: background-color 0.2s; }
+            .selectable-row:hover { background-color: #e9f7ff; }
+            .selectable-row.selected { background-color: #cce5ff; font-weight: 600; border-left: 5px solid #0056b3; }
+            .actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
+            #abm-actions { display: flex !important; gap: 10px; }
+            .btn:disabled { cursor: not-allowed; opacity: 0.65; }
+        </style>
+    </th:block>
+</head>
+
+<div layout:fragment="content" class="container main-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary fw-bold">Gestión de Administradores de Complejo</h2>
+    </div>
+
+
+    <div id="tabla-administradores-container" th:fragment="tabla-administradores">
+        <div class="table-container">
+            <table class="admin-table table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Apellido</th>
+                        <th>DNI</th>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th>Fecha Registro</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="admin : ${administradoresPage.content}"
+                        class="selectable-row"
+                        th:data-id="${admin.id}">
+                        <td th:text="${admin.id}"></td>
+                        <td th:text="${admin.nombre}"></td>
+                        <td th:text="${admin.apellido}"></td>
+                        <td th:text="${admin.dni}"></td>
+                        <td th:text="${admin.email}"></td>
+                        <td>
+                            <span th:if="${admin.activo}" class="badge bg-success">Activo</span>
+                            <span th:unless="${admin.activo}" class="badge bg-danger">Inactivo</span>
+                        </td>
+                        <td th:text="${#temporals.format(admin.fechaRegistro, 'dd/MM/yyyy HH:mm')}"></td>
+                    </tr>
+                    <tr th:if="${administradoresPage.content.size() == 0}">
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No hay administradores registrados.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Línea de acciones: alta y ABM juntos -->
+        <div class="actions mb-3">
+            <a th:href="@{/super-admin/administradores-complejo/nuevo}" class="btn btn-success d-flex align-items-center me-3">
+                <i class="bi bi-plus-circle me-2"></i>Crear Nuevo Administrador
+            </a>
+            <div id="abm-actions">
+                <button id="ver-button" class="btn btn-info d-flex align-items-center me-2" disabled>
+                    <i class="bi bi-eye me-2"></i>Ver
+                </button>
+                <button id="edit-button" class="btn btn-warning d-flex align-items-center me-2" disabled>
+                    <i class="bi bi-pencil-square me-2"></i>Editar
+                </button>
+                <form id="delete-admin-form" th:action="@{/super-admin/administradores-complejo/eliminar/__ID__}" method="post" style="display:inline;">
+                    <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+                    <button id="delete-button" type="button" class="btn btn-danger d-flex align-items-center" disabled>
+                        <i class="bi bi-trash me-2"></i>Eliminar
+                    </button>
+                </form>
             </div>
         </div>
 
-        <!-- Mensajes de alerta -->
-        <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle"></i>
-            <span th:text="${mensaje}">Mensaje</span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
-        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle"></i>
-            <span th:text="${error}">Error</span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
-        <!-- Tabla de administradores -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-role text-white">
-                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Lista de Administradores</h5>
-            </div>
-            <div class="card-body">
-                <div th:if="${administradores != null and !administradores.empty}">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Apellido</th>
-                                    <th>DNI</th>
-                                    <th>Email</th>
-                                    <th>Estado</th>
-                                    <th>Fecha Registro</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="admin : ${administradores}">
-                                    <td th:text="${admin.id}">1</td>
-                                    <td th:text="${admin.nombre}">Juan</td>
-                                    <td th:text="${admin.apellido}">Pérez</td>
-                                    <td th:text="${admin.dni}">12345678</td>
-                                    <td th:text="${admin.email}">admin@ejemplo.com</td>
-                                    <td>
-                                        <span th:if="${admin.activo}" class="badge bg-success">Activo</span>
-                                        <span th:unless="${admin.activo}" class="badge bg-danger">Inactivo</span>
-                                    </td>
-                                    <td th:text="${#temporals.format(admin.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</td>
-                                    <td class="text-center">
-                                        <!-- Ver -->
-                                        <a th:href="@{/super-admin/administradores-complejo/ver/{id}(id=${admin.id})}" 
-                                           class="btn btn-sm btn-outline-role me-1" title="Ver detalles">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <!-- Editar -->
-                                        <a th:href="@{/super-admin/administradores-complejo/editar/{id}(id=${admin.id})}" 
-                                           class="btn btn-sm btn-outline-role-accent me-1" title="Editar">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <!-- Cambiar estado -->
-                                        <form th:action="@{/super-admin/administradores-complejo/cambiar-estado/{id}(id=${admin.id})}" 
-                                              method="post" style="display: inline;">
-                                            <button type="submit" 
-                                                    th:class="${admin.activo} ? 'btn btn-sm btn-outline-danger' : 'btn btn-sm btn-outline-success'"
-                                                    th:title="${admin.activo} ? 'Desactivar' : 'Activar'"
-                                                    onclick="return confirm('¿Está seguro de cambiar el estado de este administrador?')">
-                                                <i th:class="${admin.activo} ? 'bi bi-toggle-on' : 'bi bi-toggle-off'"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                
-                <!-- Mensaje cuando no hay administradores -->
-                <div th:if="${administradores == null or administradores.empty}" class="text-center py-4">
-                    <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
-                    <h5 class="text-muted mt-3">No hay administradores registrados</h5>
-                    <p class="text-muted">Comience creando el primer administrador de complejo.</p>
-                    <a href="/super-admin/administradores-complejo/nuevo" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Crear Primer Administrador
+        <!-- Paginación Bootstrap -->
+        <nav th:if="${administradoresPage.totalPages > 1}" aria-label="Paginación">
+            <ul class="pagination justify-content-center mt-3">
+                <li class="page-item" th:classappend="${administradoresPage.first} ? 'disabled'">
+                    <a class="page-link" th:href="@{/super-admin/administradores-complejo(page=${administradoresPage.number - 1},size=${administradoresPage.size})}" aria-label="Anterior">
+                        <span aria-hidden="true">&laquo;</span>
                     </a>
-                </div>
-            </div>
-        </div>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, administradoresPage.totalPages - 1)}"
+                    th:classappend="${administradoresPage.number == i} ? 'active'">
+                    <a class="page-link" th:href="@{/super-admin/administradores-complejo(page=${i},size=${administradoresPage.size})}" th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${administradoresPage.last} ? 'disabled'">
+                    <a class="page-link" th:href="@{/super-admin/administradores-complejo(page=${administradoresPage.number + 1},size=${administradoresPage.size})}" aria-label="Siguiente">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
     </div>
 </div>
+
+<th:block layout:fragment="scripts">
+    <script th:inline="javascript">
+        let selectedAdminId = null;
+        function updateABMButtons() {
+            const verButton = document.getElementById('ver-button');
+            const editButton = document.getElementById('edit-button');
+            const deleteButton = document.getElementById('delete-button');
+            if (selectedAdminId) {
+                verButton.disabled = false;
+                editButton.disabled = false;
+                deleteButton.disabled = false;
+                verButton.onclick = () => {
+                    window.location.href = `/super-admin/administradores-complejo/ver/${selectedAdminId}`;
+                };
+                editButton.onclick = () => {
+                    window.location.href = `/super-admin/administradores-complejo/editar/${selectedAdminId}`;
+                };
+                deleteButton.onclick = () => {
+                    if (confirm('¿Está seguro de que quiere eliminar el administrador seleccionado?')) {
+                        const form = document.getElementById('delete-admin-form');
+                        form.action = `/super-admin/administradores-complejo/eliminar/${selectedAdminId}`;
+                        form.submit();
+                    }
+                };
+            } else {
+                verButton.disabled = true;
+                editButton.disabled = true;
+                deleteButton.disabled = true;
+                verButton.onclick = null;
+                editButton.onclick = null;
+                deleteButton.onclick = null;
+            }
+        }
+
+        function initRowSelection() {
+            const rows = document.querySelectorAll('.selectable-row');
+            rows.forEach(row => {
+                row.addEventListener('click', () => {
+                    const currentId = row.getAttribute('data-id');
+                    if (row.classList.contains('selected')) {
+                        row.classList.remove('selected');
+                        selectedAdminId = null;
+                    } else {
+                        rows.forEach(r => r.classList.remove('selected'));
+                        row.classList.add('selected');
+                        selectedAdminId = currentId;
+                    }
+                    updateABMButtons();
+                });
+            });
+        }
+
+        function initPaginationAjax() {
+            const container = document.getElementById('tabla-administradores-container');
+            const links = container.querySelectorAll('.page-link');
+            links.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const url = link.href;
+                    if (link.closest('.page-item').classList.contains('disabled') || !url) {
+                        return;
+                    }
+                    container.classList.add('loading');
+                    fetch(url, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error al cargar la página.');
+                        return response.text();
+                    })
+                    .then(htmlFragment => {
+                        container.innerHTML = htmlFragment;
+                        selectedAdminId = null;
+                        updateABMButtons();
+                        initRowSelection();
+                        initPaginationAjax();
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                    })
+                    .finally(() => {
+                        container.classList.remove('loading');
+                    });
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initRowSelection();
+            updateABMButtons();
+            initPaginationAjax();
+        });
+    </script>
+</th:block>
 </html>
