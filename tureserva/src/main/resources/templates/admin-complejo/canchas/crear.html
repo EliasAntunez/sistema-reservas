@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" 
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:title-fragment>
+        Crear Nueva Cancha
+    </title>
+    
+    <th:block layout:fragment="css">
+        <style>
+            /* Estilo para que el contenedor del formulario no sea demasiado ancho */
+            .form-container {
+                max-width: 800px;
+                margin: 20px auto;
+            }
+        </style>
+    </th:block>
+</head>
+
+<div layout:fragment="content" class="container main-content form-container">
+    
+    <div class="card shadow-sm border-0">
+        
+        <div class="card-header bg-primary text-white p-3">
+            <h2 class="h4 mb-0 d-flex align-items-center">
+                <i th:if="${cancha.id == null}" class="bi bi-plus-circle me-2"></i>
+                <i th:if="${cancha.id != null}" class="bi bi-pencil-square me-2"></i>
+                [[${cancha.id == null ? 'Crear Nueva Cancha' : 'Modificar Cancha'}]]
+            </h2>
+        </div>
+
+        <div class="card-body p-4">
+            <form th:action="@{/admin-complejo/canchas/crear}" th:object="${cancha}" method="post">
+
+                <input type="hidden" name="idComplejo" th:value="${idComplejo}" />
+                <input type="hidden" th:if="${cancha.id != null}" th:field="*{id}" />
+
+                <div class="mb-3">
+                    <label for="nombre" class="form-label fw-bold">Nombre de la Cancha</label>
+                    <input type="text" id="nombre" class="form-control" th:field="*{nombre}" 
+                           placeholder="Ej: Cancha Fútbol 5"
+                           th:classappend="${#fields.hasErrors('nombre')} ? 'is-invalid' : ''"
+                           maxlength="100"
+                           required>
+                    <div th:if="${#fields.hasErrors('nombre')}" th:errors="*{nombre}" class="invalid-feedback"></div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6 mb-3">
+                        <label for="capacidad" class="form-label fw-bold">Capacidad</label>
+                        <input type="number" id="capacidad" class="form-control" th:field="*{capacidad}" 
+                               placeholder="Ej: 10"
+                               th:classappend="${#fields.hasErrors('capacidad')} ? 'is-invalid' : ''"
+                               required>
+                        <div th:if="${#fields.hasErrors('capacidad')}" th:errors="*{capacidad}" class="invalid-feedback"></div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="precioPorHora" class="form-label fw-bold">Precio por Hora ($)</label>
+                        <input type="number" id="precioPorHora" class="form-control" th:field="*{precioPorHora}" 
+                               placeholder="Ej: 150.50" step="0.01"
+                               th:classappend="${#fields.hasErrors('precioPorHora')} ? 'is-invalid' : ''"
+                               required>
+                        <div th:if="${#fields.hasErrors('precioPorHora')}" th:errors="*{precioPorHora}" class="invalid-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6 mb-3">
+                        <label for="tipoPiso" class="form-label fw-bold">Tipo de Piso</label>
+                        
+                        <select id="tipoPiso" class="form-select" th:field="*{tipoPiso}"
+                                th:classappend="${#fields.hasErrors('tipoPiso')} ? 'is-invalid' : ''">
+                            
+                            <option value="" disabled>Seleccione un tipo...</option>
+                            
+                            <option th:each="tipo : ${tipoPiso}" 
+                                    th:value="${tipo}" 
+                                    th:text="${tipo}">
+                            </option>
+                        </select>
+                        
+                        <div th:if="${#fields.hasErrors('tipoPiso')}" th:errors="*{tipoPiso}" class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="col-md-6 mb-3 d-flex align-items-center pt-4">
+                        <div class="form-check form-switch fs-5">
+                            <input class="form-check-input" type="checkbox" role="switch" 
+                                   id="esTechada" th:field="*{esTechada}">
+                            <label class="form-check-label" for="esTechada">¿Es techada?</label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${idComplejo})}" 
+                       class="btn btn-secondary d-flex align-items-center">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                    
+                    <button type="submit" class="btn btn-success d-flex align-items-center">
+                        <i class="bi bi-check-circle me-2"></i>Guardar Cancha
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+</html>

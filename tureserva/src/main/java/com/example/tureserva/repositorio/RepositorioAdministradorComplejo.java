@@ -34,4 +34,5 @@ public interface RepositorioAdministradorComplejo extends JpaRepository<Administ
     
     // Contar AdministradoresComplejo activos
     long countByActivoTrue();
+
 }

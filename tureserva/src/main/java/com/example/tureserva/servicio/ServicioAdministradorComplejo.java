@@ -23,9 +23,34 @@ public class ServicioAdministradorComplejo {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // --- Métodos auxiliares de normalización (ubicados después del constructor) ---
+    private String normalizarNombreApellido(String valor) {
+        if (valor == null || valor.isEmpty()) return valor;
+        String[] palabras = valor.trim().toLowerCase().split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (String palabra : palabras) {
+            if (palabra.length() > 0) {
+                sb.append(Character.toUpperCase(palabra.charAt(0))).append(palabra.substring(1));
+            }
+            sb.append(" ");
+        }
+        return sb.toString().trim();
+    }
+
+    private String normalizarDni(String dni) {
+        if (dni == null) return null;
+        String limpio = dni.replaceAll("[ .-]", "");
+        return limpio.toUpperCase();
+    }
+
     // Obtener todos los AdministradoresComplejo
     public List<AdministradorComplejo> obtenerTodosLosAdministradores() {
         return repositorioAdministradorComplejo.findAll();
+    }
+
+    // Obtener administradores paginados
+    public org.springframework.data.domain.Page<AdministradorComplejo> obtenerAdministradoresPaginados(org.springframework.data.domain.Pageable pageable) {
+        return repositorioAdministradorComplejo.findAll(pageable);
     }
 
     // Obtener AdministradoresComplejo activos
@@ -58,16 +83,16 @@ public class ServicioAdministradorComplejo {
     public AdministradorComplejo guardarAdministrador(AdministradorComplejo admin) {
         // Normalizar datos antes de guardar
         if (admin.getNombre() != null) {
-            admin.setNombre(admin.getNombre().trim().toUpperCase());
+            admin.setNombre(normalizarNombreApellido(admin.getNombre()));
         }
         if (admin.getApellido() != null) {
-            admin.setApellido(admin.getApellido().trim().toUpperCase());
+            admin.setApellido(normalizarNombreApellido(admin.getApellido()));
         }
         if (admin.getEmail() != null) {
             admin.setEmail(admin.getEmail().trim().toLowerCase());
         }
         if (admin.getDni() != null) {
-            admin.setDni(admin.getDni().trim().toUpperCase());
+            admin.setDni(normalizarDni(admin.getDni()));
         }
         
         // Encriptar la contraseña antes de guardar
@@ -94,16 +119,16 @@ public class ServicioAdministradorComplejo {
         if (existente != null) {
             // Normalizar datos antes de actualizar
             if (admin.getNombre() != null) {
-                existente.setNombre(admin.getNombre().trim().toUpperCase());
+                existente.setNombre(normalizarNombreApellido(admin.getNombre()));
             }
             if (admin.getApellido() != null) {
-                existente.setApellido(admin.getApellido().trim().toUpperCase());
+                existente.setApellido(normalizarNombreApellido(admin.getApellido()));
             }
             if (admin.getEmail() != null) {
                 existente.setEmail(admin.getEmail().trim().toLowerCase());
             }
             if (admin.getDni() != null) {
-                existente.setDni(admin.getDni().trim().toUpperCase());
+                existente.setDni(normalizarDni(admin.getDni()));
             }
             
             // Si la contraseña ha cambiado, encriptarla antes de actualizar

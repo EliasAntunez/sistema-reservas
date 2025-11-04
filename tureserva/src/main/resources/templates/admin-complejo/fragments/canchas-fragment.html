@@ -1,0 +1,89 @@
+<div id="lista-canchas-container" th:fragment="contenido-actualizable">
+    <style>
+        /* Scoped styles for the canchas fragment to ensure selection and scrolling work when loaded via AJAX */
+        #lista-canchas-container .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            background: #fff;
+        }
+        #lista-canchas-container .canchas-table th {
+            background-color: #007bff;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        #lista-canchas-container .canchas-table th, #lista-canchas-container .canchas-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            white-space: nowrap;
+        }
+        #lista-canchas-container .selectable-row { cursor: pointer; transition: background-color .15s ease; }
+        #lista-canchas-container .selectable-row:hover { background-color: #f1fbff; }
+        #lista-canchas-container .selectable-row.selected { background-color: #e6f2ff; font-weight: 600; border-left: 4px solid #0d6efd; }
+        #lista-canchas-container .actions .left-actions { min-width: 0; }
+    </style>
+
+    <div class="table-container">
+        <table class="canchas-table table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Capacidad</th>
+                    <th>Precio por Hora</th>
+                    <th>¿Techada?</th>
+                    <th>Tipo de Piso</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="cancha : ${canchasPage.content}"
+                    class="selectable-row"
+                    th:data-id="${cancha.id}">
+                    <td th:text="${cancha.nombre}"></td>
+                    <td th:text="${cancha.capacidad}"></td>
+                    <td th:text="${cancha.precioPorHora}"></td>
+                    <td th:text="${cancha.esTechada} ? 'Sí' : 'No'"></td>
+                    <td th:text="${cancha.tipoPiso}"></td>
+                </tr>
+                <tr th:if="${canchasPage.content.size() == 0}">
+                    <td colspan="5" class="text-center text-muted py-4">No hay canchas registradas para este complejo.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <nav th:if="${canchasPage.totalPages} > 1" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${canchasPage.first} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin-complejo/canchas/listar/{idComplejo}(idComplejo=${idComplejo}, page=${canchasPage.number})}">Anterior</a>
+            </li>
+            <li class="page-item" th:each="i : ${#numbers.sequence(1, canchasPage.totalPages)}" th:classappend="${i == canchasPage.number + 1} ? 'active'">
+                <a class="page-link" th:href="@{/admin-complejo/canchas/listar/{idComplejo}(idComplejo=${idComplejo}, page=${i})}" th:text="${i}"></a>
+            </li>
+            <li class="page-item" th:classappend="${canchasPage.last} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin-complejo/canchas/listar/{idComplejo}(idComplejo=${idComplejo}, page=${canchasPage.number + 2})}">Siguiente</a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="actions mt-3 mb-5 d-flex justify-content-between align-items-center flex-nowrap">
+        <div class="left-actions">
+            <a th:href="@{/admin-complejo/canchas/crear/{id}(id=${idComplejo})}" class="btn btn-success d-flex align-items-center">
+                <i class="bi bi-plus-circle me-2"></i>Crear Cancha
+            </a>
+        </div>
+        <div id="abm-actions" class="d-flex gap-2">
+            <button id="edit-button" class="btn btn-warning d-flex align-items-center" disabled>
+                <i class="bi bi-pencil-square me-2"></i>Modificar
+            </button>
+            <button id="delete-button" class="btn btn-danger d-flex align-items-center" disabled>
+                <i class="bi bi-trash me-2"></i>Eliminar
+            </button>
+        </div>
+    </div>
+</div>

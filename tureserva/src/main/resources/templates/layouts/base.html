@@ -212,23 +212,23 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Auto-cerrar alertas después de 3 segundos -->
+
+    <!-- Auto-cerrar alertas después de 2.5 segundos (más ágil y menos molesto) -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const alerts = document.querySelectorAll('.alert-dismissible');
-            
             alerts.forEach(function(alert) {
                 setTimeout(function() {
                     if (alert && !alert.classList.contains('d-none')) {
-                        const bootstrapAlert = new bootstrap.Alert(alert);
-                        if (bootstrapAlert) {
+                        if (window.bootstrap && window.bootstrap.Alert) {
+                            const bootstrapAlert = new bootstrap.Alert(alert);
                             bootstrapAlert.close();
+                        } else {
+                            alert.style.display = 'none';
                         }
                     }
-                }, 3000);
+                }, 2500); // 2.5 segundos
             });
-
-
         });
     </script>
 

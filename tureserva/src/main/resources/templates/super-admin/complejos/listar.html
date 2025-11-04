@@ -13,14 +13,16 @@
                     <h1 class="h3 mb-3">Gestión de Complejos Deportivos</h1>
 
                     <!-- Alertas -->
-                    <div th:if="${mensajeExito}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <div th:if="${mensajeExito}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i>
                         <span th:text="${mensajeExito}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
 
-                    <div th:if="${mensajeError}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <div th:if="${mensajeError}" class="alert alert-danger-unified alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <span th:text="${mensajeError}"></span>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
 
                     <!-- Botón nuevo complejo -->

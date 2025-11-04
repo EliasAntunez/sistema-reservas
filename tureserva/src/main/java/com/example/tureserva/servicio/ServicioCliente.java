@@ -22,6 +22,26 @@ public class ServicioCliente {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // --- Métodos auxiliares de normalización (ubicados después del constructor) ---
+    private String normalizarNombreApellido(String valor) {
+        if (valor == null || valor.isEmpty()) return valor;
+        String[] palabras = valor.trim().toLowerCase().split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (String palabra : palabras) {
+            if (palabra.length() > 0) {
+                sb.append(Character.toUpperCase(palabra.charAt(0))).append(palabra.substring(1));
+            }
+            sb.append(" ");
+        }
+        return sb.toString().trim();
+    }
+
+    private String normalizarDni(String dni) {
+        if (dni == null) return null;
+        String limpio = dni.replaceAll("[ .-]", "");
+        return limpio.toUpperCase();
+    }
+
     // obtener todos los clientes
     public List<Cliente> obtenerTodosLosClientes() {
         return repositorioCliente.findAll();
@@ -51,13 +71,13 @@ public class ServicioCliente {
     public Cliente guardarCliente(Cliente cliente) {
         // normalizar datos antes de guardar
         if (cliente.getNombre() != null) {
-            cliente.setNombre(cliente.getNombre().trim().toUpperCase());
+            cliente.setNombre(normalizarNombreApellido(cliente.getNombre()));
         }
         if (cliente.getApellido() != null) {
-            cliente.setApellido(cliente.getApellido().trim().toUpperCase());
+            cliente.setApellido(normalizarNombreApellido(cliente.getApellido()));
         }
         if (cliente.getDni() != null) {
-            cliente.setDni(cliente.getDni().trim().toUpperCase());
+            cliente.setDni(normalizarDni(cliente.getDni()));
         }
         
         // encriptar la contraseña antes de guardar
@@ -83,13 +103,13 @@ public class ServicioCliente {
         if (clienteExistente != null) {
             // normalizar datos antes de actualizar
             if (cliente.getNombre() != null) {
-                clienteExistente.setNombre(cliente.getNombre().trim().toUpperCase());
+                clienteExistente.setNombre(normalizarNombreApellido(cliente.getNombre()));
             }
             if (cliente.getApellido() != null) {
-                clienteExistente.setApellido(cliente.getApellido().trim().toUpperCase());
+                clienteExistente.setApellido(normalizarNombreApellido(cliente.getApellido()));
             }
             if (cliente.getDni() != null) {
-                clienteExistente.setDni(cliente.getDni().trim().toUpperCase());
+                clienteExistente.setDni(normalizarDni(cliente.getDni()));
             }
             
             clienteExistente.setEmail(cliente.getEmail());
