@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import jakarta.validation.constraints.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "politica_cancelacion",
@@ -49,4 +51,7 @@ public class PoliticaCancelacion {
     @JoinColumn(name = "id_complejo", nullable = false, foreignKey = @ForeignKey(name = "fk_politica_cancelacion_complejo"))
     @NotNull(message = "El complejo deportivo es obligatorio")
     private ComplejoDeportivo complejoDeportivo;
+
+    @OneToMany(mappedBy = "politicaCancelacion")
+    private List<EspacioReservable> espacios = new ArrayList<>();
 }

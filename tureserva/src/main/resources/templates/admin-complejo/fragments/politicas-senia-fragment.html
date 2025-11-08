@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="politicas-senia-tab">
+    <style>
+        .politica-card {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .politica-card:hover {
+            border-color: #0dcaf0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .politica-card.selected {
+            border-color: #0dcaf0;
+            background-color: #e0f7fa;
+            box-shadow: 0 4px 12px rgba(13,202,240,0.3);
+        }
+        .politica-card input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .politica-badge {
+            font-size: 0.875rem;
+        }
+    </style>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-cash-coin me-2"></i>Asignar Política de Seña
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Selecciona la política de seña que se aplicará para las reservas de este espacio.
+            </p>
+
+            <form th:action="@{/admin-complejo/espacios/gestionar/{id}/politicas-senia/guardar(id=${espacio.id})}" 
+                  method="post" id="form-politica-senia">
+                
+                <div th:if="${politicasDisponibles.isEmpty()}" class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    No hay políticas de seña disponibles. Por favor, crea políticas primero.
+                </div>
+
+                <div th:unless="${politicasDisponibles.isEmpty()}" class="row g-3">
+                    <!-- Tarjeta por cada política -->
+                    <div class="col-12 col-md-6 col-lg-4" th:each="politica : ${politicasDisponibles}">
+                        <div class="politica-card p-3 h-100" 
+                             th:classappend="${politica.id == politicaAsignadaId} ? 'selected' : ''"
+                             th:onclick="'selectPolitica(' + ${politica.id} + ')'">
+                            
+                            <!-- Radio button en la esquina superior -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <input type="radio" 
+                                       name="politicaId" 
+                                       th:id="'politica-' + ${politica.id}"
+                                       th:value="${politica.id}" 
+                                       th:checked="${politica.id == politicaAsignadaId}"
+                                       required>
+                                <span th:if="${politica.activo}" class="badge bg-success politica-badge">
+                                    <i class="bi bi-check-circle-fill"></i> Activa
+                                </span>
+                                <span th:unless="${politica.activo}" class="badge bg-secondary politica-badge">
+                                    <i class="bi bi-dash-circle-fill"></i> Inactiva
+                                </span>
+                            </div>
+
+                            <!-- Nombre de la política -->
+                            <h6 class="fw-bold mb-2" th:text="${politica.nombre}">Nombre Política</h6>
+
+                            <!-- Tipo y valor -->
+                            <div class="mb-2">
+                                <div th:if="${politica.porcentajeSenia != null}" class="d-flex align-items-center">
+                                    <i class="bi bi-percent text-primary me-2"></i>
+                                    <span class="fs-5 fw-bold text-primary" 
+                                          th:text="${politica.porcentajeSenia + '%'}">30%</span>
+                                    <span class="text-muted ms-1">del total</span>
+                                </div>
+                                <div th:if="${politica.montoFijo != null}" class="d-flex align-items-center">
+                                    <i class="bi bi-currency-dollar text-success me-2"></i>
+                                    <span class="fs-5 fw-bold text-success" 
+                                          th:text="'$' + ${#numbers.formatDecimal(politica.montoFijo, 0, 2)}">$500</span>
+                                    <span class="text-muted ms-1">monto fijo</span>
+                                </div>
+                            </div>
+
+                            <!-- Vigencia -->
+                            <div class="small text-muted">
+                                <i class="bi bi-calendar-range me-1"></i>
+                                <span th:text="${#temporals.format(politica.fechaInicioVigencia, 'dd/MM/yyyy')}">01/01/2025</span>
+                                -
+                                <span th:text="${#temporals.format(politica.fechaFinVigencia, 'dd/MM/yyyy')}">31/12/2025</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" 
+                            class="btn btn-primary" 
+                            th:disabled="${politicasDisponibles.isEmpty()}">
+                        <i class="bi bi-save me-2"></i>Guardar Política
+                    </button>
+                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${espacio.complejoDeportivo.id_complejo})}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="card-title">
+                <i class="bi bi-info-circle me-2"></i>Información
+            </h6>
+            <ul class="mb-0">
+                <li>La política de seña se aplicará a todas las reservas de este espacio.</li>
+                <li>Solo puedes asignar políticas activas y vigentes.</li>
+                <li>Puedes cambiar la política en cualquier momento.</li>
+                <li>La misma política puede estar asignada a múltiples espacios.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function selectPolitica(id) {
+            // Marcar el radio button
+            document.getElementById('politica-' + id).checked = true;
+            
+            // Actualizar estilos de las tarjetas
+            document.querySelectorAll('.politica-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+    </script>
+</div>
+
+</html>

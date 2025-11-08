@@ -37,6 +37,7 @@
                     <th>Precio por Hora</th>
                     <th>Metros Cuadrados</th>
                     <th>¿Climatizado?</th>
+                    <th>Estado</th>
                 </tr>
             </thead>
             <tbody>
@@ -48,9 +49,21 @@
                     <td th:text="${salon.precioPorHora}"></td>
                     <td th:text="${salon.metrosCuadrados}"></td>
                     <td th:text="${salon.estaClimatizado} ? 'Sí' : 'No'"></td>
+                    <td>
+                        <span th:if="${estadosConfiguracion[salon.id] == 'completo'}" 
+                              class="badge bg-success"
+                              title="Política de Seña y Política de Cancelación configuradas">
+                            <i class="bi bi-check-circle-fill me-1"></i>Completo
+                        </span>
+                        <span th:if="${estadosConfiguracion[salon.id] == 'incompleto'}" 
+                              class="badge bg-warning text-dark"
+                              title="Falta configurar políticas">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Incompleto
+                        </span>
+                    </td>
                 </tr>
                 <tr th:if="${salonesPage.content.size() == 0}">
-                    <td colspan="5" class="text-center text-muted py-4">No hay salones registrados para este complejo.</td>
+                    <td colspan="6" class="text-center text-muted py-4">No hay salones registrados para este complejo.</td>
                 </tr>
             </tbody>
         </table>
@@ -77,6 +90,9 @@
             </a>
         </div>
         <div id="abm-actions-salones" class="d-flex gap-2">
+            <button id="gestionar-button-salones-fragment" class="btn btn-primary d-flex align-items-center" disabled>
+                <i class="bi bi-gear me-2"></i>Gestionar
+            </button>
             <button id="edit-button-salones-fragment" class="btn btn-warning d-flex align-items-center" disabled>
                 <i class="bi bi-pencil-square me-2"></i>Modificar
             </button>

@@ -38,6 +38,7 @@
                     <th>Precio por Hora</th>
                     <th>¿Techada?</th>
                     <th>Tipo de Piso</th>
+                    <th>Estado</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,9 +50,21 @@
                     <td th:text="${cancha.precioPorHora}"></td>
                     <td th:text="${cancha.esTechada} ? 'Sí' : 'No'"></td>
                     <td th:text="${cancha.tipoPiso}"></td>
+                    <td>
+                        <span th:if="${estadosConfiguracion[cancha.id] == 'completo'}" 
+                              class="badge bg-success"
+                              title="Deportes, Política de Seña y Política de Cancelación configurados">
+                            <i class="bi bi-check-circle-fill me-1"></i>Completo
+                        </span>
+                        <span th:if="${estadosConfiguracion[cancha.id] == 'incompleto'}" 
+                              class="badge bg-warning text-dark"
+                              title="Falta configurar deportes o políticas">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Incompleto
+                        </span>
+                    </td>
                 </tr>
                 <tr th:if="${canchasPage.content.size() == 0}">
-                    <td colspan="5" class="text-center text-muted py-4">No hay canchas registradas para este complejo.</td>
+                    <td colspan="6" class="text-center text-muted py-4">No hay canchas registradas para este complejo.</td>
                 </tr>
             </tbody>
         </table>
@@ -78,6 +91,9 @@
             </a>
         </div>
         <div id="abm-actions" class="d-flex gap-2">
+            <button id="gestionar-button" class="btn btn-primary d-flex align-items-center" disabled>
+                <i class="bi bi-gear me-2"></i>Gestionar
+            </button>
             <button id="edit-button" class="btn btn-warning d-flex align-items-center" disabled>
                 <i class="bi bi-pencil-square me-2"></i>Modificar
             </button>

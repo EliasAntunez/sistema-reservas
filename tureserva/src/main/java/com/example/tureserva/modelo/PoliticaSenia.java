@@ -11,12 +11,15 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.ForeignKey;
 import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import jakarta.persistence.JoinColumn;
 
 @Entity
@@ -60,4 +63,7 @@ public class PoliticaSenia {
     @ManyToOne
     @JoinColumn(name = "id_complejo", nullable = false, foreignKey = @ForeignKey(name = "fk_politica_senia_complejo"))
     private ComplejoDeportivo complejoDeportivo;
+
+    @OneToMany(mappedBy = "politicaSenia")
+    private List<EspacioReservable> espacios = new ArrayList<>();
 }

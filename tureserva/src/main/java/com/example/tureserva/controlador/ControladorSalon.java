@@ -47,7 +47,22 @@ public class ControladorSalon {
 								HttpServletRequest request) {
 
 		org.springframework.data.domain.Page<Salon> salonesPage = servicioSalon.listarSalonesPorComplejoPaginado(idComplejo, page, size);
+		
+		// Generar mapa de estados de configuración para cada salón
+		Map<Long, String> estadosConfiguracion = new HashMap<>();
+		for (Salon salon : salonesPage.getContent()) {
+			boolean tienePoliticaSenia = salon.getPoliticaSenia() != null;
+			boolean tienePoliticaCancelacion = salon.getPoliticaCancelacion() != null;
+			
+			if (tienePoliticaSenia && tienePoliticaCancelacion) {
+				estadosConfiguracion.put(salon.getId(), "completo");
+			} else {
+				estadosConfiguracion.put(salon.getId(), "incompleto");
+			}
+		}
+		
 		model.addAttribute("salonesPage", salonesPage);
+		model.addAttribute("estadosConfiguracion", estadosConfiguracion);
 		model.addAttribute("idComplejo", idComplejo);
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", salonesPage.getTotalPages());

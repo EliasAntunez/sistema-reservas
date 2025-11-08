@@ -44,9 +44,13 @@ public abstract class EspacioReservable {
     @JoinColumn(name = "complejo_id", foreignKey = @ForeignKey(name = "fk_espacio_complejo"), nullable = false)
     private ComplejoDeportivo complejoDeportivo;
 
-    @OneToMany(mappedBy = "espacioReservable", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<EspacioPoliticaSenia> espacioPoliticasSenia;
+    // Relación Many-to-One: Muchos espacios pueden tener la misma política de seña
+    @ManyToOne
+    @JoinColumn(name = "politica_senia_id", foreignKey = @ForeignKey(name = "fk_espacio_politica_senia"))
+    private PoliticaSenia politicaSenia;
 
-    @OneToMany(mappedBy = "espacioReservable", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<EspacioPoliticaCancelacion> espacioPoliticasCancelacion;
+    // Relación Many-to-One: Muchos espacios pueden tener la misma política de cancelación
+    @ManyToOne
+    @JoinColumn(name = "politica_cancelacion_id", foreignKey = @ForeignKey(name = "fk_espacio_politica_cancelacion"))
+    private PoliticaCancelacion politicaCancelacion;
 }
