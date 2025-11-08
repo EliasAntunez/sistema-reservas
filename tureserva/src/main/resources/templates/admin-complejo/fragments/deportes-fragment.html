@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="deportes-tab">
+    <style>
+        .deporte-card {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .deporte-card:hover {
+            border-color: #0dcaf0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .deporte-card.selected {
+            border-color: #0dcaf0;
+            background-color: #e0f7fa;
+            box-shadow: 0 4px 12px rgba(13,202,240,0.3);
+        }
+        .deporte-card input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .deporte-icon {
+            font-size: 2.5rem;
+        }
+    </style>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-trophy me-2"></i>Asignar Deportes
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Selecciona los deportes que se pueden practicar en esta cancha. 
+                Puedes seleccionar múltiples opciones.
+            </p>
+
+            <form th:action="@{/admin-complejo/espacios/gestionar/{id}/deportes/guardar(id=${cancha.id})}" 
+                  method="post" id="form-deportes">
+                
+                <div th:if="${deportesDisponibles.isEmpty()}" class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    No hay deportes disponibles. Por favor, crea deportes primero.
+                </div>
+
+                <div th:unless="${deportesDisponibles.isEmpty()}" class="row g-3">
+                    <!-- Tarjeta por cada deporte -->
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3" th:each="deporte : ${deportesDisponibles}">
+                        <div class="deporte-card p-3 h-100 text-center" 
+                             th:classappend="${deportesAsignados.contains(deporte.id)} ? 'selected' : ''"
+                             th:onclick="'toggleDeporte(' + ${deporte.id} + ')'">
+                            
+                            <!-- Checkbox en la esquina superior -->
+                            <div class="d-flex justify-content-end mb-2">
+                                <input type="checkbox" 
+                                       name="deporteIds" 
+                                       th:value="${deporte.id}" 
+                                       th:id="'deporte-' + ${deporte.id}"
+                                       th:checked="${deportesAsignados.contains(deporte.id)}">
+                            </div>
+
+                            <!-- Icono del deporte -->
+                            <div class="deporte-icon mb-2">
+                                <i class="bi bi-trophy-fill text-success"></i>
+                            </div>
+
+                            <!-- Nombre del deporte -->
+                            <h6 class="fw-bold mb-0" th:text="${deporte.nombre}">Fútbol</h6>
+                            
+                            <!-- Descripción (si existe) -->
+                            <p class="text-muted small mb-0 mt-2" 
+                               th:if="${deporte.descripcion != null && !deporte.descripcion.isEmpty()}"
+                               th:text="${deporte.descripcion}">
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" 
+                            class="btn btn-primary" 
+                            th:disabled="${deportesDisponibles.isEmpty()}">
+                        <i class="bi bi-save me-2"></i>Guardar Deportes
+                    </button>
+                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${cancha.complejoDeportivo.id_complejo})}" 
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="card mt-3">
+        <div class="card-body">
+            <h6 class="card-title">
+                <i class="bi bi-info-circle me-2"></i>Información
+            </h6>
+            <ul class="mb-0">
+                <li>Los deportes seleccionados aparecerán en las opciones de reserva para esta cancha.</li>
+                <li>Puedes seleccionar múltiples deportes.</li>
+                <li>Puedes cambiar la selección en cualquier momento.</li>
+                <li>Si no seleccionas ningún deporte, se eliminarán todas las asignaciones actuales.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function toggleDeporte(id) {
+            // Alternar el checkbox
+            const checkbox = document.getElementById('deporte-' + id);
+            checkbox.checked = !checkbox.checked;
+            
+            // Actualizar estilos de la tarjeta
+            const card = event.currentTarget;
+            if (checkbox.checked) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        }
+    </script>
+</div>
+
+</html>

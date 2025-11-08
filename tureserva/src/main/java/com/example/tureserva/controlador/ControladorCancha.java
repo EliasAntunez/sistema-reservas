@@ -20,6 +20,7 @@ import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.modelo.TipoPiso;
 import com.example.tureserva.servicio.ServicioCancha;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
+import com.example.tureserva.servicio.ServicioCanchaDeporte;
 import java.util.Optional;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,10 +37,14 @@ public class ControladorCancha {
     
     private final ServicioCancha servicioCancha;
     private final ServicioComplejoDeportivo servicioComplejoDeportivo;
+    private final ServicioCanchaDeporte servicioCanchaDeporte;
     
-    public ControladorCancha(ServicioCancha servicioCancha, ServicioComplejoDeportivo servicioComplejoDeportivo) {
+    public ControladorCancha(ServicioCancha servicioCancha, 
+                            ServicioComplejoDeportivo servicioComplejoDeportivo,
+                            ServicioCanchaDeporte servicioCanchaDeporte) {
         this.servicioCancha = servicioCancha;
         this.servicioComplejoDeportivo = servicioComplejoDeportivo;
+        this.servicioCanchaDeporte = servicioCanchaDeporte;
     }
 
     
@@ -56,7 +61,23 @@ public class ControladorCancha {
                                 Model model,
                                 HttpServletRequest request) {
         org.springframework.data.domain.Page<com.example.tureserva.modelo.Cancha> canchasPage = servicioCancha.listarCanchasPorComplejoPaginado(idComplejo, page, size);
+        
+        // Generar mapa de estados de configuración para cada cancha
+        Map<Long, String> estadosConfiguracion = new HashMap<>();
+        for (Cancha cancha : canchasPage.getContent()) {
+            boolean tieneDeportes = servicioCanchaDeporte.canchaTieneDeportes(cancha.getId());
+            boolean tienePoliticaSenia = cancha.getPoliticaSenia() != null;
+            boolean tienePoliticaCancelacion = cancha.getPoliticaCancelacion() != null;
+            
+            if (tieneDeportes && tienePoliticaSenia && tienePoliticaCancelacion) {
+                estadosConfiguracion.put(cancha.getId(), "completo");
+            } else {
+                estadosConfiguracion.put(cancha.getId(), "incompleto");
+            }
+        }
+        
         model.addAttribute("canchasPage", canchasPage);
+        model.addAttribute("estadosConfiguracion", estadosConfiguracion);
         model.addAttribute("idComplejo", idComplejo);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", canchasPage.getTotalPages());

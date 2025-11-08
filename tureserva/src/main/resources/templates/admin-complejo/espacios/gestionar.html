@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" 
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:title-fragment th:text="'Gestionar ' + ${tipoEspacio} + ': ' + ${espacio.nombre}">Gestionar Espacio</title>
+</head>
+
+<div layout:fragment="content" class="container main-content">
+    
+    <!-- Mensajes de éxito/error -->
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    
+    <div th:if="${exito}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${exito}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-primary fw-bold mb-0">
+                <i class="bi bi-gear-fill me-2"></i>
+                <span th:text="'Gestionar ' + ${tipoEspacio}">Gestionar Espacio</span>
+            </h2>
+            <p class="text-muted mb-0" th:text="${espacio.nombre}">Nombre del Espacio</p>
+        </div>
+        <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${idComplejo})}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Volver a lista
+        </a>
+    </div>
+
+    <!-- Tabs de navegación -->
+    <ul class="nav nav-tabs" id="gestionTabs" role="tablist">
+        <!-- Tab Deportes (solo para canchas) -->
+        <li class="nav-item" role="presentation" th:if="${esCancha}">
+            <button class="nav-link" 
+                    th:classappend="${tabActiva == 'deportes'} ? 'active' : ''"
+                    id="deportes-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#deportes-pane" 
+                    type="button" 
+                    role="tab" 
+                    aria-controls="deportes-pane" 
+                    th:attr="aria-selected=${tabActiva == 'deportes'}">
+                <i class="bi bi-trophy me-2"></i>Deportes
+            </button>
+        </li>
+        
+        <!-- Tab Políticas de Seña -->
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" 
+                    th:classappend="${tabActiva == 'politicas-senia'} ? 'active' : ''"
+                    id="politicas-senia-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#politicas-senia-pane" 
+                    type="button" 
+                    role="tab" 
+                    aria-controls="politicas-senia-pane" 
+                    th:attr="aria-selected=${tabActiva == 'politicas-senia'}">
+                <i class="bi bi-cash-coin me-2"></i>Políticas de Seña
+            </button>
+        </li>
+        
+        <!-- Tab Políticas de Cancelación -->
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" 
+                    th:classappend="${tabActiva == 'politicas-cancelacion'} ? 'active' : ''"
+                    id="politicas-cancelacion-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#politicas-cancelacion-pane" 
+                    type="button" 
+                    role="tab" 
+                    aria-controls="politicas-cancelacion-pane" 
+                    th:attr="aria-selected=${tabActiva == 'politicas-cancelacion'}">
+                <i class="bi bi-x-circle me-2"></i>Políticas de Cancelación
+            </button>
+        </li>
+    </ul>
+
+    <!-- Contenido de los tabs -->
+    <div class="tab-content mt-4" id="gestionTabsContent">
+        
+        <!-- Panel Deportes (solo para canchas) -->
+        <div class="tab-pane fade" 
+             th:classappend="${tabActiva == 'deportes'} ? 'show active' : ''"
+             th:if="${esCancha}"
+             id="deportes-pane" 
+             role="tabpanel" 
+             aria-labelledby="deportes-tab">
+            <div id="deportes-content">
+                <!-- El contenido se cargará vía AJAX -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-2">Cargando deportes...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel Políticas de Seña -->
+        <div class="tab-pane fade" 
+             th:classappend="${tabActiva == 'politicas-senia'} ? 'show active' : ''"
+             id="politicas-senia-pane" 
+             role="tabpanel" 
+             aria-labelledby="politicas-senia-tab">
+            <div id="politicas-senia-content">
+                <!-- El contenido se cargará vía AJAX -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-2">Cargando políticas de seña...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel Políticas de Cancelación -->
+        <div class="tab-pane fade" 
+             th:classappend="${tabActiva == 'politicas-cancelacion'} ? 'show active' : ''"
+             id="politicas-cancelacion-pane" 
+             role="tabpanel" 
+             aria-labelledby="politicas-cancelacion-tab">
+            <div id="politicas-cancelacion-content">
+                <!-- El contenido se cargará vía AJAX -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-2">Cargando políticas de cancelación...</p>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+</div>
+
+<th:block layout:fragment="scripts">
+    <script th:inline="javascript">
+        const idEspacio = /*[[${espacio.id}]]*/ 0;
+        const esCancha = /*[[${esCancha}]]*/ false;
+        const tabActiva = /*[[${tabActiva}]]*/ 'deportes';
+
+        // Función para cargar contenido vía AJAX
+        function cargarFragment(url, containerSelector) {
+            const container = document.querySelector(containerSelector);
+            if (!container) return;
+
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error al cargar contenido');
+                return response.text();
+            })
+            .then(html => {
+                container.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Error al cargar el contenido. Por favor, recarga la página.
+                    </div>
+                `;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cargar el contenido del tab activo al inicio
+            if (tabActiva === 'deportes' && esCancha) {
+                cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/deportes`, '#deportes-content');
+            } else if (tabActiva === 'politicas-senia') {
+                cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/politicas-senia`, '#politicas-senia-content');
+            } else if (tabActiva === 'politicas-cancelacion') {
+                cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/politicas-cancelacion`, '#politicas-cancelacion-content');
+            }
+
+            // Lazy loading: cargar contenido cuando se hace clic en un tab
+            const deportesTab = document.getElementById('deportes-tab');
+            const politicasSeniaTab = document.getElementById('politicas-senia-tab');
+            const politicasCancelacionTab = document.getElementById('politicas-cancelacion-tab');
+
+            let deportesCargado = tabActiva === 'deportes';
+            let politicasSelniaCargado = tabActiva === 'politicas-senia';
+            let politicasCancelacionCargado = tabActiva === 'politicas-cancelacion';
+
+            if (deportesTab) {
+                deportesTab.addEventListener('shown.bs.tab', function() {
+                    if (!deportesCargado) {
+                        cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/deportes`, '#deportes-content');
+                        deportesCargado = true;
+                    }
+                });
+            }
+
+            if (politicasSeniaTab) {
+                politicasSeniaTab.addEventListener('shown.bs.tab', function() {
+                    if (!politicasSelniaCargado) {
+                        cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/politicas-senia`, '#politicas-senia-content');
+                        politicasSelniaCargado = true;
+                    }
+                });
+            }
+
+            if (politicasCancelacionTab) {
+                politicasCancelacionTab.addEventListener('shown.bs.tab', function() {
+                    if (!politicasCancelacionCargado) {
+                        cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/politicas-cancelacion`, '#politicas-cancelacion-content');
+                        politicasCancelacionCargado = true;
+                    }
+                });
+            }
+        });
+    </script>
+</th:block>
+
+</html>

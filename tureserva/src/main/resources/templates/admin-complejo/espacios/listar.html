@@ -125,15 +125,30 @@
             const isInSalones = container.closest('#pane-salones') !== null;
             
             // Buscar botones DENTRO del fragmento cargado (no globalmente)
+            let gestionarBtn = null;
             let editBtn = null;
             let deleteBtn = null;
             
             if (isInCanchas) {
+                gestionarBtn = container.querySelector('#gestionar-button');
                 editBtn = container.querySelector('#edit-button');
                 deleteBtn = container.querySelector('#delete-button');
             } else if (isInSalones) {
+                gestionarBtn = container.querySelector('#gestionar-button-salones-fragment');
                 editBtn = container.querySelector('#edit-button-salones-fragment');
                 deleteBtn = container.querySelector('#delete-button-salones-fragment');
+            }
+
+            if (gestionarBtn) {
+                if (selectedId) {
+                    gestionarBtn.disabled = false;
+                    gestionarBtn.onclick = () => {
+                        window.location.href = `/admin-complejo/espacios/gestionar/${selectedId}`;
+                    };
+                } else {
+                    gestionarBtn.disabled = true;
+                    gestionarBtn.onclick = null;
+                }
             }
 
             if (editBtn) {

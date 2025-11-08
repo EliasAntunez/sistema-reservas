@@ -1,10 +1,14 @@
 package com.example.tureserva.modelo;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "cancha_deporte")
+@Getter @Setter @NoArgsConstructor
 public class CanchaDeporte {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
