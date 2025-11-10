@@ -52,6 +52,7 @@ public class ControladorPoliticaSenia {
         if (complejoDeportivo.isPresent()) {
             politicaSenia.setComplejoDeportivo(complejoDeportivo.get());
         }
+        model.addAttribute("nombreComplejo", complejoDeportivo.get().getNombre_complejo());
         model.addAttribute("politicaSenia", politicaSenia);
         return "admin-complejo/politica-senia/crear";
     }

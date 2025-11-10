@@ -51,6 +51,21 @@
                             <i class="bi bi-house-door me-1"></i>Inicio
                         </a>
                     </li>
+
+                    <!-- Menú específico para Administrador de Complejo -->
+                    <li class="nav-item dropdown ms-4" sec:authorize="hasRole('ADMIN_COMPLEJO')">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminComplejoDropdown" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-building me-1"></i>Gestionar Complejos
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" th:href="@{/admin-complejo/mis-complejos}">
+                                    <i class="bi bi-houses me-2"></i>Mis Complejos
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
                     
                     <!-- Menú para CLIENTES -->
                     <li class="nav-item dropdown" sec:authorize="hasRole('CLIENTE')">
@@ -130,7 +145,7 @@
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
                             </div>
-                            
+
                             <!-- Logout (para todos los usuarios autenticados) -->
                             <li>
                                 <form th:action="@{/logout}" method="post" class="d-inline w-100">

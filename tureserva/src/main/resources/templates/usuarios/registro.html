@@ -99,15 +99,22 @@
                                        required>
                             </div>
                             
-                            <!-- Campo Contraseña -->
+                            <!-- Campo Contraseña con botón mostrar/ocultar -->
                             <div class="mb-3">
-                                <input type="password" 
-                                       class="form-control" 
-                                       name="contrasena"
-                                       placeholder="Contraseña"
-                                       style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
-                                       minlength="6"
-                                       required>
+                                <div class="position-relative">
+                                    <input type="password" 
+                                           class="form-control" 
+                                           id="contrasena"
+                                           name="contrasena"
+                                           placeholder="Contraseña"
+                                           style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; padding-right: 44px; font-size: 14px; color: #262626;"
+                                           minlength="6"
+                                           required>
+                                    <button class="btn position-absolute" type="button" id="togglePasswordRegistro" aria-label="Mostrar contraseña"
+                                            style="right: 10px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: #6c757d; padding: 0;">
+                                        <i class="bi bi-eye" style="font-size: 1.05rem;"></i>
+                                    </button>
+                                </div>
                             </div>
                             
                             <!-- Campo Teléfono (opcional) si no es vacío validar formato -->
@@ -138,6 +145,24 @@
                             </p>
                         </form>
                     </div>
+                    <th:block layout:fragment="scripts">
+                        <script th:inline="javascript">
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const toggle = document.getElementById('togglePasswordRegistro');
+                                const input = document.getElementById('contrasena');
+                                if (!toggle || !input) return;
+                                toggle.addEventListener('click', function() {
+                                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                                    input.setAttribute('type', type);
+                                    const icon = this.querySelector('i');
+                                    if (icon) {
+                                        icon.classList.toggle('bi-eye');
+                                        icon.classList.toggle('bi-eye-slash');
+                                    }
+                                });
+                            });
+                        </script>
+                    </th:block>
                 </div>
                 
                 <!-- Enlaces adicionales -->

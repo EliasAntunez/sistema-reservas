@@ -7,7 +7,7 @@
     <title layout:title-fragment>Políticas de Cancelación</title>
     <th:block layout:fragment="css">
         <style>
-            .main-content { padding: 30px 0; }
+            .main-content { padding: 12px 0; }
             .table-container { max-height: 400px; overflow-y: auto; overflow-x: hidden; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
             .policy-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
             .policy-table th { background-color: #007bff; color: white; position: sticky; top: 0; z-index: 10; }
@@ -15,19 +15,36 @@
             .selectable-row { cursor: pointer; transition: background-color 0.2s; }
             .selectable-row:hover { background-color: #e9f7ff; }
             .selectable-row.selected { background-color: #cce5ff; font-weight: 600; border-left: 5px solid #0056b3; }
-            .actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 30px; }
-            #abm-actions { display: flex !important; gap: 10px; }
+            .actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 10px; margin-bottom: 30px; }
+            #abm-actions { display: flex !important; gap: 10px; flex-wrap: nowrap; align-items: center; }
             .btn:disabled { cursor: not-allowed; opacity: 0.65; }
         </style>
     </th:block>
 </head>
 
 <div layout:fragment="content" class="container main-content">
-    <!-- Mensajes de error y éxito -->
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-    <div th:if="${exito}" class="alert alert-success" th:text="${exito}"></div>
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary fw-bold">Gestión de Políticas de Cancelación</h2>
+    <!-- Mensajes de error y éxito (unificados con borde) -->
+    <div th:if="${error}" class="alert alert-danger-unified alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${error}">Error</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${exito}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${exito}">Operación exitosa</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div class="d-flex align-items-start mb-3">
+        <div class="me-3">
+            <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejoId})}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+
+        <h1 class="h2 mb-0 text-primary">
+            <i class="fas fa-file-signature me-2"></i>
+            Gestión de Políticas de Cancelación
+        </h1>
     </div>
 
     <div class="table-container">
@@ -100,6 +117,15 @@
                         selectedPolicyId = currentId;
                     }
                     updateABMButtons();
+                    // Auto-dismiss alerts after 3s (so flash messages no queden fijos)
+                    const alerts = document.querySelectorAll('.alert-dismissible');
+                    if (alerts && alerts.length) {
+                        alerts.forEach(a => {
+                            setTimeout(() => {
+                                try { const bs = bootstrap.Alert.getOrCreateInstance(a); bs.close(); } catch(e) { a.style.display='none'; }
+                            }, 3000);
+                        });
+                    }
                 });
             });
             function updateABMButtons() {

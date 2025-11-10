@@ -159,8 +159,9 @@ public class ControladorCancha {
             servicioCancha.guardarCancha(cancha);
             redirectAttributes.addFlashAttribute("exito", "Cancha creada exitosamente.");
             
-            // Redirigimos a la lista
-            return "redirect:/admin-complejo/canchas/listar/" + idComplejo;
+            // Redirigimos directamente al listado de espacios para que el flash
+            // attribute llegue a la plantilla `admin-complejo/espacios/listar.html`.
+            return "redirect:/admin-complejo/espacios/listar/" + idComplejo;
 
         } catch (DataIntegrityViolationException e) {
             // Manejar error de nombre duplicado (constraint de unicidad)
@@ -183,14 +184,15 @@ public class ControladorCancha {
     @GetMapping("/modificar/{id}")
     public String mostrarFormularioModificar(@PathVariable("id") Long id, Model model, RedirectAttributes redirectAttributes) {
         Optional<Cancha> canchaOpt = servicioCancha.obtenerPorId(id);
-        if (canchaOpt.isPresent()) {
+        Long idComplejo = canchaOpt.get().getComplejoDeportivo().getId_complejo();
+        if (canchaOpt.isPresent() && canchaOpt.get().getActivo()) {
             model.addAttribute("cancha", canchaOpt.get());
             model.addAttribute("tipoPiso", TipoPiso.values());
             model.addAttribute("idComplejo", canchaOpt.get().getComplejoDeportivo().getId_complejo());
             return "admin-complejo/canchas/modificar";
         } else {
             redirectAttributes.addFlashAttribute("error", "Cancha no encontrada.");
-            return "redirect:/admin-complejo/canchas/listar";
+            return "redirect:/admin-complejo/espacios/listar/" + idComplejo;
         }
     }
 
@@ -232,8 +234,9 @@ public class ControladorCancha {
             cancha.setComplejoDeportivo(complejoDeportivo);
             servicioCancha.actualizarCancha(cancha);
             redirectAttributes.addFlashAttribute("exito", "Cancha actualizada exitosamente.");
-            
-            return "redirect:/admin-complejo/canchas/listar/" + idComplejo;
+
+            // Redirigir al listado de espacios para que el mensaje se muestre
+            return "redirect:/admin-complejo/espacios/listar/" + idComplejo;
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error al actualizar la cancha: " + e.getMessage());
             return "redirect:/admin-complejo/canchas/modificar/" + cancha.getId();
