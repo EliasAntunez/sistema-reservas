@@ -50,6 +50,7 @@ public class ControladorPoliticaCancelacion {
             redirectAttributes.addFlashAttribute("error", "No se encontró el complejo deportivo.");
             return "redirect:/admin-complejo/politicas-cancelacion/listar";
         }
+        model.addAttribute("nombreComplejo", complejoDeportivo.get().getNombre_complejo());
         model.addAttribute("politicaCancelacion", politicaCancelacion);
         return "admin-complejo/politica-cancelacion/crear";
     }

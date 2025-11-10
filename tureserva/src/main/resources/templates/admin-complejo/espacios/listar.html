@@ -5,19 +5,42 @@
 </head>
 
 <div layout:fragment="content" class="container main-content">
-    <div th:if="${error}" class="alert alert-danger-unified alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <span th:text="${error}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <div th:if="${exito}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        <span th:text="${exito}"></span>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <!-- Contenedor para mensajes flash (usado por showFlash y por mensajes del servidor) -->
+    <div id="alert-container">
+        <div th:if="${error}" class="alert alert-danger-unified alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${exito}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${exito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <!-- Compatibilidad: algunos controladores usan 'mensaje' o 'mensajeExito' como clave -->
+        <div th:if="${mensaje}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${mensaje}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <div th:if="${mensajeExito}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${mensajeExito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary fw-bold">Gestión de Espacios</h2>
+    <div class="d-flex align-items-start mb-3 mt-4">
+        <div class="me-3">
+            <a th:href="@{/admin-complejo/gestionar/{id}(id=${idComplejo})}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+
+        <h1 class="h2 mb-0 text-primary">
+            <i class="fas fa-door-open me-2"></i>
+            Gestión de Espacios
+        </h1>
     </div>
 
     <ul class="nav nav-tabs" id="tabs-espacios" role="tablist">
@@ -84,6 +107,32 @@
             // Selección de filas
             const rows = container.querySelectorAll('.selectable-row');
             let selectedId = null;
+            // Auto-dismiss any alerts inside the loaded fragment (useful for AJAX-loaded fragments)
+            try {
+                const fragmentAlerts = container.querySelectorAll('.alert-dismissible');
+                fragmentAlerts.forEach(alertEl => {
+                    // ensure close button exists
+                    if (!alertEl.querySelector('.btn-close')) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'btn-close';
+                        btn.setAttribute('data-bs-dismiss', 'alert');
+                        btn.setAttribute('aria-label', 'Close');
+                        alertEl.appendChild(btn);
+                    }
+                    // auto close after 3s
+                    setTimeout(() => {
+                        try {
+                            if (window.bootstrap && bootstrap.Alert) {
+                                const bsAlert = bootstrap.Alert.getOrCreateInstance(alertEl);
+                                bsAlert.close();
+                            } else {
+                                alertEl.style.display = 'none';
+                            }
+                        } catch (e) { /* ignore */ }
+                    }, 3000);
+                });
+            } catch (e) { /* ignore */ }
             rows.forEach(row => {
                 row.addEventListener('click', () => {
                     if (row.classList.contains('selected')) {
@@ -205,10 +254,27 @@
             const container = document.getElementById('alert-container');
             if (!container) return;
             const div = document.createElement('div');
-            div.className = `alert alert-${type} alert-dismissible fade show`;
-            div.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-            container.appendChild(div);
-            setTimeout(() => { try { div.classList.remove('show'); div.classList.add('hide'); } catch(e){} }, 5000);
+                // Mapear tipos a las clases unificadas usadas por las plantillas
+                const unifiedClass = type === 'success' ? 'alert-success-unified' : (type === 'danger' ? 'alert-danger-unified' : `alert-${type}`);
+                div.className = `alert ${unifiedClass} alert-dismissible fade show`;
+                // Añadir un icono representativo según el tipo
+                const icon = type === 'success' ? '<i class="bi bi-check-circle-fill me-2"></i>' : (type === 'danger' ? '<i class="bi bi-exclamation-triangle-fill me-2"></i>' : '');
+                div.innerHTML = `${icon}${message} <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+                container.appendChild(div);
+                // Auto-cerrar: usar Bootstrap si está disponible para que elimine el nodo y no deje hueco
+                setTimeout(() => {
+                    try {
+                        if (window.bootstrap && bootstrap.Alert) {
+                            const bsAlert = bootstrap.Alert.getOrCreateInstance(div);
+                            bsAlert.close(); // esto remueve el elemento del DOM
+                        } else {
+                            // Fallback: eliminar el nodo directamente
+                            if (div && div.parentNode) div.parentNode.removeChild(div);
+                        }
+                    } catch (e) {
+                        try { if (div && div.parentNode) div.parentNode.removeChild(div); } catch(_) {}
+                    }
+                }, 3000);
         }
 
         document.addEventListener('DOMContentLoaded', () => {

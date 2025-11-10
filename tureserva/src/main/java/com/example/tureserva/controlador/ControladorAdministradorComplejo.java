@@ -11,6 +11,7 @@ import com.example.tureserva.servicio.ServicioAdministradorComplejo;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.modelo.AdministradorComplejo;
 import com.example.tureserva.modelo.ComplejoDeportivo;
+import com.example.tureserva.modelo.Usuario;
 import com.example.tureserva.utiles.ValidadorFormulario;
 import com.example.tureserva.utiles.ManejadorMensajes;
 import com.example.tureserva.utiles.ValidadorContrasena;
@@ -36,12 +37,12 @@ public class ControladorAdministradorComplejo {
     public String dashboard(Authentication authentication, Model model) {
         String email = authentication.getName();
         AdministradorComplejo adminComplejo = servicioAdministradorComplejo.obtenerAdministradorActivoPorEmail(email);
-        
+        Usuario usuario = (Usuario) adminComplejo;
         if (adminComplejo == null) {
             ManejadorMensajes.agregarMensajeError(model, "No se pudo cargar el perfil del Administrador de Complejo");
             return "redirect:/login";
         }
-
+        model.addAttribute("usuario", usuario);
         model.addAttribute("adminComplejo", adminComplejo);
 
         return "admin-complejo/dashboard";

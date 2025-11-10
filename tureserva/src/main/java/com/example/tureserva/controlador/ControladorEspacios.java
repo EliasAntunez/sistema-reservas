@@ -71,11 +71,10 @@ public class ControladorEspacios {
     public String mostrarGestion(@PathVariable("id") Long id, 
                                  @RequestParam(value = "tab", defaultValue = "deportes") String tab,
                                  Model model, 
-                                 RedirectAttributes redirectAttributes) {
-        
+                                 RedirectAttributes redirectAttributes) {                          
         // Intentar cargar primero como Cancha
         Optional<Cancha> canchaOpt = servicioCancha.obtenerPorId(id);
-        if (canchaOpt.isPresent()) {
+        if (canchaOpt.isPresent() && canchaOpt.get().getActivo()) {
             model.addAttribute("espacio", canchaOpt.get());
             model.addAttribute("tipoEspacio", "Cancha");
             model.addAttribute("esCancha", true);
@@ -86,7 +85,7 @@ public class ControladorEspacios {
         
         // Si no es cancha, intentar como Salón
         Optional<Salon> salonOpt = servicioSalon.obtenerPorId(id);
-        if (salonOpt.isPresent()) {
+        if (salonOpt.isPresent() && salonOpt.get().getActivo()) {
             model.addAttribute("espacio", salonOpt.get());
             model.addAttribute("tipoEspacio", "Salón");
             model.addAttribute("esCancha", false);
@@ -98,6 +97,7 @@ public class ControladorEspacios {
         
         // No encontrado
         redirectAttributes.addFlashAttribute("error", "Espacio no encontrado.");
+        //volver a la URL anterior
         return "redirect:/admin-complejo/espacios/listar";
     }
 

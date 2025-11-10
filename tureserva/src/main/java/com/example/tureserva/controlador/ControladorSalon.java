@@ -98,6 +98,7 @@ public class ControladorSalon {
 		Salon salon = new Salon();
 		model.addAttribute("salon", salon);
 		model.addAttribute("idComplejo", idComplejo);
+		model.addAttribute("nombreComplejo", servicioComplejoDeportivo.obtenerPorId(idComplejo).get().getNombre_complejo());
 		return "admin-complejo/salones/crear";
 	}
 
@@ -156,13 +157,13 @@ public class ControladorSalon {
 	@GetMapping("/modificar/{id}")
 	public String mostrarFormularioModificar(@PathVariable("id") Long id, Model model, RedirectAttributes redirectAttributes) {
 		Optional<Salon> salonOpt = servicioSalon.obtenerPorId(id);
-		if (salonOpt.isPresent()) {
+		if (salonOpt.isPresent() && salonOpt.get().getActivo()) {
 			model.addAttribute("salon", salonOpt.get());
 			model.addAttribute("idComplejo", salonOpt.get().getComplejoDeportivo().getId_complejo());
 			return "admin-complejo/salones/modificar";
 		} else {
 			redirectAttributes.addFlashAttribute("error", "Salón no encontrado.");
-			return "redirect:/admin-complejo/espacios/listar";
+			return "redirect:/admin-complejo/espacios/listar/" + salonOpt.get().getComplejoDeportivo().getId_complejo();
 		}
 	}
 

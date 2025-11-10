@@ -10,7 +10,7 @@
         <style>
             /* Contenedor principal del contenido */
             .main-content {
-                padding: 30px 0;
+                padding: 12px 0; /* Reducido para alinear encabezado como en Horarios */
             }
 
             /* Grilla Desplazable (Scroll solo en la tabla) */
@@ -67,31 +67,46 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                flex-wrap: wrap; 
+                flex-wrap: nowrap; /* Evitar que los botones de ABM se dispongan en varias líneas */
                 gap: 10px;
                 margin-bottom: 30px; /* Separación del footer */
             }
-            
+
+            /* Asegurar que el contenedor de ABM mantenga los botones en una sola fila */
             #abm-actions {
-                /* FUERZA LA VISIBILIDAD DE LOS BOTONES DE MODIFICAR/ELIMINAR */
-                display: flex !important; 
-                gap: 10px;
+                display: flex;
+                gap: 8px;
+                flex-wrap: nowrap;
+                align-items: center;
             }
             
-            .btn:disabled {
-                cursor: not-allowed;
-                opacity: 0.65;
-            }
         </style>
     </th:block>
 </head>
 
 <div layout:fragment="content" class="container main-content">
-    <!-- Mensajes de error y éxito -->
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
-    <div th:if="${exito}" class="alert alert-success" th:text="${exito}"></div>
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary fw-bold">Gestión de Políticas de Seña</h2>
+    <!-- Mensajes de error y éxito (unificados con borde) -->
+    <div th:if="${error}" class="alert alert-danger-unified alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span th:text="${error}">Error</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div th:if="${exito}" class="alert alert-success-unified alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <span th:text="${exito}">Operación exitosa</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <div class="d-flex align-items-start mb-3">
+        <div class="me-3">
+            <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejoId})}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+
+        <h1 class="h2 mb-0 text-primary">
+            <i class="fas fa-file-signature me-2"></i>
+            Gestión de Políticas de Seña
+        </h1>
     </div>
 
     <div class="table-container">
@@ -168,7 +183,17 @@
                         selectedPolicyId = currentId;
                     }
 
-                    updateABMButtons();
+                            updateABMButtons();
+
+                            // Auto-dismiss alerts after 3s (so flash messages no queden fijos)
+                            const alerts = document.querySelectorAll('.alert-dismissible');
+                            if (alerts && alerts.length) {
+                                alerts.forEach(a => {
+                                    setTimeout(() => {
+                                        try { const bs = bootstrap.Alert.getOrCreateInstance(a); bs.close(); } catch(e) { a.style.display='none'; }
+                                    }, 3000);
+                                });
+                            }
                 });
             });
 

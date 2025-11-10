@@ -9,10 +9,13 @@
 
 <div layout:fragment="content">
     <div class="container mt-4">
-
         <div class="row">
             <div class="col-lg-8 mx-auto">
-                
+                <div class="me-3">
+                    <a th:href="@{/admin-complejo/dashboard}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver
+                    </a>
+                </div>
                 <!-- Mensajes de alerta -->
                 <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
                     <i class="fas fa-check-circle me-2"></i>
@@ -46,12 +49,8 @@
                                 <h6 class="text-role">Información Personal</h6>
                                 <table class="table table-borderless">
                                     <tr>
-                                        <td><strong>Nombre:</strong></td>
-                                        <td th:text="${adminComplejo.nombre}">Nombre del admin</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Apellido:</strong></td>
-                                        <td th:text="${adminComplejo.apellido}">Apellido del admin</td>
+                                        <td><strong>Nombre Completo</strong></td>
+                                        <td th:text="${adminComplejo.nombre + ' ' + adminComplejo.apellido}">Nombre del admin</td>
                                     </tr>
                                     <tr>
                                         <td><strong>Email:</strong></td>
@@ -65,13 +64,6 @@
                                         <td><strong>Fecha de registro:</strong></td>
                                         <td th:text="${#temporals.format(adminComplejo.fechaRegistro, 'dd/MM/yyyy HH:mm')}">01/01/2024 10:00</td>
                                     </tr>
-                                    <tr>
-                                        <td><strong>Estado:</strong></td>
-                                        <td>
-                                            <span class="badge bg-success" th:if="${adminComplejo.activo}">Activo</span>
-                                            <span class="badge bg-danger" th:unless="${adminComplejo.activo}">Inactivo</span>
-                                        </td>
-                                    </tr>
                                 </table>
                             </div>
                         </div>
@@ -80,11 +72,6 @@
 
                 <!-- Acciones del perfil -->
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-cogs me-2"></i>Configuración de Cuenta
-                        </h5>
-                    </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -108,16 +95,6 @@
                                     <i class="fas fa-key me-1"></i>
                                     Actualiza tu contraseña por seguridad
                                 </small>
-                            </div>
-                        </div>
-                        
-                        <hr class="my-4">
-                        
-                        <div class="row">
-                            <div class="col-12">
-                                <a href="/admin-complejo/dashboard" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
-                                </a>
                             </div>
                         </div>
                     </div>

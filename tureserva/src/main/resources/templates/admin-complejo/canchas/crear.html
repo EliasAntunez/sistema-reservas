@@ -9,18 +9,17 @@
     
     <th:block layout:fragment="css">
         <style>
-            /* Estilo para que el contenedor del formulario no sea demasiado ancho */
-            .form-container {
-                max-width: 800px;
-                margin: 20px auto;
-            }
+            .form-group label { font-weight: 600; }
+            .main-form-card { padding: 30px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+            /* Mantener el contenedor estrecho para formularios largos */
+            .form-container { max-width: 800px; margin: 20px auto; }
         </style>
     </th:block>
 </head>
 
 <div layout:fragment="content" class="container main-content form-container">
     
-    <div class="card shadow-sm border-0">
+    <div class="card main-form-card">
         
         <div class="card-header bg-primary text-white p-3">
             <h2 class="h4 mb-0 d-flex align-items-center">
@@ -95,14 +94,12 @@
 
                 <hr class="my-4">
 
-                <div class="d-flex justify-content-end gap-2">
-                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${idComplejo})}" 
-                       class="btn btn-secondary d-flex align-items-center">
-                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                <div class="d-flex justify-content-between">
+                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${idComplejo})}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Volver al Listado
                     </a>
-                    
-                    <button type="submit" class="btn btn-success d-flex align-items-center">
-                        <i class="bi bi-check-circle me-2"></i>Guardar Cancha
+                    <button type="submit" class="btn btn-primary d-flex align-items-center">
+                        <i class="bi bi-floppy me-2"></i>Guardar Cancha
                     </button>
                 </div>
 
