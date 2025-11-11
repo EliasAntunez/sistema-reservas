@@ -4,8 +4,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.tureserva.modelo.HorarioComplejo;
+import com.example.tureserva.modelo.enums.DiaSemana;
 import com.example.tureserva.modelo.ComplejoDeportivo;
-import com.example.tureserva.modelo.DiaSemana;
 import com.example.tureserva.repositorio.RepositorioHorarioComplejo;
 
 import java.time.LocalTime;

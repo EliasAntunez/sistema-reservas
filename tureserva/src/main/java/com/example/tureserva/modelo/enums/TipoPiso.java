@@ -1,4 +1,4 @@
-package com.example.tureserva.modelo;
+package com.example.tureserva.modelo.enums;
 
 public enum TipoPiso {
     CESPED("Césped"),

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import java.time.LocalTime;
 
+import com.example.tureserva.modelo.enums.DiaSemana;
+
 @Entity
 @Table(name = "horario_complejo",
      uniqueConstraints = {@UniqueConstraint(name = "uk_horario_dia_complejo", columnNames = {"dia_semana", "complejo_id"})}
