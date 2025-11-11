@@ -1,5 +1,7 @@
 package com.example.tureserva.modelo;
 
+import com.example.tureserva.modelo.enums.TipoPiso;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

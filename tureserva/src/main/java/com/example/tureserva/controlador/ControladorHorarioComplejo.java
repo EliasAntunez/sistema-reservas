@@ -13,7 +13,7 @@ import com.example.tureserva.servicio.ServicioHorarioComplejo;
 import com.example.tureserva.modelo.AdministradorComplejo;
 import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.modelo.HorarioComplejo;
-import com.example.tureserva.modelo.DiaSemana;
+import com.example.tureserva.modelo.enums.DiaSemana;
 import com.example.tureserva.utiles.ManejadorMensajes;
 
 import java.util.List;

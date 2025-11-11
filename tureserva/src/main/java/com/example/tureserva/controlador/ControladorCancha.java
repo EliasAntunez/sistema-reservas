@@ -17,7 +17,7 @@ import java.util.HashMap;
 
 import com.example.tureserva.modelo.Cancha;
 import com.example.tureserva.modelo.ComplejoDeportivo;
-import com.example.tureserva.modelo.TipoPiso;
+import com.example.tureserva.modelo.enums.TipoPiso;
 import com.example.tureserva.servicio.ServicioCancha;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.servicio.ServicioCanchaDeporte;

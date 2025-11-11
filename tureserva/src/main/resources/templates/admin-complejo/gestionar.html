@@ -47,10 +47,10 @@
                                     <p class="card-text text-muted">
                                         Configurar horarios de funcionamiento del complejo
                                     </p>
-                    <a th:href="@{/admin-complejo/horarios/complejo/{id}(id=${complejo?.id_complejo})}" 
-                       class="btn btn-primary btn-sm">
-                        <i class="fas fa-clock me-2 text-white"></i>Gestionar Horarios
-                    </a>
+                                    <a th:href="@{/admin-complejo/horarios/complejo/{id}(id=${complejo?.id_complejo})}" 
+                                        class="btn btn-primary btn-sm">
+                                        <i class="fas fa-clock me-2 text-white"></i>Gestionar Horarios
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -62,9 +62,9 @@
                                     <p class="card-text text-muted">
                                         Crear y modificar las políticas de seña para este complejo
                                     </p>
-                    <a th:href="@{/admin-complejo/politicas-senia/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-hand-holding-dollar me-2 text-white"></i>Gestionar Políticas de Seña
-                    </a>
+                                    <a th:href="@{/admin-complejo/politicas-senia/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-hand-holding-dollar me-2 text-white"></i>Gestionar Políticas de Seña
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -76,9 +76,9 @@
                                     <p class="card-text text-muted">
                                         Crear y modificar las políticas de cancelación para este complejo
                                     </p>
-                    <a th:href="@{/admin-complejo/politicas-cancelacion/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-calendar-xmark me-2 text-white"></i>Gestionar Políticas de Cancelación
-                    </a>
+                                    <a th:href="@{/admin-complejo/politicas-cancelacion/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-calendar-xmark me-2 text-white"></i>Gestionar Políticas de Cancelación
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -90,9 +90,23 @@
                                     <p class="card-text text-muted">
                                         Crear y modificar los espacios reservables para este complejo
                                     </p>
-                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-door-open me-2 text-white"></i>Gestionar Espacios Reservables
-                    </a>
+                                    <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-door-open me-2 text-white"></i>Gestionar Espacios Reservables
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-door-open fa-3x text-primary mb-3"></i>
+                                    <h5 class="card-title">Gestionar Servicios Adicionales</h5>
+                                    <p class="card-text text-muted">
+                                        Crea y modifica los Servicios Adicionales para este complejo
+                                    </p>
+                                    <a th:href="@{/admin-complejo/servicios-adicionales/listar/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-door-open me-2 text-white"></i>Gestionar Servicios Adicionales
+                                    </a>
                                 </div>
                             </div>
                         </div>

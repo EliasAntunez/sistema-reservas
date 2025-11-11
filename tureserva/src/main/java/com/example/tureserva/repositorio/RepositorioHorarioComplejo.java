@@ -6,8 +6,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.tureserva.modelo.ComplejoDeportivo;
-import com.example.tureserva.modelo.DiaSemana;
 import com.example.tureserva.modelo.HorarioComplejo;
+import com.example.tureserva.modelo.enums.DiaSemana;
 
 import java.util.List;
 import java.util.Optional;
