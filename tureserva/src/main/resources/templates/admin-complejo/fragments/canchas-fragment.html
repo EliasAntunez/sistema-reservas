@@ -38,6 +38,7 @@
                     <th>Precio por Hora</th>
                     <th>¿Techada?</th>
                     <th>Tipo de Piso</th>
+                    <th>Estado Operativo</th>
                     <th>Estado</th>
                 </tr>
             </thead>
@@ -50,6 +51,20 @@
                     <td th:text="${cancha.precioPorHora}"></td>
                     <td th:text="${cancha.esTechada} ? 'Sí' : 'No'"></td>
                     <td th:text="${cancha.tipoPiso}"></td>
+                    <td>
+                        <span th:if="${cancha.estadoOperativo.name() == 'DISPONIBLE'}" 
+                              class="badge bg-success"
+                              th:text="${cancha.estadoOperativo.displayName}">
+                        </span>
+                        <span th:if="${cancha.estadoOperativo.name() == 'MANTENIMIENTO'}" 
+                              class="badge bg-warning text-dark"
+                              th:text="${cancha.estadoOperativo.displayName}">
+                        </span>
+                        <span th:if="${cancha.estadoOperativo.name() == 'CERRADO'}" 
+                              class="badge bg-danger"
+                              th:text="${cancha.estadoOperativo.displayName}">
+                        </span>
+                    </td>
                     <td>
                         <span th:if="${estadosConfiguracion[cancha.id] == 'completo'}" 
                               class="badge bg-success"
@@ -64,7 +79,7 @@
                     </td>
                 </tr>
                 <tr th:if="${canchasPage.content.size() == 0}">
-                    <td colspan="6" class="text-center text-muted py-4">No hay canchas registradas para este complejo.</td>
+                    <td colspan="7" class="text-center text-muted py-4">No hay canchas registradas para este complejo.</td>
                 </tr>
             </tbody>
         </table>

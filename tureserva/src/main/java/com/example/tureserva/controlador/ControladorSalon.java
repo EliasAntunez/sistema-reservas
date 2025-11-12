@@ -22,6 +22,7 @@ import com.example.tureserva.servicio.ServicioSalon;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.modelo.Salon;
 import com.example.tureserva.modelo.ComplejoDeportivo;
+import com.example.tureserva.modelo.enums.EstadoOperativo;
 
 import jakarta.validation.Valid;
 import org.springframework.validation.BindingResult;
@@ -99,6 +100,7 @@ public class ControladorSalon {
 		model.addAttribute("salon", salon);
 		model.addAttribute("idComplejo", idComplejo);
 		model.addAttribute("nombreComplejo", servicioComplejoDeportivo.obtenerPorId(idComplejo).get().getNombre_complejo());
+		model.addAttribute("estadosOperativos", EstadoOperativo.values());
 		return "admin-complejo/salones/crear";
 	}
 
@@ -106,11 +108,13 @@ public class ControladorSalon {
 	public String procesarFormularioCrear(@Valid @ModelAttribute("salon") Salon salon,
 										  BindingResult bindingResult,
 										  @RequestParam("idComplejo") Long idComplejo,
+										  @RequestParam("estadoOperativo") String estadoOperativoStr,
 										  Model model,
 										  RedirectAttributes redirectAttributes) {
 
 		if (bindingResult.hasErrors()) {
 			model.addAttribute("idComplejo", idComplejo);
+			model.addAttribute("estadosOperativos", EstadoOperativo.values());
 			return "admin-complejo/salones/crear";
 		}
 
@@ -129,10 +133,19 @@ public class ControladorSalon {
 			if (servicioSalon.existeNombreDuplicado(salon.getNombre(), complejoDeportivo)) {
 				model.addAttribute("error", "Ya existe un salón con ese nombre en este complejo deportivo");
 				model.addAttribute("idComplejo", idComplejo);
+				model.addAttribute("estadosOperativos", EstadoOperativo.values());
 				return "admin-complejo/salones/crear";
 			}
 
-			// Si todo está OK, guardamos
+			// Si todo está OK, establecemos el estado operativo y guardamos
+			try {
+				EstadoOperativo estadoOperativo = EstadoOperativo.valueOf(estadoOperativoStr);
+				salon.setEstadoOperativo(estadoOperativo);
+			} catch (IllegalArgumentException e) {
+				// Si el estado no es válido, usar DISPONIBLE por defecto
+				salon.setEstadoOperativo(EstadoOperativo.DISPONIBLE);
+			}
+			
 			salon.setComplejoDeportivo(complejoDeportivo);
 			servicioSalon.guardarSalon(salon);
 			redirectAttributes.addFlashAttribute("exito", "Salón creado exitosamente.");
@@ -150,6 +163,7 @@ public class ControladorSalon {
 			
 			model.addAttribute("error", mensajeError);
 			model.addAttribute("idComplejo", idComplejo);
+			model.addAttribute("estadosOperativos", EstadoOperativo.values());
 			return "admin-complejo/salones/crear";
 		}
 	}
@@ -160,6 +174,7 @@ public class ControladorSalon {
 		if (salonOpt.isPresent() && salonOpt.get().getActivo()) {
 			model.addAttribute("salon", salonOpt.get());
 			model.addAttribute("idComplejo", salonOpt.get().getComplejoDeportivo().getId_complejo());
+			model.addAttribute("estadosOperativos", EstadoOperativo.values());
 			return "admin-complejo/salones/modificar";
 		} else {
 			redirectAttributes.addFlashAttribute("error", "Salón no encontrado.");
@@ -170,12 +185,14 @@ public class ControladorSalon {
 	@PostMapping("/modificar")
 	public String procesarFormularioModificar(@Valid @ModelAttribute("salon") Salon salon,
 											  @RequestParam("idComplejo") Long idComplejo,
+											  @RequestParam("estadoOperativo") String estadoOperativoStr,
 											  BindingResult bindingResult,
 											  Model model,
 											  RedirectAttributes redirectAttributes) {
 
 		if (bindingResult.hasErrors()) {
 			model.addAttribute("idComplejo", idComplejo);
+			model.addAttribute("estadosOperativos", EstadoOperativo.values());
 			return "admin-complejo/salones/modificar";
 		}
 
@@ -194,12 +211,21 @@ public class ControladorSalon {
 			if (servicioSalon.existeNombreDuplicadoExcluyendoId(salon.getNombre(), complejoDeportivo, salon.getId())) {
 				model.addAttribute("error", "Ya existe un salón con ese nombre en este complejo deportivo");
 				model.addAttribute("idComplejo", idComplejo);
+				model.addAttribute("estadosOperativos", EstadoOperativo.values());
 				return "admin-complejo/salones/modificar";
 			}
-
-			// Si todo está OK, actualizamos
+			// Si todo está OK, establecemos el estado operativo y actualizamos
+			try {
+				EstadoOperativo estadoOperativo = EstadoOperativo.valueOf(estadoOperativoStr);
+				salon.setEstadoOperativo(estadoOperativo);
+			} catch (IllegalArgumentException e) {
+				// Si el estado no es válido, usar DISPONIBLE por defecto
+				salon.setEstadoOperativo(EstadoOperativo.DISPONIBLE);
+			}
+			
 			salon.setComplejoDeportivo(complejoDeportivo);
 			servicioSalon.actualizarSalon(salon);
+			redirectAttributes.addFlashAttribute("exito", "Salón actualizado exitosamente.");
 			redirectAttributes.addFlashAttribute("exito", "Salón actualizado exitosamente.");
 			return "redirect:/admin-complejo/espacios/listar/" + idComplejo + "?tab=salones";
 		} catch (Exception e) {

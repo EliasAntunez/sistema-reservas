@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:title-fragment>Gestionar Rangos de Horario</title>
+
+    <th:block layout:fragment="css">
+        <style>
+            .rango-card {
+                border-left: 4px solid #007bff;
+                transition: all 0.3s;
+            }
+            .rango-card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .dia-badge {
+                font-size: 0.9rem;
+                padding: 0.5rem 1rem;
+                font-weight: 600;
+            }
+            .form-sticky {
+                position: sticky;
+                top: 20px;
+            }
+            .horario-icon {
+                font-size: 1.1rem;
+            }
+        </style>
+    </th:block>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container mt-4 mb-5">
+        
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a th:href="@{/admin-complejo/mis-complejos}">
+                        <i class="bi bi-building me-1"></i>Mis Complejos
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo.id_complejo})}" 
+                       th:text="${complejo.nombre_complejo}">Complejo</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a th:href="@{/admin-complejo/complejos/{id}/horarios(id=${complejo.id_complejo})}">
+                        Configuraciones de Horario
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" th:text="${configuracion.nombre}">Configuración</li>
+            </ol>
+        </nav>
+        
+        <!-- Header -->
+        <div class="d-flex align-items-center mb-4">
+            <a th:href="@{/admin-complejo/complejos/{id}/horarios(id=${complejo.id_complejo})}" 
+               class="btn btn-outline-secondary me-3">
+                <i class="bi bi-arrow-left me-2"></i>Volver
+            </a>
+            <div>
+                <h1 class="h2 mb-0 text-primary">
+                    <i class="bi bi-gear me-2"></i>Gestionar Rangos de Horario
+                </h1>
+                <p class="text-muted mb-0">
+                    Configuración: <strong th:text="${configuracion.nombre}"></strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- Mensajes -->
+        <div th:if="${exito}" class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i><span th:text="${exito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i><span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="row">
+            <!-- Formulario para agregar nuevo rango -->
+            <div class="col-lg-4 mb-4">
+                <div class="card form-sticky">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-plus-circle me-2"></i>Agregar Rango
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/admin-complejo/complejos/{complejoId}/horarios/gestionar/{configId}/agregar-rango(complejoId=${complejo.id_complejo},configId=${configuracion.id})}" 
+                              method="post">
+                            
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                            <!-- Día de la semana -->
+                            <div class="mb-3">
+                                <label for="diaSemana" class="form-label">
+                                    <i class="bi bi-calendar-day me-1"></i>Día de la Semana <span class="text-danger">*</span>
+                                </label>
+                                <select name="diaSemana" 
+                                        id="diaSemana" 
+                                        class="form-select"
+                                        required>
+                                    <option value="">Seleccione un día</option>
+                                    <option value="MONDAY">Lunes</option>
+                                    <option value="TUESDAY">Martes</option>
+                                    <option value="WEDNESDAY">Miércoles</option>
+                                    <option value="THURSDAY">Jueves</option>
+                                    <option value="FRIDAY">Viernes</option>
+                                    <option value="SATURDAY">Sábado</option>
+                                    <option value="SUNDAY">Domingo</option>
+                                </select>
+                            </div>
+
+                            <!-- Hora de apertura -->
+                            <div class="mb-3">
+                                <label for="horaApertura" class="form-label">
+                                    <i class="bi bi-clock me-1 text-success"></i>Hora de Apertura <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" 
+                                       name="horaApertura" 
+                                       id="horaApertura" 
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <!-- Hora de cierre -->
+                            <div class="mb-3">
+                                <label for="horaCierre" class="form-label">
+                                    <i class="bi bi-clock me-1 text-danger"></i>Hora de Cierre <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" 
+                                       name="horaCierre" 
+                                       id="horaCierre" 
+                                       class="form-control"
+                                       required>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-plus-circle me-2"></i>Agregar Rango
+                            </button>
+                        </form>
+
+                        <hr class="my-3">
+                        
+                        <!-- Ayuda -->
+                        <div class="alert alert-info mb-0">
+                            <h6 class="alert-heading small">
+                                <i class="bi bi-info-circle me-1"></i>Información
+                            </h6>
+                            <ul class="small mb-0 ps-3">
+                                <li>Puede agregar <strong>múltiples rangos</strong> para el mismo día (horario partido)</li>
+                                <li>Ejemplo: 09:00-12:00 y 16:00-20:00</li>
+                                <li>Los rangos que cruzan medianoche son válidos (22:00-01:00)</li>
+                                <li><strong>No se permiten solapamientos</strong> en el mismo día</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de rangos existentes -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-ul me-2"></i>Rangos Configurados
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(rangos)}" class="text-center py-5">
+                            <i class="bi bi-calendar-x" style="font-size: 4rem; color: #ccc;"></i>
+                            <h5 class="text-muted mt-3">No hay rangos configurados</h5>
+                            <p class="text-muted">Agregue rangos de horario usando el formulario de la izquierda.</p>
+                        </div>
+                        
+                        <div th:unless="${#lists.isEmpty(rangos)}">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Día</th>
+                                        <th>Apertura</th>
+                                        <th>Cierre</th>
+                                        <th width="100">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="rango : ${rangos}">
+                                        <td>
+                                            <span class="badge bg-primary" th:text="${rango.diaSemana}"></span>
+                                        </td>
+                                        <td th:text="${rango.horaApertura}"></td>
+                                        <td th:text="${rango.horaCierre}"></td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" 
+                                                        class="btn btn-outline-warning"
+                                                        data-bs-toggle="modal" 
+                                                        th:data-bs-target="'#editModal' + ${rango.id}"
+                                                        title="Editar">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button type="button"
+                                                        class="btn btn-outline-danger"
+                                                        th:onclick="'confirmarEliminar(' + ${rango.id} + ')'"
+                                                        title="Eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Modales para editar cada rango -->
+                            <div th:each="rango : ${rangos}">
+                                <div class="modal fade" th:id="'editModal' + ${rango.id}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">
+                                                    <i class="bi bi-pencil me-2"></i>Editar Rango - 
+                                                    <span th:text="${rango.diaSemana}"></span>
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form th:action="@{/admin-complejo/complejos/{complejoId}/horarios/gestionar/{configId}/actualizar-rango/{rangoId}(complejoId=${complejo.id_complejo},configId=${configuracion.id},rangoId=${rango.id})}" 
+                                                  method="post">
+                                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">
+                                                            <i class="bi bi-clock me-1 text-success"></i>Hora de Apertura
+                                                        </label>
+                                                        <input type="time" 
+                                                               name="horaApertura" 
+                                                               class="form-control" 
+                                                               th:value="${rango.horaApertura}" 
+                                                               required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">
+                                                            <i class="bi bi-clock me-1 text-danger"></i>Hora de Cierre
+                                                        </label>
+                                                        <input type="time" 
+                                                               name="horaCierre" 
+                                                               class="form-control" 
+                                                               th:value="${rango.horaCierre}" 
+                                                               required>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                        Cancelar
+                                                    </button>
+                                                    <button type="submit" class="btn btn-warning">
+                                                        <i class="bi bi-save me-2"></i>Guardar Cambios
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Form oculto para eliminar -->
+                                <form th:id="'deleteForm' + ${rango.id}"
+                                      th:action="@{/admin-complejo/complejos/{complejoId}/horarios/gestionar/{configId}/eliminar-rango/{rangoId}(complejoId=${complejo.id_complejo},configId=${configuracion.id},rangoId=${rango.id})}" 
+                                      method="post" 
+                                      style="display: none;">
+                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script th:inline="javascript">
+        function confirmarEliminar(rangoId) {
+            if (confirm('¿Está seguro que desea eliminar este rango horario?')) {
+                document.getElementById('deleteForm' + rangoId).submit();
+            }
+        }
+    </script>
+</th:block>
+</body>
+</html>

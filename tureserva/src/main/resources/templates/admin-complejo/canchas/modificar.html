@@ -72,6 +72,20 @@
                                 <div th:if="${#fields.hasErrors('tipoPiso')}" th:errors="*{tipoPiso}" class="invalid-feedback"></div>
                             </div>
                         </div>
+                        <div class="mb-3 form-group">
+                            <label for="estadoOperativo" class="form-label">Estado Operativo:</label>
+                            <select id="estadoOperativo" class="form-select" th:field="*{estadoOperativo}"
+                                    th:classappend="${#fields.hasErrors('estadoOperativo')} ? 'is-invalid' : ''">
+                                
+                                <option value="" disabled>Seleccione un estado...</option>
+                                
+                                <option th:each="estado : ${estadosOperativos}" 
+                                        th:value="${estado}" 
+                                        th:text="${estado.displayName}">
+                                </option>
+                            </select>
+                            <div th:if="${#fields.hasErrors('estadoOperativo')}" th:errors="*{estadoOperativo}" class="invalid-feedback"></div>
+                        </div>
                         <hr class="my-4">
                         <div class="d-flex justify-content-between align-items-center">
                             <a th:href="@{/admin-complejo/espacios/listar/{id}(id=${idComplejo})}" class="btn btn-outline-secondary">

@@ -17,6 +17,7 @@ import com.example.tureserva.servicio.ServicioCanchaDeporte;
 import com.example.tureserva.servicio.ServicioEspacioReservable;
 import com.example.tureserva.servicio.ServicioPoliticaSenia;
 import com.example.tureserva.servicio.ServicioPoliticaCancelacion;
+import com.example.tureserva.servicio.ServicioConfiguracionHorario;
 import com.example.tureserva.modelo.Cancha;
 import com.example.tureserva.modelo.Salon;
 import com.example.tureserva.modelo.Deporte;
@@ -24,6 +25,8 @@ import com.example.tureserva.modelo.CanchaDeporte;
 import com.example.tureserva.modelo.EspacioReservable;
 import com.example.tureserva.modelo.PoliticaSenia;
 import com.example.tureserva.modelo.PoliticaCancelacion;
+import com.example.tureserva.modelo.ComplejoDeportivo;
+import com.example.tureserva.modelo.ConfiguracionHorario;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -41,6 +44,7 @@ public class ControladorEspacios {
     private final ServicioEspacioReservable servicioEspacioReservable;
     private final ServicioPoliticaSenia servicioPoliticaSenia;
     private final ServicioPoliticaCancelacion servicioPoliticaCancelacion;
+    private final ServicioConfiguracionHorario servicioConfiguracionHorario;
 
     public ControladorEspacios(ServicioCancha servicioCancha, 
                               ServicioSalon servicioSalon,
@@ -48,7 +52,8 @@ public class ControladorEspacios {
                               ServicioCanchaDeporte servicioCanchaDeporte,
                               ServicioEspacioReservable servicioEspacioReservable,
                               ServicioPoliticaSenia servicioPoliticaSenia,
-                              ServicioPoliticaCancelacion servicioPoliticaCancelacion) {
+                              ServicioPoliticaCancelacion servicioPoliticaCancelacion,
+                              ServicioConfiguracionHorario servicioConfiguracionHorario) {
         this.servicioCancha = servicioCancha;
         this.servicioSalon = servicioSalon;
         this.servicioDeporte = servicioDeporte;
@@ -56,6 +61,7 @@ public class ControladorEspacios {
         this.servicioEspacioReservable = servicioEspacioReservable;
         this.servicioPoliticaSenia = servicioPoliticaSenia;
         this.servicioPoliticaCancelacion = servicioPoliticaCancelacion;
+        this.servicioConfiguracionHorario = servicioConfiguracionHorario;
     }
 
     @GetMapping("/listar/{idComplejo}")
@@ -336,5 +342,105 @@ public class ControladorEspacios {
         }
 
         return "redirect:/admin-complejo/espacios/gestionar/" + id + "?tab=politicas-cancelacion";
+    }
+    
+    /**
+     * GET: Fragment para personalizar horario de un espacio
+     */
+    @GetMapping("/gestionar/{id}/horario")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public String mostrarHorarioPersonalizado(@PathVariable("id") Long id,
+                                              Model model,
+                                              HttpServletRequest request,
+                                              RedirectAttributes redirectAttributes) {
+        
+        EspacioReservable espacio = servicioEspacioReservable.obtenerPorId(id)
+                .orElse(null);
+        
+        if (espacio == null || !espacio.getActivo()) {
+            redirectAttributes.addFlashAttribute("error", "Espacio no encontrado.");
+            return "redirect:/admin-complejo/espacios/listar";
+        }
+        
+        // Obtener complejo y todas sus configuraciones disponibles
+        ComplejoDeportivo complejo = espacio.getComplejoDeportivo();
+        List<ConfiguracionHorario> configuracionesDisponibles = 
+            servicioConfiguracionHorario.listarPorComplejoConRangos(complejo);
+        
+        model.addAttribute("espacio", espacio);
+        model.addAttribute("configuracionesDisponibles", configuracionesDisponibles);
+        model.addAttribute("horarioActual", espacio.getHorarioPersonalizado());
+        model.addAttribute("horarioEfectivo", espacio.getConfiguracionHorarioEfectiva());
+        
+        // Si es petición AJAX, devolver solo el fragmento
+        String requestedWithHeader = request.getHeader("X-Requested-With");
+        if ("XMLHttpRequest".equals(requestedWithHeader)) {
+            return "admin-complejo/fragments/horario-personalizado-fragment :: horario-tab";
+        }
+        
+        return "redirect:/admin-complejo/espacios/gestionar/" + id + "?tab=horario";
+    }
+    
+    /**
+     * POST: Asignar horario personalizado a un espacio
+     */
+    @PostMapping("/gestionar/{id}/horario/asignar")
+    public String asignarHorarioPersonalizado(@PathVariable("id") Long id,
+                                             @RequestParam("configuracionId") Long configuracionId,
+                                             RedirectAttributes redirectAttributes) {
+        
+        try {
+            EspacioReservable espacio = servicioEspacioReservable.obtenerPorId(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Espacio no encontrado"));
+            
+            ConfiguracionHorario configuracion = servicioConfiguracionHorario.obtenerPorId(configuracionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Configuración de horario no encontrada"));
+            
+            // Validar que la configuración pertenece al mismo complejo
+            if (!configuracion.getComplejoDeportivo().getId_complejo()
+                    .equals(espacio.getComplejoDeportivo().getId_complejo())) {
+                throw new IllegalStateException("La configuración no pertenece al mismo complejo");
+            }
+            
+            // Asignar horario personalizado
+            espacio.setHorarioPersonalizado(configuracion);
+            servicioEspacioReservable.guardar(espacio);
+            
+            redirectAttributes.addFlashAttribute("exito", 
+                "Horario personalizado '" + configuracion.getNombre() + "' asignado correctamente.");
+                
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al asignar horario personalizado.");
+        }
+        
+        return "redirect:/admin-complejo/espacios/gestionar/" + id + "?tab=horario";
+    }
+    
+    /**
+     * POST: Remover horario personalizado de un espacio
+     */
+    @PostMapping("/gestionar/{id}/horario/remover")
+    public String removerHorarioPersonalizado(@PathVariable("id") Long id,
+                                             RedirectAttributes redirectAttributes) {
+        
+        try {
+            EspacioReservable espacio = servicioEspacioReservable.obtenerPorId(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Espacio no encontrado"));
+            
+            espacio.setHorarioPersonalizado(null);
+            servicioEspacioReservable.guardar(espacio);
+            
+            redirectAttributes.addFlashAttribute("exito", 
+                "Horario personalizado removido. Ahora usa el horario del complejo.");
+                
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Error al remover horario personalizado.");
+        }
+        
+        return "redirect:/admin-complejo/espacios/gestionar/" + id + "?tab=horario";
     }
 }

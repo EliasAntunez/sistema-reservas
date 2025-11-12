@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title layout:title-fragment>Configuraciones de Horario</title>
+    
+    <th:block layout:fragment="css">
+        <style>
+            .config-card {
+                transition: transform 0.2s, box-shadow 0.2s;
+                border-left: 4px solid #007bff;
+            }
+            .config-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            .badge-master {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            .badge-override {
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            }
+            .badge-unused {
+                background: #6c757d;
+            }
+        </style>
+    </th:block>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container mt-4 mb-5">
+        
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a th:href="@{/admin-complejo/mis-complejos}">
+                        <i class="bi bi-building me-1"></i>Mis Complejos
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo.id_complejo})}" 
+                       th:text="${complejo.nombre_complejo}">Complejo</a>
+                </li>
+                <li class="breadcrumb-item active">Configuraciones de Horario</li>
+            </ol>
+        </nav>
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h2 text-primary mb-1">
+                    <i class="bi bi-clock-history me-2"></i>Configuraciones de Horario
+                </h1>
+                <p class="text-muted mb-0">
+                    Complejo: <strong th:text="${complejo.nombre_complejo}"></strong>
+                </p>
+            </div>
+            <a th:href="@{/admin-complejo/complejos/{id}/horarios/crear(id=${complejo.id_complejo})}" 
+               class="btn btn-success">
+                <i class="bi bi-plus-circle me-2"></i>Nueva Configuración
+            </a>
+        </div>
+
+        <!-- Mensajes -->
+        <div th:if="${exito}" class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i><span th:text="${exito}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i><span th:text="${error}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Info sobre jerarquía -->
+        <div class="alert alert-info mb-4">
+            <h6 class="alert-heading">
+                <i class="bi bi-info-circle me-2"></i>Sistema de Jerarquía de Horarios
+            </h6>
+            <p class="mb-2"><strong>Horario Por Defecto:</strong> Horario base que se aplica a todos los espacios por defecto.</p>
+            <p class="mb-2"><strong>Horario Personalizado según el tipo (Canchas/Salones):</strong> Anula el horario por defecto para un tipo específico de espacio.</p>
+            <p class="mb-0"><small class="text-muted">Puede asignar configuraciones usando los botones en cada tarjeta.</small></p>
+        </div>
+
+        <!-- Estado actual del complejo -->
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Configuración Actual del Complejo</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-primary">
+                            <i class="bi bi-star-fill me-1"></i>Horario Por Defecto
+                        </h6>
+                        <p th:if="${configuracionMaster}" class="mb-0">
+                            <span class="badge badge-master" th:text="${configuracionMaster.nombre}"></span>
+                        </p>
+                        <p th:unless="${configuracionMaster}" class="text-danger mb-0">
+                            <i class="bi bi-exclamation-triangle me-1"></i>No configurado
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-success">
+                            <i class="bi bi-trophy me-1"></i>Personalizado para Canchas
+                        </h6>
+                        <p th:if="${complejo.configuracionHorarioCanchas}" class="mb-0">
+                            <span class="badge badge-override" th:text="${complejo.configuracionHorarioCanchas.nombre}"></span>
+                        </p>
+                        <p th:unless="${complejo.configuracionHorarioCanchas}" class="text-muted mb-0">
+                            Usando horario por defecto
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-warning">
+                            <i class="bi bi-calendar-event me-1"></i>Personalizado para Salones
+                        </h6>
+                        <p th:if="${complejo.configuracionHorarioSalones}" class="mb-0">
+                            <span class="badge badge-override" th:text="${complejo.configuracionHorarioSalones.nombre}"></span>
+                        </p>
+                        <p th:unless="${complejo.configuracionHorarioSalones}" class="text-muted mb-0">
+                            Usando horario por defecto
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de configuraciones -->
+        <div th:if="${#lists.isEmpty(configuraciones)}" class="text-center py-5">
+            <i class="bi bi-clock-history" style="font-size: 4rem; color: #ccc;"></i>
+            <h5 class="text-muted mt-3">No hay configuraciones de horario</h5>
+            <p class="text-muted">Crea tu primera configuración para comenzar.</p>
+            <a th:href="@{/admin-complejo/complejos/{id}/horarios/crear(id=${complejo.id_complejo})}" 
+               class="btn btn-success mt-2">
+                <i class="bi bi-plus-circle me-2"></i>Crear Primera Configuración
+            </a>
+        </div>
+
+        <div th:unless="${#lists.isEmpty(configuraciones)}" class="row">
+            <div th:each="config : ${configuraciones}" class="col-md-6 col-lg-4 mb-4">
+                <div class="card config-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-clock me-2"></i>
+                            <span th:text="${config.nombre}"></span>
+                        </h5>
+                        <p class="card-text text-muted" th:if="${config.descripcion}" 
+                           th:text="${config.descripcion}"></p>
+                        <p class="card-text text-muted" th:unless="${config.descripcion}">
+                            <em>Sin descripción</em>
+                        </p>
+                        
+                        <!-- Badges de uso -->
+                        <div class="mb-3">
+                            <span th:if="${configuracionMaster != null && configuracionMaster.id == config.id}" 
+                                  class="badge badge-master me-1">
+                                <i class="bi bi-star-fill me-1"></i>Master
+                            </span>
+                            <span th:if="${complejo.configuracionHorarioCanchas != null && complejo.configuracionHorarioCanchas.id == config.id}" 
+                                  class="badge badge-override me-1">
+                                <i class="bi bi-trophy me-1"></i>Canchas
+                            </span>
+                            <span th:if="${complejo.configuracionHorarioSalones != null && complejo.configuracionHorarioSalones.id == config.id}" 
+                                  class="badge badge-override me-1">
+                                <i class="bi bi-calendar-event me-1"></i>Salones
+                            </span>
+                            <span th:if="${(configuracionMaster == null || configuracionMaster.id != config.id) && 
+                                          (complejo.configuracionHorarioCanchas == null || complejo.configuracionHorarioCanchas.id != config.id) && 
+                                          (complejo.configuracionHorarioSalones == null || complejo.configuracionHorarioSalones.id != config.id)}" 
+                                  class="badge badge-unused">
+                                Sin asignar
+                            </span>
+                        </div>
+                        
+                        <!-- Cantidad de rangos -->
+                        <p class="small text-muted mb-3">
+                            <i class="bi bi-list-ul me-1"></i>
+                            <span th:text="${#lists.size(config.rangosHorario)}"></span> rangos configurados
+                        </p>
+                        
+                        <!-- Botones de acción -->
+                        <div class="btn-group w-100 mb-2" role="group">
+                            <a th:href="@{/admin-complejo/complejos/{complejoId}/horarios/gestionar/{configId}(complejoId=${complejo.id_complejo},configId=${config.id})}" 
+                               class="btn btn-sm btn-primary">
+                                <i class="bi bi-gear me-1"></i>Gestionar Rangos
+                            </a>
+                        </div>
+                        
+                        <!-- Dropdown para asignar -->
+                        <div class="dropdown w-100">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100" 
+                                    type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="bi bi-link-45deg me-1"></i>Asignar como...
+                            </button>
+                            <ul class="dropdown-menu w-100">
+                                <li>
+                                    <form th:action="@{/admin-complejo/complejos/{complejoId}/horarios/asignar-master/{configId}(complejoId=${complejo.id_complejo},configId=${config.id})}" 
+                                          method="post" style="display: inline;">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-star-fill me-2 text-primary"></i>Horario Por Defecto
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form th:action="@{/admin-complejo/complejos/{complejoId}/horarios/asignar-canchas/{configId}(complejoId=${complejo.id_complejo},configId=${config.id})}" 
+                                          method="post" style="display: inline;">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-trophy me-2 text-success"></i>Personalizado para Canchas
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
+                                    <form th:action="@{/admin-complejo/complejos/{complejoId}/horarios/asignar-salones/{configId}(complejoId=${complejo.id_complejo},configId=${config.id})}" 
+                                          method="post" style="display: inline;">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-calendar-event me-2 text-warning"></i>Personalizado para Salones
+                                        </button>
+                                    </form>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li th:if="${complejo.configuracionHorarioCanchas != null && complejo.configuracionHorarioCanchas.id == config.id}">
+                                    <form th:action="@{/admin-complejo/complejos/{complejoId}/horarios/remover-override/canchas(complejoId=${complejo.id_complejo})}" 
+                                          method="post" style="display: inline;">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-x-circle me-2"></i>Remover Personalizado de Canchas
+                                        </button>
+                                    </form>
+                                </li>
+                                <li th:if="${complejo.configuracionHorarioSalones != null && complejo.configuracionHorarioSalones.id == config.id}">
+                                    <form th:action="@{/admin-complejo/complejos/{complejoId}/horarios/remover-override/salones(complejoId=${complejo.id_complejo})}" 
+                                          method="post" style="display: inline;">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-x-circle me-2"></i>Remover Personalizado de Salones
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Botón eliminar -->
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-danger w-100 mt-2 btn-eliminar"
+                                th:data-config-id="${config.id}"
+                                th:data-config-nombre="${config.nombre}">
+                            <i class="bi bi-trash me-1"></i>Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Modal de confirmación de eliminación -->
+    <div class="modal fade" id="modalEliminar" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro que deseas eliminar la configuración <strong id="configNombre"></strong>?</p>
+                    
+                    <div id="advertenciaUso" class="alert alert-warning" style="display: none;">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Configuración en Uso
+                        </h6>
+                        <div id="listaUsos"></div>
+                        <hr>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="checkDesvincular">
+                            <label class="form-check-label" for="checkDesvincular">
+                                Desvincular automáticamente de todos los lugares donde está asignada
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="motivoEliminacion" class="form-label">Motivo de eliminación (opcional):</label>
+                        <textarea class="form-control" id="motivoEliminacion" rows="3" 
+                                  placeholder="Ej: Horario obsoleto, error en configuración, etc."></textarea>
+                        <small class="text-muted">Este motivo quedará registrado en el historial</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form id="formEliminar" method="post" style="display: inline;">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <input type="hidden" name="motivo" id="motivoHidden">
+                        <input type="hidden" name="desvincularAutomaticamente" id="desvincularHidden" value="false">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                // Variable para almacenar ID actual
+                let configIdActual = null;
+                const complejoId = /*[[${complejo.id_complejo}]]*/ 0;
+                
+                // Modal instance
+                const modalEliminar = document.getElementById('modalEliminar');
+                const bsModal = new bootstrap.Modal(modalEliminar);
+                
+                // Elementos del DOM
+                const configNombreSpan = document.getElementById('configNombre');
+                const advertenciaUso = document.getElementById('advertenciaUso');
+                const listaUsos = document.getElementById('listaUsos');
+                const formEliminar = document.getElementById('formEliminar');
+                const motivoEliminacion = document.getElementById('motivoEliminacion');
+                const motivoHidden = document.getElementById('motivoHidden');
+                const checkDesvincular = document.getElementById('checkDesvincular');
+                const desvincularHidden = document.getElementById('desvincularHidden');
+                
+                // Al hacer click en cualquier botón eliminar
+                document.querySelectorAll('.btn-eliminar').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        configIdActual = this.getAttribute('data-config-id');
+                        const configNombre = this.getAttribute('data-config-nombre');
+                        
+                        // Mostrar nombre en modal
+                        configNombreSpan.textContent = configNombre;
+                        
+                        // Obtener información de uso
+                        fetch(`/admin-complejo/complejos/${complejoId}/horarios/${configIdActual}/info-uso`)
+                            .then(response => {
+                                if (!response.ok) throw new Error('Error al obtener info');
+                                return response.json();
+                            })
+                            .then(data => {
+                                if (data.usos && data.usos.length > 0) {
+                                    // Mostrar advertencia
+                                    advertenciaUso.style.display = 'block';
+                                    let html = '<ul class="mb-0">';
+                                    data.usos.forEach(uso => {
+                                        html += '<li>' + uso + '</li>';
+                                    });
+                                    html += '</ul>';
+                                    listaUsos.innerHTML = html;
+                                } else {
+                                    advertenciaUso.style.display = 'none';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                advertenciaUso.style.display = 'none';
+                            });
+                        
+                        // Actualizar URL del form
+                        formEliminar.action = `/admin-complejo/complejos/${complejoId}/horarios/${configIdActual}/eliminar`;
+                        
+                        // Limpiar campos
+                        motivoEliminacion.value = '';
+                        checkDesvincular.checked = false;
+                        
+                        // Mostrar modal
+                        bsModal.show();
+                    });
+                });
+                
+                // Al enviar el form, copiar valores
+                formEliminar.addEventListener('submit', function(e) {
+                    motivoHidden.value = motivoEliminacion.value;
+                    desvincularHidden.value = checkDesvincular.checked;
+                });
+            });
+        </script>
+    </th:block>
+</div>
+</body>
+</html>

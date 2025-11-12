@@ -45,9 +45,9 @@
                                     <i class="fas fa-clock fa-3x text-primary mb-3"></i>
                                     <h5 class="card-title">Gestión de Horarios</h5>
                                     <p class="card-text text-muted">
-                                        Configurar horarios de funcionamiento del complejo
+                                        Configurar horarios de apertura y cierre del complejo
                                     </p>
-                                    <a th:href="@{/admin-complejo/horarios/complejo/{id}(id=${complejo?.id_complejo})}" 
+                                    <a th:href="@{/admin-complejo/complejos/{id}/horarios(id=${complejo?.id_complejo})}" 
                                         class="btn btn-primary btn-sm">
                                         <i class="fas fa-clock me-2 text-white"></i>Gestionar Horarios
                                     </a>
