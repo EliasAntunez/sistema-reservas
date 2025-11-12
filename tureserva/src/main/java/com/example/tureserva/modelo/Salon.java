@@ -20,4 +20,9 @@ public class Salon extends EspacioReservable {
 
     @Column(name = "esta_climatizado", nullable = false)
     private boolean estaClimatizado;
+    
+    @Override
+    public String getTipoEspacio() {
+        return "SALON";
+    }
 }

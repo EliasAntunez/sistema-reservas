@@ -120,6 +120,7 @@ public class ServicioCancha {
         existente.setPrecioPorHora(cancha.getPrecioPorHora());
         existente.setEsTechada(cancha.getEsTechada());
         existente.setTipoPiso(cancha.getTipoPiso());
+        existente.setEstadoOperativo(cancha.getEstadoOperativo());
         existente.setActivo(cancha.getActivo());
         repositorioCancha.save(existente);
     }

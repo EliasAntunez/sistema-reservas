@@ -18,6 +18,7 @@ import java.util.HashMap;
 import com.example.tureserva.modelo.Cancha;
 import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.modelo.enums.TipoPiso;
+import com.example.tureserva.modelo.enums.EstadoOperativo;
 import com.example.tureserva.servicio.ServicioCancha;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.servicio.ServicioCanchaDeporte;
@@ -113,6 +114,7 @@ public class ControladorCancha {
         model.addAttribute("cancha", cancha);
         model.addAttribute("idComplejo", idComplejo);
         model.addAttribute("tipoPiso", TipoPiso.values());
+        model.addAttribute("estadosOperativos", EstadoOperativo.values());
         return "admin-complejo/canchas/crear";
     }
 
@@ -121,14 +123,16 @@ public class ControladorCancha {
                 @Valid @ModelAttribute("cancha") Cancha cancha, // 1. Recibe el objeto y lo valida
                 BindingResult bindingResult,                     // 2. Aquí se guardan los errores de validación
                 @RequestParam("idComplejo") Long idComplejo,     // 3. Recibe el ID del <input hidden>
-                Model model,                                     // 4. Para devolver datos al form SI HAY ERROR
-                RedirectAttributes redirectAttributes) {         // 5. Para enviar mensajes de éxito/error DESPUÉS de redirigir
+                @RequestParam("estadoOperativo") String estadoOperativoStr, // 4. Recibe el estado operativo del formulario
+                Model model,                                     // 5. Para devolver datos al form SI HAY ERROR
+                RedirectAttributes redirectAttributes) {         // 6. Para enviar mensajes de éxito/error DESPUÉS de redirigir
 
         // --- A. Si hay errores de validación ---
         if (bindingResult.hasErrors()) {
 
             model.addAttribute("idComplejo", idComplejo); 
             model.addAttribute("tipoPiso", TipoPiso.values());
+            model.addAttribute("estadosOperativos", EstadoOperativo.values());
 
             // Devolvemos la vista del formulario (NO redirigimos)
             return "admin-complejo/canchas/crear"; 
@@ -151,10 +155,19 @@ public class ControladorCancha {
                 model.addAttribute("error", "Ya existe una cancha con ese nombre en este complejo deportivo");
                 model.addAttribute("idComplejo", idComplejo);
                 model.addAttribute("tipoPiso", TipoPiso.values());
+                model.addAttribute("estadosOperativos", EstadoOperativo.values());
                 return "admin-complejo/canchas/crear";
             }
 
-            // Si todo está OK, guardamos
+            // Si todo está OK, establecemos el estado operativo y guardamos
+            try {
+                EstadoOperativo estadoOperativo = EstadoOperativo.valueOf(estadoOperativoStr);
+                cancha.setEstadoOperativo(estadoOperativo);
+            } catch (IllegalArgumentException e) {
+                // Si el estado no es válido, usar DISPONIBLE por defecto
+                cancha.setEstadoOperativo(EstadoOperativo.DISPONIBLE);
+            }
+            
             cancha.setComplejoDeportivo(complejoDeportivo);
             servicioCancha.guardarCancha(cancha);
             redirectAttributes.addFlashAttribute("exito", "Cancha creada exitosamente.");
@@ -177,6 +190,7 @@ public class ControladorCancha {
             model.addAttribute("error", mensajeError);
             model.addAttribute("idComplejo", idComplejo);
             model.addAttribute("tipoPiso", TipoPiso.values());
+            model.addAttribute("estadosOperativos", EstadoOperativo.values());
             return "admin-complejo/canchas/crear";
         }
     }
@@ -188,6 +202,7 @@ public class ControladorCancha {
         if (canchaOpt.isPresent() && canchaOpt.get().getActivo()) {
             model.addAttribute("cancha", canchaOpt.get());
             model.addAttribute("tipoPiso", TipoPiso.values());
+            model.addAttribute("estadosOperativos", EstadoOperativo.values());
             model.addAttribute("idComplejo", canchaOpt.get().getComplejoDeportivo().getId_complejo());
             return "admin-complejo/canchas/modificar";
         } else {
@@ -200,6 +215,7 @@ public class ControladorCancha {
     public String procesarFormularioModificar(
                 @Valid @ModelAttribute("cancha") Cancha cancha,
                 @RequestParam("idComplejo") Long idComplejo,
+                @RequestParam("estadoOperativo") String estadoOperativoStr,
                 BindingResult bindingResult,
                 Model model,
                 RedirectAttributes redirectAttributes) {
@@ -207,6 +223,7 @@ public class ControladorCancha {
         // --- A. Si hay errores de validación ---
         if (bindingResult.hasErrors()) {
             model.addAttribute("tipoPiso", TipoPiso.values());
+            model.addAttribute("estadosOperativos", EstadoOperativo.values());
             model.addAttribute("idComplejo", idComplejo);
             return "admin-complejo/canchas/modificar";
         }
@@ -226,11 +243,20 @@ public class ControladorCancha {
             if (servicioCancha.existeNombreDuplicadoExcluyendoId(cancha.getNombre(), complejoDeportivo, cancha.getId())) {
                 model.addAttribute("error", "Ya existe una cancha con ese nombre en este complejo deportivo");
                 model.addAttribute("tipoPiso", TipoPiso.values());
+                model.addAttribute("estadosOperativos", EstadoOperativo.values());
                 model.addAttribute("idComplejo", idComplejo);
                 return "admin-complejo/canchas/modificar";
             }
 
-            // Si todo está OK, actualizamos
+            // Si todo está OK, establecemos el estado operativo y actualizamos
+            try {
+                EstadoOperativo estadoOperativo = EstadoOperativo.valueOf(estadoOperativoStr);
+                cancha.setEstadoOperativo(estadoOperativo);
+            } catch (IllegalArgumentException e) {
+                // Si el estado no es válido, usar DISPONIBLE por defecto
+                cancha.setEstadoOperativo(EstadoOperativo.DISPONIBLE);
+            }
+            
             cancha.setComplejoDeportivo(complejoDeportivo);
             servicioCancha.actualizarCancha(cancha);
             redirectAttributes.addFlashAttribute("exito", "Cancha actualizada exitosamente.");

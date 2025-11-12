@@ -121,6 +121,13 @@ public class ServicioComplejoDeportivo {
     }
 
     /**
+     * Guardar o actualizar un complejo deportivo
+     */
+    public ComplejoDeportivo guardar(ComplejoDeportivo complejo) {
+        return repositorioComplejoDeportivo.save(complejo);
+    }
+
+    /**
      * Obtener todos los países
      */
 }

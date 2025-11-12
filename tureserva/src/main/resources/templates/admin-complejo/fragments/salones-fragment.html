@@ -37,6 +37,7 @@
                     <th>Precio por Hora</th>
                     <th>Metros Cuadrados</th>
                     <th>¿Climatizado?</th>
+                    <th>Estado Operativo</th>
                     <th>Estado</th>
                 </tr>
             </thead>
@@ -49,6 +50,20 @@
                     <td th:text="${salon.precioPorHora}"></td>
                     <td th:text="${salon.metrosCuadrados}"></td>
                     <td th:text="${salon.estaClimatizado} ? 'Sí' : 'No'"></td>
+                    <td>
+                        <span th:if="${salon.estadoOperativo.name() == 'DISPONIBLE'}" 
+                              class="badge bg-success"
+                              th:text="${salon.estadoOperativo.displayName}">
+                        </span>
+                        <span th:if="${salon.estadoOperativo.name() == 'MANTENIMIENTO'}" 
+                              class="badge bg-warning text-dark"
+                              th:text="${salon.estadoOperativo.displayName}">
+                        </span>
+                        <span th:if="${salon.estadoOperativo.name() == 'CERRADO'}" 
+                              class="badge bg-danger"
+                              th:text="${salon.estadoOperativo.displayName}">
+                        </span>
+                    </td>
                     <td>
                         <span th:if="${estadosConfiguracion[salon.id] == 'completo'}" 
                               class="badge bg-success"
@@ -63,7 +78,7 @@
                     </td>
                 </tr>
                 <tr th:if="${salonesPage.content.size() == 0}">
-                    <td colspan="6" class="text-center text-muted py-4">No hay salones registrados para este complejo.</td>
+                    <td colspan="7" class="text-center text-muted py-4">No hay salones registrados para este complejo.</td>
                 </tr>
             </tbody>
         </table>

@@ -113,6 +113,7 @@ public class ServicioSalon {
         existente.setPrecioPorHora(salon.getPrecioPorHora());
         existente.setMetrosCuadrados(salon.getMetrosCuadrados());
         existente.setEstaClimatizado(salon.isEstaClimatizado());
+        existente.setEstadoOperativo(salon.getEstadoOperativo());
         existente.setActivo(salon.getActivo());
         repositorioSalon.save(existente);
     }

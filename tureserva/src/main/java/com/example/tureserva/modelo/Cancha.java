@@ -23,4 +23,9 @@ public class Cancha extends EspacioReservable {
 
     @OneToMany(mappedBy = "cancha", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private java.util.List<CanchaDeporte> canchaDeporte = new java.util.ArrayList<>();
+    
+    @Override
+    public String getTipoEspacio() {
+        return "CANCHA";
+    }
 }

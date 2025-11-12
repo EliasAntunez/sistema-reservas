@@ -83,6 +83,21 @@
                 <i class="bi bi-x-circle me-2"></i>Políticas de Cancelación
             </button>
         </li>
+        
+        <!-- Tab Personalizar Horario -->
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" 
+                    th:classappend="${tabActiva == 'horario'} ? 'active' : ''"
+                    id="horario-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#horario-pane" 
+                    type="button" 
+                    role="tab" 
+                    aria-controls="horario-pane" 
+                    th:attr="aria-selected=${tabActiva == 'horario'}">
+                <i class="bi bi-clock-history me-2"></i>Personalizar Horario
+            </button>
+        </li>
     </ul>
 
     <!-- Contenido de los tabs -->
@@ -140,6 +155,23 @@
             </div>
         </div>
         
+        <!-- Panel Personalizar Horario -->
+        <div class="tab-pane fade" 
+             th:classappend="${tabActiva == 'horario'} ? 'show active' : ''"
+             id="horario-pane" 
+             role="tabpanel" 
+             aria-labelledby="horario-tab">
+            <div id="horario-content">
+                <!-- El contenido se cargará vía AJAX -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-2">Cargando configuración de horario...</p>
+                </div>
+            </div>
+        </div>
+        
     </div>
 
 </div>
@@ -187,16 +219,20 @@
                 cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/politicas-senia`, '#politicas-senia-content');
             } else if (tabActiva === 'politicas-cancelacion') {
                 cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/politicas-cancelacion`, '#politicas-cancelacion-content');
+            } else if (tabActiva === 'horario') {
+                cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/horario`, '#horario-content');
             }
 
             // Lazy loading: cargar contenido cuando se hace clic en un tab
             const deportesTab = document.getElementById('deportes-tab');
             const politicasSeniaTab = document.getElementById('politicas-senia-tab');
             const politicasCancelacionTab = document.getElementById('politicas-cancelacion-tab');
+            const horarioTab = document.getElementById('horario-tab');
 
             let deportesCargado = tabActiva === 'deportes';
             let politicasSelniaCargado = tabActiva === 'politicas-senia';
             let politicasCancelacionCargado = tabActiva === 'politicas-cancelacion';
+            let horarioCargado = tabActiva === 'horario';
 
             if (deportesTab) {
                 deportesTab.addEventListener('shown.bs.tab', function() {
@@ -221,6 +257,15 @@
                     if (!politicasCancelacionCargado) {
                         cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/politicas-cancelacion`, '#politicas-cancelacion-content');
                         politicasCancelacionCargado = true;
+                    }
+                });
+            }
+            
+            if (horarioTab) {
+                horarioTab.addEventListener('shown.bs.tab', function() {
+                    if (!horarioCargado) {
+                        cargarFragment(`/admin-complejo/espacios/gestionar/${idEspacio}/horario`, '#horario-content');
+                        horarioCargado = true;
                     }
                 });
             }
