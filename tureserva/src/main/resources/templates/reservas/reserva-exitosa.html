@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>¡Reserva Exitosa!</title>
+    <style>
+        .success-icon {
+            font-size: 5rem;
+            color: #198754;
+            animation: scaleIn 0.5s ease-out;
+        }
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .reserva-card {
+            border-left: 4px solid #198754;
+        }
+        .info-row {
+            padding: 1rem 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .reserva-id {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #0d6efd;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content" class="container main-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                
+                <!-- Mensaje de éxito -->
+                <div class="text-center mb-5 mt-5">
+                    <i class="bi bi-check-circle-fill success-icon"></i>
+                    <h1 class="mt-4 mb-2">¡Reserva Confirmada!</h1>
+                    <p class="lead text-muted">Tu reserva ha sido creada exitosamente</p>
+                </div>
+
+                <!-- Número de Reserva -->
+                <div class="card mb-4 text-center py-4">
+                    <div class="card-body">
+                        <p class="text-muted mb-2">Identificador de Reserva</p>
+                        <div class="reserva-id" th:text="'#' + ${reserva.codigoReserva}">
+                            #12345
+                        </div>
+                        <small class="text-muted">Guarda este número para futuras consultas</small>
+                    </div>
+                </div>
+
+                <!-- Detalles de la Reserva -->
+                <div class="card reserva-card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Detalles de tu Reserva
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        
+                        <!-- Estado -->
+                        <div class="info-row">
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <strong class="text-muted">Estado</strong>
+                                </div>
+                                <div class="col-md-8">
+                                    <span class="badge bg-success fs-6">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        <span th:text="${reserva.estado}">CONFIRMADA</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fecha de Reserva -->
+                        <div class="info-row">
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <strong class="text-muted">
+                                        <i class="bi bi-calendar3"></i> Fecha
+                                    </strong>
+                                </div>
+                                <div class="col-md-8">
+                                    <span th:text="${#temporals.format(reserva.fechaReserva, 'dd/MM/yyyy')}">14/11/2025</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detalles por Espacio -->
+                        <div th:each="detalle, iterStat : ${reserva.detalles}" 
+                             class="info-row"
+                             th:classappend="${iterStat.last} ? 'border-0' : ''">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong class="text-muted">
+                                        <i class="bi bi-pin-map"></i> Espacio
+                                    </strong>
+                                </div>
+                                <div class="col-md-8">
+                                    <div>
+                                        <strong th:text="${detalle.espacioReservable.nombre}">Cancha 1</strong>
+                                        <span class="badge bg-info ms-2" 
+                                              th:text="${detalle.espacioReservable.tipoEspacio}">CANCHA</span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock"></i>
+                                            <span th:text="${#temporals.format(detalle.horaInicio, 'HH:mm')}">18:00</span>
+                                            -
+                                            <span th:text="${#temporals.format(detalle.horaFin, 'HH:mm')}">20:00</span>
+                                            (<span th:text="${detalle.duracionHoras}">2</span> 
+                                            <span th:text="${detalle.duracionHoras == 1} ? 'hora' : 'horas'">horas</span>)
+                                        </small>
+                                    </div>
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            <i class="bi bi-cash"></i>
+                                            Subtotal: $<span th:text="${#numbers.formatDecimal(detalle.subtotal, 1, 2)}">0.00</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total -->
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <strong class="fs-5">Total a Pagar</strong>
+                                </div>
+                                <div class="col-md-8">
+                                    <span class="fs-3 fw-bold text-success">
+                                        $<span th:text="${#numbers.formatDecimal(reserva.montoTotal, 1, 2)}">0.00</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Información Adicional -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="bi bi-info-circle-fill text-primary"></i>
+                            Información Importante
+                        </h6>
+                        <ul class="mb-0">
+                            <li class="mb-2">
+                                <strong>Antes del día:</strong> 
+                                Recuerda llegar 10 minutos antes de tu horario reservado.
+                            </li>
+                            <li class="mb-2">
+                                <strong>Cancelaciones:</strong> 
+                                Revisa las políticas de cancelación del complejo deportivo.
+                            </li>
+                            <li>
+                                <strong>Consultas:</strong> 
+                                Ante cualquier duda, contacta con el complejo deportivo.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="d-grid gap-3 mb-5">
+                    <a th:href="@{/reservas/mis-reservas}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-list-check me-2"></i>
+                        Ver Mis Reservas
+                    </a>
+                    
+                    <a th:href="@{/reservas/nueva}" class="btn btn-outline-success btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Hacer Otra Reserva
+                    </a>
+                    
+                    <a th:href="@{/}" class="btn btn-outline-secondary btn-lg">
+                        <i class="bi bi-house me-2"></i>
+                        Volver al Inicio
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

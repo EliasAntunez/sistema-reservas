@@ -388,7 +388,7 @@ public class ControladorUsuario {
 
         try {
             boolean eliminado = servicioCliente.eliminarCliente(cliente.getId());
-            
+
             if (eliminado) {
                 // Redirigir a página intermedia que muestre alerta y haga logout
                 return "usuarios/baja-exitosa-redirect";
@@ -396,7 +396,11 @@ public class ControladorUsuario {
                 redirectAttributes.addFlashAttribute("error", "No se pudo dar de baja la cuenta");
                 return "redirect:/perfil";
             }
-            
+
+        } catch (IllegalStateException ise) {
+            // Mensaje específico cuando el cliente tiene reservas activas
+            redirectAttributes.addFlashAttribute("error", ise.getMessage());
+            return "redirect:/perfil";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Error al procesar la baja. Inténtelo de nuevo.");
             return "redirect:/perfil";

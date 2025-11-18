@@ -1,6 +1,7 @@
 package com.example.tureserva.seguridad;
 
 import com.example.tureserva.servicio.ServicioOAuth2Usuario;
+import com.example.tureserva.servicio.ServicioOidcUsuario;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,11 +19,16 @@ public class ConfiguracionSeguridad {
 
     private final ServicioAutenticacion servicioAutenticacion;
     private final ServicioOAuth2Usuario servicioOAuth2Usuario;
+    private final ServicioOidcUsuario servicioOidcUsuario;
 
     // Constructor injection (más moderno que @Autowired)
-    public ConfiguracionSeguridad(ServicioAutenticacion servicioAutenticacion, ServicioOAuth2Usuario servicioOAuth2Usuario) {
+    public ConfiguracionSeguridad(
+            ServicioAutenticacion servicioAutenticacion, 
+            ServicioOAuth2Usuario servicioOAuth2Usuario,
+            ServicioOidcUsuario servicioOidcUsuario) {
         this.servicioAutenticacion = servicioAutenticacion;
         this.servicioOAuth2Usuario = servicioOAuth2Usuario;
+        this.servicioOidcUsuario = servicioOidcUsuario;
     }
 
     @Bean
@@ -57,13 +63,26 @@ public class ConfiguracionSeguridad {
             .requestMatchers("/", "/usuarios/registro").permitAll()
             .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
             .requestMatchers("/debug/**").permitAll()
-            // Rutas OAuth2
-            .requestMatchers("/completar-datos").hasAnyAuthority("ROLE_OAUTH2_USER", "OIDC_USER")
+            // Rutas OAuth2 - NO ES NECESARIO YA, todos los Google OAuth2 obtienen ROLE_CLIENTE directamente
+            // .requestMatchers("/completar-datos").hasAnyAuthority("ROLE_OAUTH2_USER", "OIDC_USER")
+            // Rutas de cliente (solo clientes pueden acceder a los flujos de reserva)
+            .requestMatchers(
+                "/reservas/nueva",
+                "/reservas/complejo/**",
+                "/reservas/seleccionar-horario",
+                "/reservas/confirmar",
+                "/reservas/confirmar-final",
+                "/reservas/exitosa/**",
+                "/reservas/mis-reservas/**",
+                "/reservas/*/cancelar",
+                "/reservas/extender-horario"
+            ).hasRole("CLIENTE")
             // Rutas de administración
             .requestMatchers("/super-admin/**").hasRole("SUPER_ADMIN")
             .requestMatchers("/admin-complejo/**").hasRole("ADMIN_COMPLEJO")
-            // Rutas autenticadas
-            .requestMatchers("/perfil/**", "/dashboard").authenticated()
+            // Rutas de perfil (solo clientes) y dashboard autenticado
+            .requestMatchers("/perfil/**").hasRole("CLIENTE")
+            .requestMatchers("/dashboard").authenticated()
             .anyRequest().authenticated();
     }
     
@@ -82,7 +101,12 @@ public class ConfiguracionSeguridad {
             .loginPage("/login")
             .defaultSuccessUrl("/dashboard", true)
             .failureUrl("/login?error=oauth2")
-            .userInfoEndpoint(userInfo -> userInfo.userService(servicioOAuth2Usuario));
+            .userInfoEndpoint(userInfo -> {
+                // OAuth2 estándar (Facebook, GitHub, etc.)
+                userInfo.userService(servicioOAuth2Usuario);
+                // OIDC (Google, Microsoft, Apple, etc.)
+                userInfo.oidcUserService(servicioOidcUsuario);
+            });
     }
     
     private void configurarLogout(org.springframework.security.config.annotation.web.configurers.LogoutConfigurer<HttpSecurity> logout) {

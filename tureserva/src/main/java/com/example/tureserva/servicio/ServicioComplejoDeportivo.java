@@ -6,6 +6,8 @@ import com.example.tureserva.modelo.Localidad;
 import com.example.tureserva.repositorio.RepositorioComplejoDeportivo;
 import com.example.tureserva.repositorio.RepositorioLocalidad;
 import com.example.tureserva.repositorio.RepositorioAdministradorComplejo;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +74,20 @@ public class ServicioComplejoDeportivo {
      */
     public List<ComplejoDeportivo> obtenerComplejosActivos() {
         return repositorioComplejoDeportivo.findByActivoTrue();
+    }
+
+    /**
+     * Obtener todos los complejos activos con paginación
+     */
+    public Page<ComplejoDeportivo> obtenerComplejosActivos(Pageable pageable) {
+        return repositorioComplejoDeportivo.findByActivoTrue(pageable);
+    }
+
+    /**
+     * Buscar complejos por nombre con paginación
+     */
+    public Page<ComplejoDeportivo> buscarPorNombre(String nombre, Pageable pageable) {
+        return repositorioComplejoDeportivo.findByNombreComplejoContainingIgnoreCaseAndActivoTrue(nombre, pageable);
     }
 
     /**

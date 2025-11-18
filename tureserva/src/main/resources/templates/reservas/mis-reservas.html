@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Mis Reservas</title>
+    
+    <th:block layout:fragment="css">
+        <style>
+            .main-content {
+                padding: 12px 0;
+            }
+
+            .table-container {
+                max-height: 500px;
+                overflow-y: auto;
+                overflow-x: hidden;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                margin-bottom: 25px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            }
+
+            .reservas-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 0;
+            }
+
+            .reservas-table thead th {
+                background-color: #007bff;
+                color: white;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+            }
+
+            .reservas-table thead th, .reservas-table td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+                white-space: nowrap;
+            }
+
+            .selectable-row {
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+
+            .selectable-row:hover {
+                background-color: #e9f7ff;
+            }
+
+            .selectable-row.selected {
+                background-color: #cce5ff;
+                font-weight: 600;
+                border-left: 5px solid #0056b3;
+            }
+
+            .estado-badge {
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 0.875rem;
+                font-weight: 500;
+                display: inline-block;
+            }
+
+            .estado-CONFIRMADA {
+                background-color: #d1e7dd;
+                color: #0f5132;
+            }
+
+            .estado-PENDIENTE {
+                background-color: #fff3cd;
+                color: #664d03;
+            }
+
+            .estado-CANCELADA {
+                background-color: #f8d7da;
+                color: #842029;
+            }
+
+            .estado-FINALIZADA {
+                background-color: #e2e3e5;
+                color: #41464b;
+            }
+
+            .stats-cards {
+                display: flex;
+                gap: 15px;
+                margin-bottom: 25px;
+            }
+
+            .stat-card {
+                flex: 1;
+                padding: 20px;
+                border-radius: 8px;
+                border-left: 4px solid;
+                background: white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .stat-card.total { border-color: #0d6efd; }
+            .stat-card.confirmadas { border-color: #198754; }
+            .stat-card.pendientes { border-color: #ffc107; }
+
+            .actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: nowrap;
+                gap: 10px;
+                margin-bottom: 30px;
+            }
+        </style>
+    </th:block>
+</head>
+
+<body>
+    <div layout:fragment="content" class="container main-content">
+        
+        <!-- Mensajes de alerta -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span th:text="${error}">Error</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        
+        <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span th:text="${mensaje}">Éxito</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Header -->
+        <div class="d-flex align-items-start mb-3">
+            <div class="me-3">
+                <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+            <h1 class="h2 mb-0 text-primary">
+                <i class="fas fa-calendar-check me-2"></i>
+                Mis Reservas
+            </h1>
+        </div>
+        
+        <!-- Tabla de Reservas -->
+        <input type="hidden" id="estado" th:value="${estadoFiltro}" />
+        <div id="mis-reservas-grid" th:fragment="grid">
+            <div class="table-container">
+                <table class="reservas-table table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th><i class="bi bi-tag me-1"></i>Codigo de<br>Reserva</th>
+                        <th><i class="bi bi-calendar3 me-1"></i>Fecha de creación<br>de la Reserva</th>
+                        <th><i class="bi bi-calendar3 me-1"></i>Fecha de la<br>Reserva</th>
+                        <th><i class="bi bi-building me-1"></i>Complejo</th>
+                        <th><i class="bi bi-geo-alt me-1"></i>Espacio</th>
+                        <th><i class="bi bi-clock me-1"></i>Horario</th>
+                        <th><i class="bi bi-currency-dollar me-1"></i>Total</th>
+                        <th><i class="bi bi-info-circle me-1"></i>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="reserva : ${reservas}"
+                        class="selectable-row"
+                        th:data-id="${reserva.id}">
+                        <td th:text="${reserva.codigoReserva}">1</td>
+                        <td th:text="${#temporals.format(reserva.fechaCreacion, 'dd/MM/yyyy')}">dd/MM/yyyy</td>
+                        <td th:text="${#temporals.format(reserva.fechaReserva, 'dd/MM/yyyy')}">14/11/2025</td>
+                        <td>
+                            <span th:if="${!reserva.detalles.isEmpty()}"
+                                  th:text="${reserva.detalles[0].espacioReservable.complejoDeportivo.nombre_complejo}">
+                                Complejo
+                            </span>
+                        </td>
+                        <td>
+                            <span th:each="detalle, iter : ${reserva.detalles}">
+                                <span th:text="${detalle.espacioReservable.nombre}">Espacio</span>
+                                <span th:if="${!iter.last}"><br></span>
+                            </span>
+                        </td>
+                        <td>
+                            <span th:each="detalle, iter : ${reserva.detalles}">
+                                <span th:text="${#temporals.format(detalle.horaInicio, 'HH:mm')}">00:00</span>-<span th:text="${#temporals.format(detalle.horaFin, 'HH:mm')}">00:00</span>
+                                <span th:if="${!iter.last}"><br></span>
+                            </span>
+                        </td>
+                        <td th:text="'$' + ${#numbers.formatDecimal(reserva.montoTotal, 1, 2)}">$0.00</td>
+                        <td>
+                            <span class="estado-badge" 
+                                  th:classappend="'estado-' + ${reserva.estado}"
+                                  th:text="${reserva.estado}">
+                                CONFIRMADA
+                            </span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(reservas)}">
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No tienes reservas registradas.
+                        </td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="pagination-container text-center mt-3" th:if="${totalPaginas != null && totalPaginas > 1}">
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" th:classappend="${paginaActual == 0} ? 'disabled'">
+                            <a class="page-link" th:href="@{/reservas/mis-reservas(page=0, estado=${estadoFiltro})}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item" th:classappend="${paginaActual == 0} ? 'disabled'">
+                            <a class="page-link" th:href="@{/reservas/mis-reservas(page=${paginaActual - 1}, estado=${estadoFiltro})}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPaginas - 1)}"
+                            th:if="${i >= (paginaActual - 2) and i <= (paginaActual + 2)}"
+                            th:classappend="${i == paginaActual} ? 'active'">
+                            <a class="page-link" th:href="@{/reservas/mis-reservas(page=${i}, estado=${estadoFiltro})}" th:text="${i + 1}">1</a>
+                        </li>
+
+                        <li class="page-item" th:classappend="${paginaActual >= totalPaginas - 1} ? 'disabled'">
+                            <a class="page-link" th:href="@{/reservas/mis-reservas(page=${paginaActual + 1}, estado=${estadoFiltro})}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item" th:classappend="${paginaActual >= totalPaginas - 1} ? 'disabled'">
+                            <a class="page-link" th:href="@{/reservas/mis-reservas(page=${totalPaginas - 1}, estado=${estadoFiltro})}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="actions">
+            <a th:href="@{/reservas/nueva}" class="btn btn-success d-flex align-items-center">
+                <i class="bi bi-plus-circle me-2"></i>Nueva Reserva
+            </a>
+
+            <div id="abm-actions">
+                <button id="view-button" class="btn btn-primary d-flex align-items-center" disabled>
+                    <i class="bi bi-eye me-2"></i>Ver Detalles
+                </button>
+                <button id="cancel-button" class="btn btn-danger d-flex align-items-center" disabled>
+                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', () => {
+                const rows = document.querySelectorAll('.selectable-row');
+                const viewButton = document.getElementById('view-button');
+                const cancelButton = document.getElementById('cancel-button');
+                
+                let selectedReservaId = null;
+                function initGridBehavior(container = document) {
+                    const rowsLocal = container.querySelectorAll('.selectable-row');
+                    rowsLocal.forEach(row => {
+                        row.addEventListener('click', () => {
+                            const currentId = row.getAttribute('data-id');
+
+                            if (row.classList.contains('selected')) {
+                                row.classList.remove('selected');
+                                selectedReservaId = null;
+                            } else {
+                                rowsLocal.forEach(r => r.classList.remove('selected'));
+                                row.classList.add('selected');
+                                selectedReservaId = currentId;
+                            }
+
+                            updateButtons();
+                        });
+                    });
+
+                    function updateButtons() {
+                        if (selectedReservaId) {
+                            viewButton.disabled = false;
+                            cancelButton.disabled = false;
+
+                            viewButton.onclick = () => {
+                                window.location.href = `/reservas/exitosa/${selectedReservaId}`;
+                            };
+                            
+                            cancelButton.onclick = () => {
+                                window.location.href = `/reservas/${selectedReservaId}/cancelar`;
+                            };
+                        } else {
+                            viewButton.disabled = true;
+                            cancelButton.disabled = true;
+                            viewButton.onclick = null;
+                            cancelButton.onclick = null;
+                        }
+                    }
+
+                    updateButtons();
+                }
+
+                // Inicializar comportamiento en carga inicial
+                initGridBehavior();
+
+                // Interceptar clicks de paginación dentro del fragmento
+                const grid = document.getElementById('mis-reservas-grid');
+                if (grid) {
+                    grid.addEventListener('click', function(ev) {
+                        const a = ev.target.closest('a.page-link');
+                        if (!a) return;
+                        ev.preventDefault();
+                        const url = new URL(a.href, window.location.origin);
+                        const params = new URLSearchParams(url.search);
+                        const page = params.get('page') || '0';
+                        const estado = document.getElementById('estado') ? document.getElementById('estado').value : '';
+
+                        const fetchUrl = `/reservas/mis-reservas/fragment?page=${encodeURIComponent(page)}&estado=${encodeURIComponent(estado)}`;
+                        fetch(fetchUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(r => r.text())
+                            .then(html => {
+                                // Parsear y reemplazar el contenedor completo para evitar div anidado
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newGrid = doc.getElementById('mis-reservas-grid');
+                                if (newGrid) {
+                                    grid.outerHTML = newGrid.outerHTML;
+                                    const replaced = document.getElementById('mis-reservas-grid');
+                                    initGridBehavior(replaced);
+                                } else {
+                                    // Si el fragmento no contiene el div, reemplazamos el innerHTML
+                                    grid.innerHTML = html;
+                                    initGridBehavior(grid);
+                                }
+                            }).catch(err => console.error('Error cargando página:', err));
+                    });
+                }
+
+                // Auto-dismiss alerts
+                const alerts = document.querySelectorAll('.alert-dismissible');
+                alerts.forEach(alert => {
+                    setTimeout(() => {
+                        try {
+                            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                            bsAlert.close();
+                        } catch(e) {
+                            alert.style.display = 'none';
+                        }
+                    }, 3000);
+                });
+            });
+        </script>
+    </th:block>
+</body>
+</html>

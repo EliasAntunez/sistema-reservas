@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Cancelar Reserva</title>
+    
+    <th:block layout:fragment="css">
+        <style>
+            .cancelacion-card {
+                max-width: 700px;
+                margin: 40px auto;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }
+
+            .cancelacion-header {
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                color: white;
+                padding: 30px;
+                text-align: center;
+            }
+
+            .cancelacion-header i {
+                font-size: 3.5rem;
+                margin-bottom: 15px;
+                opacity: 0.9;
+            }
+
+            .cancelacion-header h2 {
+                margin: 0;
+                font-size: 1.8rem;
+                font-weight: 600;
+            }
+
+            .cancelacion-body {
+                padding: 35px;
+            }
+
+            .info-box {
+                background: #f8f9fa;
+                border-left: 4px solid #0d6efd;
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 25px;
+            }
+
+            .info-box.warning {
+                border-left-color: #ffc107;
+                background: #fff9e6;
+            }
+
+            .info-box h4 {
+                margin-top: 0;
+                margin-bottom: 15px;
+                color: #495057;
+                font-size: 1.1rem;
+            }
+
+            .info-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 10px 0;
+                border-bottom: 1px solid #e9ecef;
+            }
+
+            .info-row:last-child {
+                border-bottom: none;
+            }
+
+            .info-label {
+                font-weight: 500;
+                color: #6c757d;
+            }
+
+            .info-value {
+                font-weight: 600;
+                color: #212529;
+            }
+
+            .warning-message {
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 25px;
+            }
+
+            .warning-message i {
+                color: #856404;
+                font-size: 1.3rem;
+                margin-right: 10px;
+            }
+
+            .warning-message p {
+                margin: 0;
+                color: #856404;
+                font-size: 1rem;
+            }
+
+            .form-group label {
+                font-weight: 600;
+                color: #495057;
+                margin-bottom: 10px;
+            }
+
+            .form-control {
+                border-radius: 8px;
+                border: 2px solid #e9ecef;
+                padding: 12px 15px;
+            }
+
+            .form-control:focus {
+                border-color: #dc3545;
+                box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+            }
+
+            .action-buttons {
+                display: flex;
+                gap: 15px;
+                margin-top: 30px;
+            }
+
+            .action-buttons .btn {
+                flex: 1;
+                padding: 12px;
+                font-size: 1.05rem;
+                font-weight: 600;
+                border-radius: 8px;
+            }
+
+            .badge-estado {
+                padding: 6px 14px;
+                border-radius: 12px;
+                font-size: 0.9rem;
+                font-weight: 600;
+            }
+        </style>
+    </th:block>
+</head>
+
+<body>
+    <div layout:fragment="content" class="container">
+        
+        <div class="cancelacion-card">
+            <!-- Header -->
+            <div class="cancelacion-header">
+                <i class="bi bi-exclamation-triangle"></i>
+                <h2>Confirmar Cancelación</h2>
+                <p class="mb-0 mt-2">¿Estás seguro de que deseas cancelar esta reserva?</p>
+            </div>
+
+            <!-- Body -->
+            <div class="cancelacion-body">
+                
+                <!-- Información de la Reserva -->
+                <div class="info-box">
+                    <h4><i class="bi bi-info-circle me-2"></i>Información de la Reserva</h4>
+                    <div class="info-row">
+                        <span class="info-label">ID de Reserva:</span>
+                        <span class="info-value" th:text="${reserva.id}">#123</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Fecha:</span>
+                        <span class="info-value" th:text="${#temporals.format(reserva.fechaReserva, 'dd/MM/yyyy')}">14/11/2025</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Complejo:</span>
+                        <span class="info-value" 
+                              th:text="${!reserva.detalles.isEmpty() ? reserva.detalles[0].espacioReservable.complejoDeportivo.nombre_complejo : 'N/A'}">
+                            Complejo Deportivo
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Espacio:</span>
+                        <span class="info-value">
+                            <span th:each="detalle, iter : ${reserva.detalles}">
+                                <span th:text="${detalle.espacioReservable.nombre}">Cancha 1</span>
+                                <span th:if="${!iter.last}">, </span>
+                            </span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Horario:</span>
+                        <span class="info-value">
+                            <span th:each="detalle, iter : ${reserva.detalles}">
+                                <span th:text="${#temporals.format(detalle.horaInicio, 'HH:mm')}">18:00</span>-<span th:text="${#temporals.format(detalle.horaFin, 'HH:mm')}">20:00</span>
+                                <span th:if="${!iter.last}">, </span>
+                            </span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Estado:</span>
+                        <span class="badge-estado" 
+                              th:classappend="'estado-' + ${reserva.estado}"
+                              th:text="${reserva.estado}">
+                            CONFIRMADA
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Monto Total:</span>
+                        <span class="info-value" th:text="'$' + ${#numbers.formatDecimal(reserva.montoTotal, 1, 2)}">$2,500.00</span>
+                    </div>
+                </div>
+
+                <!-- Tiempo Restante -->
+                <div class="info-box warning" th:if="${horasRestantes != null && horasRestantes > 0}">
+                    <h4><i class="bi bi-clock me-2"></i>Tiempo hasta la Reserva</h4>
+                    <p class="mb-0">
+                        <strong th:text="${horasRestantes}">24</strong> hora(s) restantes hasta el inicio de tu reserva.
+                    </p>
+                </div>
+
+                <!-- Advertencia de Política de Cancelación -->
+                <div class="warning-message" th:if="${politica != null}">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <p>
+                        <strong>Política de Cancelación:</strong>
+                        <span th:text="${politica.nombre}">Política estándar</span> - 
+                        Se requieren al menos <strong th:text="${politica.horasAnticipacionMinima}">24</strong> hora(s) de anticipación.
+                        <span th:if="${politica.porcentajeDevolucion < 100}">
+                            Se devolverá el <strong th:text="${politica.porcentajeDevolucion}">50</strong>% del monto pagado.
+                        </span>
+                        <span th:if="${politica.porcentajeDevolucion == 100}">
+                            Se devolverá el <strong>100%</strong> del monto pagado.
+                        </span>
+                    </p>
+                </div>
+
+                <div class="warning-message" th:if="${politica == null}">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <p>
+                        <strong>Política de Cancelación por defecto:</strong>
+                        Puedes cancelar hasta 1 hora antes del inicio de la reserva sin cargos.
+                    </p>
+                </div>
+
+                <!-- Formulario de Cancelación -->
+                <form th:action="@{/reservas/{id}/cancelar(id=${reserva.id})}" method="post">
+                    
+                    <div class="form-group mb-3">
+                        <label for="motivo">Motivo de Cancelación (Opcional)</label>
+                        <textarea 
+                            class="form-control" 
+                            id="motivo" 
+                            name="motivo" 
+                            rows="3" 
+                            maxlength="255"
+                            placeholder="Ingresa el motivo de la cancelación (opcional)"></textarea>
+                        <small class="form-text text-muted">Máximo 255 caracteres</small>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="action-buttons">
+                        <a th:href="@{/reservas/mis-reservas}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Volver
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-x-circle me-2"></i>Confirmar Cancelación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <th:block layout:fragment="scripts">
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const form = document.querySelector('form');
+                
+                form.addEventListener('submit', (e) => {
+                    const confirmacion = confirm('¿Estás completamente seguro de que deseas cancelar esta reserva?');
+                    if (!confirmacion) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        </script>
+    </th:block>
+</body>
+</html>
