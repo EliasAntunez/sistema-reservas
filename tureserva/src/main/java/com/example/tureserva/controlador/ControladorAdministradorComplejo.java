@@ -501,9 +501,9 @@ public class ControladorAdministradorComplejo {
     /**
      * Cancela una reserva por parte del administrador.
      */
-        @PostMapping("/reservas/{reservaId}/cancelar")
+        @PostMapping("/reservas/{codigoReserva}/cancelar")
         public String cancelarReservaPorAdmin(
-            @PathVariable("reservaId") String reservaId,
+            @PathVariable("codigoReserva") String codigoReserva,
             @RequestParam("complejoId") Long complejoId,
             @RequestParam(value = "motivo", required = false) String motivo,
             Authentication authentication,
@@ -516,7 +516,7 @@ public class ControladorAdministradorComplejo {
                 return "redirect:/admin-complejo/mis-complejos";
             }
             
-            Long resolvedId = resolveReservaId(reservaId);
+            Long resolvedId = resolveReservaId(codigoReserva);
             servicioReserva.cancelarReservaPorAdmin(resolvedId, motivo);
             ManejadorMensajes.agregarMensajeExito(redirectAttributes, "Reserva cancelada exitosamente");
             

@@ -133,9 +133,9 @@ public class ServicioReserva {
                 return intervalos;
             }
             
-            // Obtener reservas existentes
-            List<DetalleReserva> reservasExistentes = repositorioDetalleReserva
-                    .findByEspacioReservableAndFechaReserva(espacioConectado, fecha);
+                // Obtener reservas existentes (ignorar detalles pertenecientes a reservas CANCELADAS)
+                List<DetalleReserva> reservasExistentes = repositorioDetalleReserva
+                    .findByEspacioReservableAndFechaReservaAndReservaEstadoNot(espacioConectado, fecha, com.example.tureserva.modelo.enums.EstadoReserva.CANCELADA);
             
             // Generar intervalos para cada rango horario del día
             for (RangoHorario rango : rangosDelDia) {
@@ -376,7 +376,8 @@ public class ServicioReserva {
             return resultado; // Retornar el resultado con el mensaje de error
         }
         
-        // 6. Cancelar la reserva
+        // 6. Cancelar la reserva: marcar como CANCELADA pero mantener los detalles
+        // para conservar el historial y evitar inconsistencias en validaciones (montoTotal > 0)
         reserva.cancelar(motivo);
         repositorioReserva.save(reserva);
         
@@ -624,7 +625,8 @@ public class ServicioReserva {
         reserva.cancelar(motivo != null && !motivo.trim().isEmpty() 
             ? motivo 
             : "Cancelada por el administrador del complejo");
-        
+
+        // Mantener detalles para auditoría; la lógica de disponibilidad debe ignorar reservas CANCELADAS
         repositorioReserva.save(reserva);
         
         logger.info("Reserva {} cancelada por administrador. Motivo: {}", reservaId, motivo);

@@ -3,6 +3,7 @@ package com.example.tureserva.servicio;
 import org.springframework.stereotype.Service;
 import com.example.tureserva.repositorio.RepositorioCancha;
 import com.example.tureserva.repositorio.RepositorioComplejoDeportivo;
+import com.example.tureserva.repositorio.RepositorioDetalleReserva;
 import com.example.tureserva.modelo.Cancha;
 import com.example.tureserva.modelo.ComplejoDeportivo;
 import java.util.Optional;
@@ -12,10 +13,13 @@ public class ServicioCancha {
 
     private final RepositorioCancha repositorioCancha;
     private final RepositorioComplejoDeportivo repositorioComplejo;
+    private final RepositorioDetalleReserva repositorioDetalleReserva;
 
-    public ServicioCancha(RepositorioCancha repositorioCancha, RepositorioComplejoDeportivo repositorioComplejo) {
+    public ServicioCancha(RepositorioCancha repositorioCancha, RepositorioComplejoDeportivo repositorioComplejo,
+                          RepositorioDetalleReserva repositorioDetalleReserva) {
         this.repositorioCancha = repositorioCancha;
         this.repositorioComplejo = repositorioComplejo;
+        this.repositorioDetalleReserva = repositorioDetalleReserva;
     }
 
     public org.springframework.data.domain.Page<Cancha> listarCanchasPorComplejoPaginado(Long idComplejo, int page, int size) {
@@ -107,6 +111,25 @@ public class ServicioCancha {
 
     public void eliminarCancha(Long id) {
         Cancha cancha = repositorioCancha.findById(id).orElseThrow(() -> new IllegalArgumentException("Cancha no encontrada con ID: " + id));
+
+        // Verificar si existen reservas activas (PENDIENTE o CONFIRMADA) desde hoy en adelante
+        java.time.LocalDate hoy = java.time.LocalDate.now();
+        java.time.LocalTime ahora = java.time.LocalTime.now();
+        java.util.List<com.example.tureserva.modelo.enums.EstadoReserva> estadosActivos = java.util.Arrays.asList(
+            com.example.tureserva.modelo.enums.EstadoReserva.PENDIENTE,
+            com.example.tureserva.modelo.enums.EstadoReserva.CONFIRMADA
+        );
+
+        java.util.List<com.example.tureserva.modelo.DetalleReserva> detallesActivos = repositorioDetalleReserva
+            .findActiveDetallesByEspacioFromToday(cancha, hoy, ahora, estadosActivos);
+
+        if (!detallesActivos.isEmpty()) {
+            // Construir un mensaje útil
+            int count = detallesActivos.size();
+            throw new IllegalStateException("No se puede dar de baja la cancha: existen " + count + " reserva(s) activas. " +
+                "Por favor, cancele las reservas activas o espere a que finalicen antes de desactivar la cancha.");
+        }
+
         cancha.setActivo(false);
         repositorioCancha.save(cancha);
     }

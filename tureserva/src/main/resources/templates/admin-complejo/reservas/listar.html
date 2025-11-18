@@ -439,6 +439,7 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <form id="formCancelar" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                         <div class="modal-body">
                             <p><strong>¿Estás seguro de que deseas cancelar esta reserva?</strong></p>
                             <p class="text-muted">Esta acción no se puede deshacer.</p>
