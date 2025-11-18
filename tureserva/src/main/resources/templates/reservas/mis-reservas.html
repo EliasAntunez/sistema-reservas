@@ -165,7 +165,8 @@
                 <tbody>
                     <tr th:each="reserva : ${reservas}"
                         class="selectable-row"
-                        th:data-id="${reserva.id}">
+                        th:data-id="${reserva.id}"
+                        th:data-codigo-reserva="${reserva.codigoReserva}">
                         <td th:text="${reserva.codigoReserva}">1</td>
                         <td th:text="${#temporals.format(reserva.fechaCreacion, 'dd/MM/yyyy')}">dd/MM/yyyy</td>
                         <td th:text="${#temporals.format(reserva.fechaReserva, 'dd/MM/yyyy')}">14/11/2025</td>
@@ -260,88 +261,110 @@
     <th:block layout:fragment="scripts">
         <script th:inline="javascript">
             document.addEventListener('DOMContentLoaded', () => {
-                const rows = document.querySelectorAll('.selectable-row');
-                const viewButton = document.getElementById('view-button');
-                const cancelButton = document.getElementById('cancel-button');
-                
+                let viewButton = document.getElementById('view-button');
+                let cancelButton = document.getElementById('cancel-button');
+
                 let selectedReservaId = null;
-                function initGridBehavior(container = document) {
-                    const rowsLocal = container.querySelectorAll('.selectable-row');
-                    rowsLocal.forEach(row => {
-                        row.addEventListener('click', () => {
-                            const currentId = row.getAttribute('data-id');
+                let selectedReservaCodigo = null;
 
-                            if (row.classList.contains('selected')) {
-                                row.classList.remove('selected');
-                                selectedReservaId = null;
-                            } else {
-                                rowsLocal.forEach(r => r.classList.remove('selected'));
-                                row.classList.add('selected');
-                                selectedReservaId = currentId;
-                            }
+                // Refresca referencias a botones y limpia selección cuando el fragmento se reemplaza
+                function refreshReferencesAndState() {
+                    viewButton = document.getElementById('view-button');
+                    cancelButton = document.getElementById('cancel-button');
 
-                            updateButtons();
-                        });
-                    });
-
-                    function updateButtons() {
-                        if (selectedReservaId) {
-                            viewButton.disabled = false;
-                            cancelButton.disabled = false;
-
-                            viewButton.onclick = () => {
-                                window.location.href = `/reservas/exitosa/${selectedReservaId}`;
-                            };
-                            
-                            cancelButton.onclick = () => {
-                                window.location.href = `/reservas/${selectedReservaId}/cancelar`;
-                            };
-                        } else {
-                            viewButton.disabled = true;
-                            cancelButton.disabled = true;
-                            viewButton.onclick = null;
-                            cancelButton.onclick = null;
-                        }
-                    }
-
+                    // Limpiar selección visual y estado
+                    const prev = document.querySelector('#mis-reservas-grid .selectable-row.selected');
+                    if (prev) prev.classList.remove('selected');
+                    selectedReservaId = null;
+                    selectedReservaCodigo = null;
                     updateButtons();
                 }
 
-                // Inicializar comportamiento en carga inicial
-                initGridBehavior();
+                // Actualiza estado de botones según la fila seleccionada
+                function updateButtons() {
+                    if (selectedReservaId) {
+                        viewButton.disabled = false;
+                        cancelButton.disabled = false;
 
-                // Interceptar clicks de paginación dentro del fragmento
-                const grid = document.getElementById('mis-reservas-grid');
-                if (grid) {
-                    grid.addEventListener('click', function(ev) {
-                        const a = ev.target.closest('a.page-link');
-                        if (!a) return;
-                        ev.preventDefault();
-                        const url = new URL(a.href, window.location.origin);
-                        const params = new URLSearchParams(url.search);
-                        const page = params.get('page') || '0';
-                        const estado = document.getElementById('estado') ? document.getElementById('estado').value : '';
+                        viewButton.onclick = () => {
+                            window.location.href = `/reservas/exitosa/${selectedReservaId}`;
+                        };
 
-                        const fetchUrl = `/reservas/mis-reservas/fragment?page=${encodeURIComponent(page)}&estado=${encodeURIComponent(estado)}`;
-                        fetch(fetchUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                            .then(r => r.text())
-                            .then(html => {
-                                // Parsear y reemplazar el contenedor completo para evitar div anidado
-                                const parser = new DOMParser();
-                                const doc = parser.parseFromString(html, 'text/html');
-                                const newGrid = doc.getElementById('mis-reservas-grid');
-                                if (newGrid) {
-                                    grid.outerHTML = newGrid.outerHTML;
-                                    const replaced = document.getElementById('mis-reservas-grid');
-                                    initGridBehavior(replaced);
-                                } else {
-                                    // Si el fragmento no contiene el div, reemplazamos el innerHTML
-                                    grid.innerHTML = html;
-                                    initGridBehavior(grid);
-                                }
-                            }).catch(err => console.error('Error cargando página:', err));
-                    });
+                        cancelButton.onclick = () => {
+                            // Para cancelar usamos el codigoReserva (acepta id numérico o código)
+                            const codigo = selectedReservaCodigo || selectedReservaId;
+                            window.location.href = `/reservas/${codigo}/cancelar`;
+                        };
+                    } else {
+                        viewButton.disabled = true;
+                        cancelButton.disabled = true;
+                        viewButton.onclick = null;
+                        cancelButton.onclick = null;
+                    }
                 }
+
+                // Delegación: manejar selección de filas desde document para sobrevivir reemplazos del fragmento
+                document.addEventListener('click', function(ev) {
+                    const row = ev.target.closest('#mis-reservas-grid .selectable-row');
+                    if (!row) return;
+
+                    const currentId = row.getAttribute('data-id');
+                    const currentCodigo = row.getAttribute('data-codigo-reserva');
+
+                    // Deseleccionar otra fila si existiera
+                    const prev = document.querySelector('#mis-reservas-grid .selectable-row.selected');
+                    if (prev && prev !== row) prev.classList.remove('selected');
+
+                    if (row.classList.contains('selected')) {
+                        row.classList.remove('selected');
+                        selectedReservaId = null;
+                        selectedReservaCodigo = null;
+                    } else {
+                        row.classList.add('selected');
+                        selectedReservaId = currentId;
+                        selectedReservaCodigo = currentCodigo;
+                    }
+
+                    updateButtons();
+                });
+
+                // Inicializar estado de botones al cargar
+                updateButtons();
+
+                // Interceptar clicks de paginación usando delegación en document
+                // Esto evita perder el handler cuando se reemplaza el contenido del fragmento
+                document.addEventListener('click', function(ev) {
+                    const a = ev.target.closest('#mis-reservas-grid a.page-link');
+                    if (!a) return;
+                    ev.preventDefault();
+
+                    const url = new URL(a.href, window.location.origin);
+                    const params = new URLSearchParams(url.search);
+                    const page = params.get('page') || '0';
+                    const estado = document.getElementById('estado') ? document.getElementById('estado').value : '';
+
+                    const fetchUrl = `/reservas/mis-reservas/fragment?page=${encodeURIComponent(page)}&estado=${encodeURIComponent(estado)}`;
+                    fetch(fetchUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(r => r.text())
+                        .then(html => {
+                            // Parsear y reemplazar el contenedor completo para evitar div anidado
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newGrid = doc.getElementById('mis-reservas-grid');
+                            const grid = document.getElementById('mis-reservas-grid');
+                            if (!grid) return; // nada que hacer
+
+                            if (newGrid) {
+                                grid.outerHTML = newGrid.outerHTML;
+                                // Refrescar referencias y estado tras reemplazo
+                                refreshReferencesAndState();
+                            } else {
+                                // Si el fragmento no contiene el div, reemplazamos el innerHTML
+                                grid.innerHTML = html;
+                                refreshReferencesAndState();
+                            }
+                        }).catch(err => console.error('Error cargando página:', err));
+                });
 
                 // Auto-dismiss alerts
                 const alerts = document.querySelectorAll('.alert-dismissible');

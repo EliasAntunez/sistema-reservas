@@ -60,6 +60,21 @@ public class ControladorReserva {
         this.repositorioCliente = repositorioCliente;
         this.repositorioReserva = repositorioReserva;
     }
+
+    /**
+     * Intenta resolver una reserva por ID numérico o por su código único.
+     */
+    private Optional<Reserva> obtenerReservaPorIdOrCodigo(String idOrCodigo) {
+        try {
+            Long id = Long.parseLong(idOrCodigo);
+            return servicioReserva.obtenerReservaPorId(id);
+        } catch (NumberFormatException e) {
+            // No es numérico, buscar por código
+            return repositorioReserva.findByCodigoReservaWithDetalles(idOrCodigo);
+        }
+    }
+
+    
     
     /**
      * Muestra la lista de complejos deportivos disponibles con búsqueda y paginación.
@@ -552,9 +567,9 @@ public class ControladorReserva {
      * Muestra el modal de confirmación de cancelación (GET).
      * Valida que se pueda cancelar según tiempo límite y políticas.
      */
-    @GetMapping("/{id}/cancelar")
-    public String mostrarCancelacion(
-            @PathVariable("id") Long reservaId,
+        @GetMapping("/{idOrCodigo}/cancelar")
+        public String mostrarCancelacion(
+            @PathVariable("idOrCodigo") String idOrCodigo,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
@@ -569,49 +584,79 @@ public class ControladorReserva {
                 email = authentication.getName();
             }
             
-            // Buscar cliente
-            Cliente cliente = repositorioCliente.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Debe tener un perfil de cliente"));
-            
-            // Obtener reserva
-            Reserva reserva = servicioReserva.obtenerReservaPorId(reservaId)
+            // Intentar buscar cliente; si no existe, comprobar si es administrador del complejo
+            Cliente cliente = repositorioCliente.findByEmail(email).orElse(null);
+
+            // Obtener reserva (acepta id numérico o codigoReserva)
+            Reserva reserva = obtenerReservaPorIdOrCodigo(idOrCodigo)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
-            
-            // Validar pertenencia
-            if (!reserva.getCliente().getId().equals(cliente.getId())) {
-                redirectAttributes.addFlashAttribute("error", "No tienes permiso para cancelar esta reserva");
-                return "redirect:/reservas/mis-reservas";
+
+            boolean esAdminComplejo = false;
+
+            if (cliente != null) {
+                // Validar pertenencia del cliente
+                if (!reserva.getCliente().getId().equals(cliente.getId())) {
+                    cliente = null; // no es el cliente propietario
+                }
             }
-            
-            // Validar estado
+
+            if (cliente == null) {
+                // Comprobar si el usuario autenticado es el administrador del complejo asociado
+                if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                    redirectAttributes.addFlashAttribute("error", "Reserva sin detalles asociados");
+                    return "redirect:/reservas/mis-reservas";
+                }
+
+                DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+                EspacioReservable espacio = primerDetalle.getEspacioReservable();
+                Long complejoId = espacio.getComplejoDeportivo().getId_complejo();
+
+                Optional<ComplejoDeportivo> complejoOpt = servicioComplejo.obtenerPorId(complejoId);
+                if (complejoOpt.isPresent() && complejoOpt.get().getAdministradorComplejo() != null
+                        && email != null && email.equals(complejoOpt.get().getAdministradorComplejo().getEmail())) {
+                    esAdminComplejo = true;
+                } else {
+                    redirectAttributes.addFlashAttribute("error", "No tienes permiso para cancelar esta reserva");
+                    return "redirect:/reservas/mis-reservas";
+                }
+            }
+
+            // Validar estado general
             if (reserva.estaCancelada()) {
                 redirectAttributes.addFlashAttribute("error", "Esta reserva ya ha sido cancelada");
-                return "redirect:/reservas/mis-reservas";
+                return esAdminComplejo ? "redirect:/admin-complejo/reservas/" + reserva.getDetalles().get(0).getEspacioReservable().getComplejoDeportivo().getId_complejo() : "redirect:/reservas/mis-reservas";
             }
-            
+
             if (reserva.getEstado() == EstadoReserva.FINALIZADA) {
                 redirectAttributes.addFlashAttribute("error", "No se puede cancelar una reserva finalizada");
-                return "redirect:/reservas/mis-reservas";
+                return esAdminComplejo ? "redirect:/admin-complejo/reservas/" + reserva.getDetalles().get(0).getEspacioReservable().getComplejoDeportivo().getId_complejo() : "redirect:/reservas/mis-reservas";
             }
-            
-            // Validar tiempo límite (sin cancelar realmente)
-            DetalleReserva primerDetalle = reserva.getDetalles().get(0);
-            EspacioReservable espacio = primerDetalle.getEspacioReservable();
-            PoliticaCancelacion politica = espacio.getPoliticaCancelacion();
-            
-            // Calcular información para mostrar
-            LocalDateTime fechaHoraReserva = LocalDateTime.of(
-                primerDetalle.getFechaReserva(),
-                primerDetalle.getHoraInicio()
-            );
-            LocalDateTime ahora = LocalDateTime.now();
-            long horasRestantes = java.time.Duration.between(ahora, fechaHoraReserva).toHours();
-            
-            model.addAttribute("reserva", reserva);
-            model.addAttribute("horasRestantes", horasRestantes);
-            model.addAttribute("politica", politica);
-            
-            return "reservas/cancelar-reserva";
+
+            // Si es cliente, mostramos la validación de tiempo límite como antes
+            if (!esAdminComplejo) {
+                DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+                EspacioReservable espacio = primerDetalle.getEspacioReservable();
+                PoliticaCancelacion politica = espacio.getPoliticaCancelacion();
+
+                LocalDateTime fechaHoraReserva = LocalDateTime.of(
+                    primerDetalle.getFechaReserva(),
+                    primerDetalle.getHoraInicio()
+                );
+                LocalDateTime ahora = LocalDateTime.now();
+                long horasRestantes = java.time.Duration.between(ahora, fechaHoraReserva).toHours();
+
+                model.addAttribute("reserva", reserva);
+                model.addAttribute("horasRestantes", horasRestantes);
+                model.addAttribute("politica", politica);
+                model.addAttribute("esAdmin", false);
+
+                return "reservas/cancelar-reserva";
+            } else {
+                // Si es administrador, no aplicamos la validación de tiempo; mostramos vista con flag de admin
+                model.addAttribute("reserva", reserva);
+                model.addAttribute("esAdmin", true);
+                return "reservas/cancelar-reserva";
+            }
             
         } catch (Exception e) {
             logger.error("Error al mostrar cancelación: {}", e.getMessage(), e);
@@ -623,9 +668,9 @@ public class ControladorReserva {
     /**
      * Procesa la cancelación de una reserva (POST).
      */
-    @PostMapping("/{id}/cancelar")
-    public String cancelarReserva(
-            @PathVariable("id") Long reservaId,
+        @PostMapping("/{idOrCodigo}/cancelar")
+        public String cancelarReserva(
+            @PathVariable("idOrCodigo") String idOrCodigo,
             @RequestParam(value = "motivo", required = false) String motivo,
             Authentication authentication,
             RedirectAttributes redirectAttributes) {
@@ -640,42 +685,72 @@ public class ControladorReserva {
                 email = authentication.getName();
             }
             
-            // Buscar cliente
-            Cliente cliente = repositorioCliente.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Debe tener un perfil de cliente"));
-            
-            // Validar motivo
-            if (motivo == null || motivo.trim().isEmpty()) {
-                motivo = "Cancelada por el cliente";
+            // Intentar buscar cliente; si no existe o no es propietario, comprobar si es admin del complejo
+            Cliente cliente = repositorioCliente.findByEmail(email).orElse(null);
+            Reserva reserva = obtenerReservaPorIdOrCodigo(idOrCodigo)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+
+            boolean esAdminComplejo = false;
+
+            if (cliente != null && reserva.getCliente() != null && reserva.getCliente().getId().equals(cliente.getId())) {
+                // propietario -> proceder como cliente
+            } else {
+                // verificar admin
+                if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                    throw new RuntimeException("Reserva sin detalles asociados");
+                }
+                DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+                EspacioReservable espacio = primerDetalle.getEspacioReservable();
+                Long complejoId = espacio.getComplejoDeportivo().getId_complejo();
+
+                Optional<ComplejoDeportivo> complejoOpt = servicioComplejo.obtenerPorId(complejoId);
+                if (complejoOpt.isPresent() && complejoOpt.get().getAdministradorComplejo() != null
+                        && email != null && email.equals(complejoOpt.get().getAdministradorComplejo().getEmail())) {
+                    esAdminComplejo = true;
+                } else {
+                    throw new RuntimeException("Debe tener un perfil de cliente o ser administrador del complejo para cancelar esta reserva");
+                }
             }
-            
-            // Cancelar reserva usando el servicio
-            ServicioReserva.ResultadoCancelacion resultado = servicioReserva.cancelarReserva(
-                reservaId, cliente, motivo
-            );
-            
-            // Verificar resultado
-            if (!resultado.isPuedeSerCancelada()) {
-                redirectAttributes.addFlashAttribute("error", resultado.getMensaje());
+
+            if (motivo == null || motivo.trim().isEmpty()) {
+                motivo = "Cancelada";
+            }
+
+            if (esAdminComplejo) {
+                // El administrador puede cancelar sin respetar el tiempo límite
+                servicioReserva.cancelarReservaPorAdmin(reserva.getId(), motivo);
+                redirectAttributes.addFlashAttribute("mensaje", "Reserva cancelada exitosamente");
+                // Redirigir al listado del admin para el complejo correspondiente
+                DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+                Long complejoId = primerDetalle.getEspacioReservable().getComplejoDeportivo().getId_complejo();
+                return "redirect:/admin-complejo/reservas/" + complejoId;
+            } else {
+                // Cancelación por cliente (aplicar reglas de política)
+                ServicioReserva.ResultadoCancelacion resultado = servicioReserva.cancelarReserva(
+                    reserva.getId(), cliente, motivo
+                );
+
+                if (!resultado.isPuedeSerCancelada()) {
+                    redirectAttributes.addFlashAttribute("error", resultado.getMensaje());
+                    return "redirect:/reservas/mis-reservas";
+                }
+
+                String mensajeExito = "Reserva cancelada exitosamente";
+                if (resultado.getPorcentajeDevolucion() != null && resultado.getPorcentajeDevolucion() < 100) {
+                    mensajeExito += String.format(". Se devolverá el %.0f%% del monto pagado",
+                        resultado.getPorcentajeDevolucion());
+                }
+
+                redirectAttributes.addFlashAttribute("mensaje", mensajeExito);
+                logger.info("Reserva {} cancelada exitosamente por cliente {}", reserva.getId(), reserva.getCliente() != null ? reserva.getCliente().getId() : "-" );
                 return "redirect:/reservas/mis-reservas";
             }
             
-            // Mensaje de éxito
-            String mensajeExito = "Reserva cancelada exitosamente";
-            if (resultado.getPorcentajeDevolucion() != null && resultado.getPorcentajeDevolucion() < 100) {
-                mensajeExito += String.format(". Se devolverá el %.0f%% del monto pagado",
-                    resultado.getPorcentajeDevolucion());
-            }
-            
-            redirectAttributes.addFlashAttribute("mensaje", mensajeExito);
-            logger.info("Reserva {} cancelada exitosamente por cliente {}", reservaId, cliente.getId());
-            
-            return "redirect:/reservas/mis-reservas";
-            
         } catch (Exception e) {
-            logger.error("Error al cancelar reserva {}: {}", reservaId, e.getMessage(), e);
+            logger.error("Error al cancelar reserva {}: {}", idOrCodigo, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/reservas/mis-reservas";
         }
     }
+
 }
