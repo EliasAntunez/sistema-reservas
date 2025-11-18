@@ -13,6 +13,8 @@ import com.example.tureserva.modelo.enums.AplicableA;
 import com.example.tureserva.modelo.enums.TipoDeCobro;
 
 import jakarta.validation.constraints.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "servicio_adicional", uniqueConstraints = {
@@ -56,6 +58,16 @@ public class ServicioAdicional implements Serializable {
     @NotNull
     @Column(name = "activo", nullable = false)
     private Boolean activo = Boolean.TRUE;
+
+    // Máxima cantidad permitida para este servicio (null = sin límite administrable)
+    @Min(1)
+    @Column(name = "maximo_cantidad")
+    private Integer maximoCantidad;
+
+    // Relación inversa: un servicio puede aparecer en muchos detalles de reserva
+    @ToString.Exclude
+    @OneToMany(mappedBy = "servicioAdicional", fetch = FetchType.LAZY)
+    private List<DetalleServicioAdicional> detalles = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

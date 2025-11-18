@@ -2,23 +2,32 @@ package com.example.tureserva.servicio;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.example.tureserva.repositorio.RepositorioCliente;
+import com.example.tureserva.repositorio.RepositorioReserva;
+import com.example.tureserva.modelo.enums.EstadoReserva;
 import com.example.tureserva.modelo.Cliente;
 
 @Service
 public class ServicioCliente {
-
+    private static final Logger logger = LoggerFactory.getLogger(ServicioCliente.class);
     private final RepositorioCliente repositorioCliente;
+    private final RepositorioReserva repositorioReserva;
     private final PasswordEncoder passwordEncoder;
     
     // Constructor injection
-    public ServicioCliente(RepositorioCliente repositorioCliente, PasswordEncoder passwordEncoder) {
+    public ServicioCliente(RepositorioCliente repositorioCliente,
+                           RepositorioReserva repositorioReserva,
+                           PasswordEncoder passwordEncoder) {
         this.repositorioCliente = repositorioCliente;
+        this.repositorioReserva = repositorioReserva;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -94,6 +103,35 @@ public class ServicioCliente {
         // marcar como activo por defecto
         cliente.setActivo(true);
         
+        String codigo;
+        int intentos = 0;
+        int maxIntentos = 10; // Límite de seguridad para evitar un bucle infinito
+
+        // --- Bucle de reintento para generar código único ---
+        do {
+            if (intentos > 0) {
+                logger.warn("Colisión de código de Cliente. Reintentando... (Intento {})", intentos);
+            }
+            
+            // 1. Genera un código aleatorio (6 caracteres)
+            codigo = "CLI-" + UUID.randomUUID().toString()
+                                    .substring(0, 6)
+                                    .toUpperCase();
+            
+            intentos++;
+
+            // 2. Seguridad: Si falla 10 veces, es porque 6 caracteres son muy pocos
+            // para tu volumen de reservas y deberías usar 7 o 8.
+            if (intentos > maxIntentos) {
+                throw new RuntimeException("No se pudo generar un código de reserva único después de " + maxIntentos + " intentos.");
+            }
+
+        } while (repositorioReserva.existsByCodigoReserva(codigo)); // 3. Repite si el código ya existe
+        // --- Fin del bucle ---
+
+        // 4. Tenemos un código único, lo asignamos
+        cliente.setCodigoUsuario(codigo);
+        
         return repositorioCliente.save(cliente);
     }
 
@@ -140,20 +178,26 @@ public class ServicioCliente {
         return null;
     }
 
-    // eliminar cliente (físicamente para desarrollo, lógicamente para producción)
+    // eliminar cliente: baja lógica (marcar inactivo) verificando reservas activas
     @Transactional
     public boolean eliminarCliente(Long id) {
-        try {
-            Cliente cliente = repositorioCliente.findById(id).orElse(null);
-            if (cliente != null) {
-                // Para desarrollo: eliminación física
-                repositorioCliente.delete(cliente);
-                return true;
-            }
-            return false;
-        } catch (Exception e) {
+        Cliente cliente = repositorioCliente.findById(id).orElse(null);
+        if (cliente == null) {
             return false;
         }
+
+        // Contar reservas activas (PENDIENTE o CONFIRMADA)
+        long pendientes = repositorioReserva.countByClienteAndEstado(cliente, EstadoReserva.PENDIENTE);
+        long confirmadas = repositorioReserva.countByClienteAndEstado(cliente, EstadoReserva.CONFIRMADA);
+
+        if (pendientes + confirmadas > 0) {
+            throw new IllegalStateException("El cliente tiene reservas activas. Debe cancelar todas sus reservas antes de darse de baja.");
+        }
+
+        // Dar de baja lógicamente
+        cliente.setActivo(false);
+        repositorioCliente.save(cliente);
+        return true;
     }
 
     // verificar si existe email

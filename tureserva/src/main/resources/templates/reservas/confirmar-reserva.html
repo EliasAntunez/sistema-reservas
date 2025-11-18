@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Confirmar Reserva</title>
+    <style>
+        .resumen-card {
+            border-left: 4px solid #0d6efd;
+            transition: all 0.3s ease;
+        }
+        .resumen-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .espacio-item {
+            padding: 1.5rem;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .espacio-item:hover {
+            border-color: #0d6efd;
+            background: #e7f1ff;
+        }
+        .espacio-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+        .info-value {
+            font-size: 1rem;
+            color: #212529;
+        }
+        .precio-total {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #198754;
+        }
+        .btn-duration {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content" class="container main-content">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                
+                <!-- Encabezado -->
+                <div class="text-center mb-4 mt-4">
+                    <i class="bi bi-calendar-check fs-1 text-primary"></i>
+                    <h2 class="mt-3">Confirmar Reserva</h2>
+                    <p class="text-muted">Revisa los espacios agregados y confirma tu reserva</p>
+                </div>
+
+                <!-- Breadcrumb de pasos -->
+                <div class="card mb-4">
+                    <div class="card-body py-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <span class="badge bg-success me-2">
+                                <i class="bi bi-check-lg"></i>
+                            </span>
+                            <span class="text-success small">Complejo</span>
+                            <i class="bi bi-chevron-right mx-2 text-muted"></i>
+                            <span class="badge bg-success me-2">
+                                <i class="bi bi-check-lg"></i>
+                            </span>
+                            <span class="text-success small">Espacios seleccionados</span>
+                            <i class="bi bi-chevron-right mx-2 text-muted"></i>
+                            <span class="badge bg-primary me-2">3</span>
+                            <strong class="text-primary small">Confirmar</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensajes flash -->
+                <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span th:text="${mensaje}">Mensaje de éxito</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span th:text="${error}">Mensaje de error</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Información del Complejo y Fecha -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-label">
+                                    <i class="bi bi-building"></i> Complejo
+                                </div>
+                                <div class="info-value">
+                                    <strong th:text="${complejo.nombre_complejo}">Nombre del Complejo</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-label">
+                                    <i class="bi bi-calendar3"></i> Fecha de Reserva
+                                </div>
+                                <div class="info-value" th:text="${#temporals.format(datosReserva.fecha, 'dd/MM/yyyy')}">
+                                    14/11/2025
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Espacios Agregados -->
+                <div class="card resumen-card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list-check me-2"></i>
+                            Espacios Agregados (<span th:text="${datosReserva.cantidadEspacios()}">0</span>)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        
+                        <div th:each="item, iterStat : ${datosReserva.items}" class="espacio-item">
+                            <span class="espacio-badge badge" 
+                                  th:classappend="${item.tipoEspacio == 'CANCHA'} ? 'bg-success' : 'bg-info'"
+                                  th:text="${item.tipoEspacio}">CANCHA</span>
+                            
+                            <h5 th:text="${item.nombreEspacio}">Nombre del Espacio</h5>
+                            
+                            <div class="info-row">
+                                <span class="info-label"><i class="bi bi-clock"></i> Horario</span>
+                                <span class="info-value">
+                                    <strong th:text="${item.horaInicio}">18:00</strong>
+                                    -
+                                    <strong th:text="${item.horaFin}">19:00</strong>
+                                </span>
+                            </div>
+                            
+                            <div class="info-row">
+                                <span class="info-label"><i class="bi bi-hourglass-split"></i> Duración</span>
+                                <span class="info-value">
+                                    <strong th:text="${item.duracionHoras}">1</strong> 
+                                    <span th:text="${item.duracionHoras == 1} ? 'hora' : 'horas'">hora</span>
+                                    
+                                    <!-- Botones para modificar duración -->
+                                    <form th:action="@{/reservas/modificar-duracion}" method="post" class="d-inline ms-2">
+                                        <input type="hidden" name="indice" th:value="${iterStat.index}"/>
+                                        <button type="submit" name="accion" value="reducir" 
+                                                class="btn btn-sm btn-outline-secondary btn-duration"
+                                                th:disabled="${!item.puedeReducir()}"
+                                                title="Reducir 1 hora">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <button type="submit" name="accion" value="extender" 
+                                                class="btn btn-sm btn-outline-primary btn-duration"
+                                                th:disabled="${!item.puedeExtender()}"
+                                                title="Agregar 1 hora">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </form>
+                                </span>
+                            </div>
+                            
+                            <div class="info-row">
+                                <span class="info-label"><i class="bi bi-currency-dollar"></i> Precio</span>
+                                <span class="info-value">
+                                    $<span th:text="${#numbers.formatDecimal(item.precioPorHora, 1, 2)}">0.00</span> / hora
+                                </span>
+                            </div>
+                            
+                            <div class="info-row border-top pt-2 mt-2">
+                                <span class="info-label"><strong>Subtotal</strong></span>
+                                <span class="info-value">
+                                    <strong class="text-success">
+                                        $<span th:text="${#numbers.formatDecimal(item.calcularSubtotal(), 1, 2)}">0.00</span>
+                                    </strong>
+                                </span>
+                            </div>
+                            
+                            <!-- Botón remover -->
+                            <form th:action="@{/reservas/remover-espacio}" method="post" class="mt-2">
+                                <input type="hidden" name="indice" th:value="${iterStat.index}"/>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash me-1"></i> Remover espacio
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Total y Acciones -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 text-center text-md-start">
+                                <div class="info-label">TOTAL A PAGAR</div>
+                                <div class="precio-total">
+                                    $<span th:text="${#numbers.formatDecimal(datosReserva.calcularMontoTotal(), 1, 2)}">0.00</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-center text-md-end">
+                                <div class="d-grid gap-2">
+                                    <!-- Botón agregar más espacios -->
+                                    <a th:href="@{/reservas/complejo/{id}(id=${complejo.id_complejo}, fecha=${datosReserva.fecha})}" 
+                                       class="btn btn-outline-primary btn-lg">
+                                        <i class="bi bi-plus-circle me-2"></i>
+                                        Agregar Otro Espacio
+                                    </a>
+                                    
+                                    <!-- Botón confirmar reserva -->
+                                    <form th:if="${!requiereSeña}" 
+                                          th:action="@{/reservas/confirmar-final}" 
+                                          method="post">
+                                        <button type="submit" class="btn btn-success btn-lg w-100">
+                                            <i class="bi bi-check-circle me-2"></i>
+                                            Confirmar Reserva
+                                        </button>
+                                    </form>
+                                    
+                                    <button th:if="${requiereSeña}" 
+                                            type="button" 
+                                            class="btn btn-warning btn-lg" 
+                                            disabled>
+                                        <i class="bi bi-credit-card me-2"></i>
+                                        Pagar Seña (Próximamente)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advertencia de Seña (si aplica) -->
+                <div th:if="${requiereSeña}" class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Nota:</strong> Uno o más espacios requieren pago de seña. La funcionalidad de pago estará disponible próximamente.
+                </div>
+                
+                <!-- Nota informativa -->
+                <div th:if="${!requiereSeña}" class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Nota:</strong> Una vez confirmada la reserva, podrás gestionarla desde tu panel de usuario.
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

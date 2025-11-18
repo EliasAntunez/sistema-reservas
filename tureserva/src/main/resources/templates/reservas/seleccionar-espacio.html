@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Seleccionar Espacio - Nueva Reserva</title>
+    <style>
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link:hover {
+            border-color: #dee2e6;
+            color: #0d6efd;
+        }
+        .nav-tabs .nav-link.active {
+            color: #0d6efd;
+            border-bottom-color: #0d6efd;
+            background-color: transparent;
+        }
+        .espacio-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #0d6efd;
+        }
+        .espacio-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .horario-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            padding: 0.5rem 0.75rem;
+        }
+        .horario-badge:hover {
+            transform: scale(1.05);
+        }
+        .horario-badge.disponible {
+            background-color: #198754 !important;
+            color: white;
+        }
+        .horario-badge.disponible:hover {
+            background-color: #157347 !important;
+        }
+        .horario-badge.ocupado {
+            background-color: #6c757d !important;
+            color: white;
+            cursor: not-allowed;
+        }
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content" class="container main-content">
+        <div class="row">
+            <div class="col-12">
+                <!-- Encabezado -->
+                <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-building fs-1 text-primary me-3"></i>
+                        <div>
+                            <h2 class="mb-0" th:text="${complejo.nombre_complejo}">Nombre del Complejo</h2>
+                            <p class="text-muted mb-0">
+                                <i class="bi bi-geo-alt"></i>
+                                <span th:text="${complejo.direccion_complejo}">Dirección</span>
+                                <span th:if="${complejo.localidad != null}">
+                                    - <span th:text="${complejo.localidad.nombre}">Localidad</span>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <a th:href="@{/reservas/nueva}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Volver a Complejos
+                    </a>
+                </div>
+
+                <!-- Breadcrumb de pasos -->
+                <div class="card mb-4">
+                    <div class="card-body py-2">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-success me-2">
+                                <i class="bi bi-check-lg"></i>
+                            </span>
+                            <span class="text-success">Seleccionar Complejo</span>
+                            <i class="bi bi-chevron-right mx-3 text-muted"></i>
+                            <span class="badge bg-primary me-2">2</span>
+                            <strong class="text-primary">Elegir Espacio y Horario</strong>
+                            <i class="bi bi-chevron-right mx-3 text-muted"></i>
+                            <span class="badge bg-secondary me-2">3</span>
+                            <span class="text-muted">Confirmar Reserva</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selector de fecha -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form th:action="@{/reservas/complejo/{id}(id=${complejo.id_complejo})}" method="get" class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label for="fechaInput" class="form-label">
+                                    <i class="bi bi-calendar3"></i> Seleccionar fecha
+                                </label>
+                                <input type="date" 
+                                       id="fechaInput"
+                                       name="fecha" 
+                                       class="form-control form-control-lg" 
+                                       th:value="${fecha}"
+                                       th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
+                                       required>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                    <i class="bi bi-search"></i> Buscar
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-info mb-0">
+                                    <i class="bi bi-info-circle"></i>
+                                    Mostrando disponibilidad para 
+                                    <strong th:text="${#temporals.format(fecha, 'dd/MM/yyyy')}">fecha</strong>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Mensaje si no hay espacios -->
+                <div th:if="${totalEspacios == 0}" class="card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <h4>No hay espacios disponibles</h4>
+                            <p class="mb-0">Este complejo no tiene espacios configurados para reservar.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs: Canchas y Salones -->
+                <div th:if="${totalEspacios > 0}" class="card">
+                    <div class="card-body">
+                        <ul class="nav nav-tabs mb-4" id="espaciosTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" 
+                                        id="canchas-tab" 
+                                        data-bs-toggle="tab" 
+                                        data-bs-target="#canchas-panel" 
+                                        type="button" 
+                                        role="tab">
+                                    <i class="bi bi-dribbble me-2"></i>
+                                    Canchas 
+                                    <span class="badge bg-primary ms-2" th:text="${#lists.size(canchas)}">0</span>
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" 
+                                        id="salones-tab" 
+                                        data-bs-toggle="tab" 
+                                        data-bs-target="#salones-panel" 
+                                        type="button" 
+                                        role="tab">
+                                    <i class="bi bi-door-open me-2"></i>
+                                    Salones 
+                                    <span class="badge bg-primary ms-2" th:text="${#lists.size(salones)}">0</span>
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="espaciosTabContent">
+                            <!-- Panel de Canchas -->
+                            <div class="tab-pane fade show active" 
+                                 id="canchas-panel" 
+                                 role="tabpanel">
+                                
+                                <!-- Sin canchas -->
+                                <div th:if="${#lists.isEmpty(canchas)}" class="empty-state">
+                                    <i class="bi bi-dribbble"></i>
+                                    <h5>No hay canchas disponibles</h5>
+                                    <p class="mb-0 text-muted">Este complejo no tiene canchas configuradas.</p>
+                                </div>
+
+                                <!-- Lista de canchas -->
+                                <div class="row g-4" th:if="${!#lists.isEmpty(canchas)}">
+                                    <div class="col-md-6 col-lg-4" th:each="cancha : ${canchas}">
+                                        <div class="card espacio-card h-100">
+                                            <div class="card-header bg-primary text-white">
+                                                <h5 class="mb-0">
+                                                    <i class="bi bi-dribbble me-2"></i>
+                                                    <span th:text="${cancha.nombre}">Nombre Cancha</span>
+                                                </h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <small class="text-muted d-block">
+                                                        <i class="bi bi-people"></i> 
+                                                        Capacidad: <strong th:text="${cancha.capacidad}">10</strong> personas
+                                                    </small>
+                                                    <small class="text-muted d-block">
+                                                        <i class="bi bi-cash"></i> 
+                                                        Precio: <strong>$<span th:text="${#numbers.formatDecimal(cancha.precioPorHora, 1, 2)}">0.00</span></strong> por hora
+                                                    </small>
+                                                </div>
+                                                
+                                                <hr>
+                                                
+                                                <!-- Horarios dinámicos -->
+                                                <div th:with="intervalos=${intervalosPorEspacio[cancha.id] ?: intervalosPorEspacio[cancha.id.toString()]}">
+                                                    <!-- Sin horarios configurados -->
+                                                    <div th:if="${intervalos == null or #lists.isEmpty(intervalos)}" class="text-center">
+                                                        <p class="text-warning small mb-2">
+                                                            <i class="bi bi-exclamation-triangle"></i> 
+                                                            Sin horarios para este día
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    <!-- Lista de intervalos -->
+                                                    <div th:if="${intervalos != null and !#lists.isEmpty(intervalos)}">
+                                                        <p class="text-muted small mb-2">
+                                                            <i class="bi bi-clock-history"></i> 
+                                                            Selecciona un horario:
+                                                        </p>
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            <form th:each="intervalo : ${intervalos}"
+                                                                  th:if="${intervalo.disponible()}"
+                                                                  th:action="@{/reservas/seleccionar-horario}" 
+                                                                  method="post"
+                                                                  style="display: inline;">
+                                                                <input type="hidden" name="espacioId" th:value="${cancha.id}">
+                                                                <input type="hidden" name="fecha" th:value="${fecha}">
+                                                                <input type="hidden" name="horaInicio" th:value="${intervalo.horaInicio()}">
+                                                                <button type="submit" 
+                                                                        class="btn horario-badge disponible"
+                                                                        th:title="'Reservar desde las ' + ${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">
+                                                                    <span th:text="${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">15:00</span>
+                                                                </button>
+                                                            </form>
+                                                            <span th:each="intervalo : ${intervalos}"
+                                                                  th:if="${!intervalo.disponible()}"
+                                                                  class="badge horario-badge ocupado"
+                                                                  th:title="'Ocupado'">
+                                                                <span th:text="${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">15:00</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Badge de Seña -->
+                                                    <div th:if="${cancha.politicaSenia != null}" class="alert alert-warning py-2 mb-3">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>
+                                                        <strong>Requiere Seña:</strong>
+                                                        <span th:if="${cancha.politicaSenia.porcentajeSenia != null}">
+                                                            <span th:text="${cancha.politicaSenia.porcentajeSenia}">10</span>% del total
+                                                        </span>
+                                                        <span th:if="${cancha.politicaSenia.montoFijo != null}">
+                                                            $<span th:text="${#numbers.formatDecimal(cancha.politicaSenia.montoFijo, 1, 2)}">500.00</span> fijo
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Panel de Salones -->
+                            <div class="tab-pane fade" 
+                                 id="salones-panel" 
+                                 role="tabpanel">
+                                
+                                <!-- Sin salones -->
+                                <div th:if="${#lists.isEmpty(salones)}" class="empty-state">
+                                    <i class="bi bi-door-open"></i>
+                                    <h5>No hay salones disponibles</h5>
+                                    <p class="mb-0 text-muted">Este complejo no tiene salones configurados.</p>
+                                </div>
+
+                                <!-- Lista de salones -->
+                                <div class="row g-4" th:if="${!#lists.isEmpty(salones)}">
+                                    <div class="col-md-6 col-lg-4" th:each="salon : ${salones}">
+                                        <div class="card espacio-card h-100">
+                                            <div class="card-header bg-success text-white">
+                                                <h5 class="mb-0">
+                                                    <i class="bi bi-door-open me-2"></i>
+                                                    <span th:text="${salon.nombre}">Nombre Salón</span>
+                                                </h5>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <small class="text-muted d-block">
+                                                        <i class="bi bi-people"></i> 
+                                                        Capacidad: <strong th:text="${salon.capacidad}">50</strong> personas
+                                                    </small>
+                                                    <small class="text-muted d-block">
+                                                        <i class="bi bi-cash"></i> 
+                                                        Precio: <strong>$<span th:text="${#numbers.formatDecimal(salon.precioPorHora, 1, 2)}">0.00</span></strong> por hora
+                                                    </small>
+                                                </div>
+                                                
+                                                <hr>
+                                                
+                                                <!-- Horarios dinámicos -->
+                                                <div th:with="intervalos=${intervalosPorEspacio[salon.id] ?: intervalosPorEspacio[salon.id.toString()]}">
+                                                    <!-- Sin horarios configurados -->
+                                                    <div th:if="${intervalos == null or #lists.isEmpty(intervalos)}" class="text-center">
+                                                        <p class="text-warning small mb-2">
+                                                            <i class="bi bi-exclamation-triangle"></i> 
+                                                            Sin horarios para este día
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    <!-- Lista de intervalos -->
+                                                    <div th:if="${intervalos != null and !#lists.isEmpty(intervalos)}">
+                                                        <p class="text-muted small mb-2">
+                                                            <i class="bi bi-clock-history"></i> 
+                                                            Selecciona un horario:
+                                                        </p>
+                                                        <div class="d-flex flex-wrap gap-2">
+                                                            <form th:each="intervalo : ${intervalos}"
+                                                                  th:if="${intervalo.disponible()}"
+                                                                  th:action="@{/reservas/seleccionar-horario}" 
+                                                                  method="post"
+                                                                  style="display: inline;">
+                                                                <input type="hidden" name="espacioId" th:value="${salon.id}">
+                                                                <input type="hidden" name="fecha" th:value="${fecha}">
+                                                                <input type="hidden" name="horaInicio" th:value="${intervalo.horaInicio()}">
+                                                                <button type="submit" 
+                                                                        class="btn horario-badge disponible"
+                                                                        th:title="'Reservar desde las ' + ${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">
+                                                                    <span th:text="${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">15:00</span>
+                                                                </button>
+                                                            </form>
+                                                            <span th:each="intervalo : ${intervalos}"
+                                                                  th:if="${!intervalo.disponible()}"
+                                                                  class="badge horario-badge ocupado"
+                                                                  th:title="'Ocupado'">
+                                                                <span th:text="${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">15:00</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <hr>
+                                                    <!-- Badge de Seña -->
+                                                    <div th:if="${salon.politicaSenia != null}" class="alert alert-warning py-2 mb-3">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>
+                                                        <strong>Requiere Seña:</strong>
+                                                        <span th:if="${salon.politicaSenia.porcentajeSenia != null}">
+                                                            <span th:text="${salon.politicaSenia.porcentajeSenia}">10</span>% del total
+                                                        </span>
+                                                        <span th:if="${salon.politicaSenia.montoFijo != null}">
+                                                            $<span th:text="${#numbers.formatDecimal(salon.politicaSenia.montoFijo, 1, 2)}">500.00</span> fijo
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Nueva Reserva - Seleccionar Complejo</title>
+</head>
+<body>
+    <div layout:fragment="content" class="container main-content">
+        <div class="row">
+            <div class="col-12">
+                <!-- Encabezado -->
+                <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar-check fs-1 text-primary me-3"></i>
+                        <h2 class="mb-0">Nueva Reserva</h2>
+                    </div>
+                    <a th:href="@{/dashboard}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Volver al Inicio
+                    </a>
+                </div>
+
+                <!-- Breadcrumb de pasos -->
+                <div class="card mb-4">
+                    <div class="card-body py-2">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-primary me-2">1</span>
+                            <strong class="text-primary">Seleccionar Complejo</strong>
+                            <i class="bi bi-chevron-right mx-3 text-muted"></i>
+                            <span class="badge bg-secondary me-2">2</span>
+                            <span class="text-muted">Elegir Espacio y Horario</span>
+                            <i class="bi bi-chevron-right mx-3 text-muted"></i>
+                            <span class="badge bg-secondary me-2">3</span>
+                            <span class="text-muted">Confirmar Reserva</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario de búsqueda -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form th:action="@{/reservas/nueva}" method="get" class="row g-3 align-items-end">
+                            <div class="col-md-9">
+                                <label for="buscarInput" class="form-label">
+                                    <i class="bi bi-search"></i> Buscar complejo por nombre
+                                </label>
+                                <input type="text" 
+                                       id="buscarInput"
+                                       name="buscar" 
+                                       class="form-control form-control-lg" 
+                                       placeholder="Ingrese el nombre del complejo..."
+                                       th:value="${buscar}">
+                            </div>
+                            <div class="col-md-3">
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-search"></i> Buscar
+                                    </button>
+                                    <a th:href="@{/reservas/nueva}" 
+                                       class="btn btn-outline-secondary"
+                                       th:if="${buscar != null and !buscar.isEmpty()}">
+                                        <i class="bi bi-x-circle"></i> Limpiar Búsqueda
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Lista de complejos -->
+                <div th:if="${!complejos.hasContent()}" class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-building display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted" th:if="${buscar != null and !buscar.isEmpty()}">
+                            No se encontraron complejos con el nombre "<strong th:text="${buscar}"></strong>"
+                        </h4>
+                        <h4 class="text-muted" th:unless="${buscar != null and !buscar.isEmpty()}">
+                            No hay complejos deportivos disponibles
+                        </h4>
+                        <p class="text-muted">Intente con otra búsqueda o vuelva más tarde</p>
+                        <a th:href="@{/reservas/nueva}" class="btn btn-primary mt-3" th:if="${buscar != null and !buscar.isEmpty()}">
+                            <i class="bi bi-arrow-counterclockwise"></i> Ver Todos los Complejos
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Complejos encontrados -->
+                <div th:if="${complejos.hasContent()}">
+                    <!-- Info de resultados -->
+                    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>
+                            <span th:text="${complejos.totalElements}">0</span> 
+                            <span th:text="${complejos.totalElements == 1 ? 'complejo encontrado' : 'complejos encontrados'}"></span>
+                        </strong>
+                        <span th:if="${buscar != null and !buscar.isEmpty()}">
+                            para "<strong th:text="${buscar}"></strong>"
+                        </span>
+                    </div>
+
+                    <!-- Grid de complejos -->
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
+                        <div th:each="complejo : ${complejos.content}" class="col">
+                            <div class="card h-100 shadow-sm hover-shadow">
+                                <div class="card-body">
+                                    <h5 class="card-title text-primary mb-3">
+                                        <i class="bi bi-building me-2"></i>
+                                        <span th:text="${complejo.nombre_complejo}">Nombre del Complejo</span>
+                                    </h5>
+                                    
+                                    <div class="mb-3">
+                                        <p class="mb-2">
+                                            <i class="bi bi-geo-alt text-danger me-2"></i>
+                                            <strong>Dirección:</strong><br>
+                                            <span class="ms-4" th:text="${complejo.direccion_complejo}">Dirección</span>
+                                        </p>
+                                        <p class="mb-0">
+                                            <i class="bi bi-pin-map text-info me-2"></i>
+                                            <strong>Localidad:</strong>
+                                            <span th:text="${complejo.localidad?.nombre ?: 'No especificada'}">Localidad</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-white border-top">
+                                    <a th:href="@{/reservas/complejo/{id}(id=${complejo.id_complejo})}" 
+                                       class="btn btn-primary w-100">
+                                        <i class="bi bi-calendar-check me-2"></i>
+                                        Ver Horarios Disponibles
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paginación -->
+                    <nav aria-label="Navegación de páginas" th:if="${complejos.totalPages gt 1}">
+                        <ul class="pagination justify-content-center">
+                            <!-- Botón Anterior -->
+                            <li class="page-item" th:classappend="${complejos.first ? 'disabled' : ''}">
+                                <a class="page-link" 
+                                   th:href="@{/reservas/nueva(page=${paginaActual - 1}, buscar=${buscar})}"
+                                   aria-label="Anterior">
+                                    <span aria-hidden="true">&laquo;</span> Anterior
+                                </a>
+                            </li>
+
+                            <!-- Números de página -->
+                            <li class="page-item" 
+                                th:each="pageNum : ${#numbers.sequence(0, complejos.totalPages - 1)}"
+                                th:classappend="${pageNum == paginaActual ? 'active' : ''}">
+                                <a class="page-link" 
+                                   th:href="@{/reservas/nueva(page=${pageNum}, buscar=${buscar})}"
+                                   th:text="${pageNum + 1}">1</a>
+                            </li>
+
+                            <!-- Botón Siguiente -->
+                            <li class="page-item" th:classappend="${complejos.last ? 'disabled' : ''}">
+                                <a class="page-link" 
+                                   th:href="@{/reservas/nueva(page=${paginaActual + 1}, buscar=${buscar})}"
+                                   aria-label="Siguiente">
+                                    Siguiente <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    <!-- Resumen de paginación -->
+                    <div class="text-center text-muted">
+                        <small>
+                            Página <strong th:text="${paginaActual + 1}">1</strong> de <strong th:text="${complejos.totalPages}">1</strong>
+                            | Mostrando <strong th:text="${complejos.numberOfElements}">0</strong> de <strong th:text="${complejos.totalElements}">0</strong> complejos
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSS adicional -->
+    <th:block layout:fragment="css">
+        <style>
+            .hover-shadow {
+                transition: all 0.3s ease;
+            }
+            .hover-shadow:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            }
+            .main-content {
+                min-height: calc(100vh - 200px);
+            }
+        </style>
+    </th:block>
+</body>
+</html>

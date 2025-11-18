@@ -72,7 +72,16 @@
                                             </div>
                                         </div>
                                         <div class="card-footer">
-                                            <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo.id_complejo})}" class="btn btn-primary btn-sm w-100">Gestionar Complejo</a>
+                                            <div class="d-grid gap-2">
+                                                <a th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo})}" 
+                                                   class="btn btn-success btn-sm">
+                                                    <i class="bi bi-calendar-check me-2"></i>Ver Reservas
+                                                </a>
+                                                <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo.id_complejo})}" 
+                                                   class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-gear me-2"></i>Gestionar Complejo
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

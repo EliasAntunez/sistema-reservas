@@ -22,6 +22,9 @@ public abstract class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "codigo_usuario", nullable = true, unique = true, length = 20)
+    private String codigoUsuario;
+
      @Column(name = "nombre", nullable = false, length = 50)
     private String nombre;
 
