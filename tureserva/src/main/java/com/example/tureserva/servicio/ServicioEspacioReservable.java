@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.example.tureserva.modelo.Cancha;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServicioEspacioReservable {
@@ -75,5 +77,33 @@ public class ServicioEspacioReservable {
         }
         
         return repositorioEspacioReservable.findByComplejoDeportivo(complejoOpt.get());
+    }
+
+    /**
+     * Obtiene canchas activas de un complejo que estén asignadas al deporte indicado.
+     * Si no existe el complejo o no hay canchas para el deporte, devuelve lista vacía.
+     */
+    @Transactional(readOnly = true)
+    public List<EspacioReservable> obtenerCanchasActivasDeComplejoPorDeporte(Long idComplejo, Long deporteId) {
+        Optional<ComplejoDeportivo> complejoOpt = repositorioComplejo.findById(idComplejo);
+        if (complejoOpt.isEmpty()) {
+            return List.of();
+        }
+
+        List<EspacioReservable> todosLosEspacios = repositorioEspacioReservable
+            .findByComplejoDeportivoWithRelations(complejoOpt.get());
+
+        List<EspacioReservable> espaciosFiltrados = todosLosEspacios.stream()
+            .filter(e -> e.estaDisponibleParaReservas())
+            .filter(e -> e instanceof Cancha)
+            .filter(e -> {
+                Cancha c = (Cancha) e;
+                return c.getCanchaDeporte().stream()
+                    .anyMatch(cd -> cd.getDeporte() != null && cd.getDeporte().getId() != null && cd.getDeporte().getId().equals(deporteId));
+            })
+            .collect(Collectors.toList());
+
+        logger.debug("Canchas filtradas por deporte {}: {}", deporteId, espaciosFiltrados.size());
+        return espaciosFiltrados;
     }
 }
