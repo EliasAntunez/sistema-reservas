@@ -6,6 +6,7 @@ import com.example.tureserva.repositorio.RepositorioCliente;
 import com.example.tureserva.repositorio.RepositorioReserva;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.servicio.ServicioEspacioReservable;
+import com.example.tureserva.servicio.ServicioDeporte;
 import com.example.tureserva.servicio.ServicioReserva;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -45,17 +46,20 @@ public class ControladorReserva {
     
     private final ServicioComplejoDeportivo servicioComplejo;
     private final ServicioEspacioReservable servicioEspacio;
+    private final ServicioDeporte servicioDeporte;
     private final ServicioReserva servicioReserva;
     private final RepositorioCliente repositorioCliente;
     private final RepositorioReserva repositorioReserva;
     
     public ControladorReserva(ServicioComplejoDeportivo servicioComplejo,
                               ServicioEspacioReservable servicioEspacio,
+                              ServicioDeporte servicioDeporte,
                               ServicioReserva servicioReserva,
                               RepositorioCliente repositorioCliente,
                               RepositorioReserva repositorioReserva) {
         this.servicioComplejo = servicioComplejo;
         this.servicioEspacio = servicioEspacio;
+        this.servicioDeporte = servicioDeporte;
         this.servicioReserva = servicioReserva;
         this.repositorioCliente = repositorioCliente;
         this.repositorioReserva = repositorioReserva;
@@ -105,9 +109,11 @@ public class ControladorReserva {
      * Muestra los espacios disponibles de un complejo con sus horarios organizados por tipo.
      */
     @GetMapping("/complejo/{id}")
-    public String verEspaciosDisponibles(
+        public String verEspaciosDisponibles(
             @PathVariable("id") Long idComplejo,
             @RequestParam(value = "fecha", required = false) String fechaStr,
+            @RequestParam(value = "deporteId", required = false) Long deporteId,
+            @RequestParam(value = "soloSalones", required = false) Boolean soloSalones,
             Model model,
             RedirectAttributes redirectAttributes) {
         
@@ -122,8 +128,34 @@ public class ControladorReserva {
             ? LocalDate.parse(fechaStr) 
             : LocalDate.now();
         
-        List<EspacioReservable> espaciosActivos = servicioEspacio.obtenerEspaciosActivosDeComplejo(idComplejo);
-        
+        List<EspacioReservable> espaciosActivos;
+
+        // Si no se pasó selección de deporte ni la opción de salones, mostrar selector primero
+        if (deporteId == null && (soloSalones == null || !soloSalones)) {
+            List<Deporte> deportes = servicioDeporte.listarActivos();
+            model.addAttribute("deportes", deportes);
+            model.addAttribute("mostrarSelectorDeporte", true);
+            model.addAttribute("complejo", complejo);
+            model.addAttribute("fecha", fecha);
+            model.addAttribute("totalEspacios", 0);
+            return "reservas/seleccionar-espacio";
+        }
+
+        if (deporteId != null) {
+            // Mostrar solo canchas compatibles con el deporte seleccionado
+            espaciosActivos = servicioEspacio.obtenerCanchasActivasDeComplejoPorDeporte(idComplejo, deporteId);
+            model.addAttribute("activeTab", "canchas");
+        } else if (soloSalones != null && soloSalones) {
+            // Mostrar solo salones
+            List<EspacioReservable> todos = servicioEspacio.obtenerEspaciosActivosDeComplejo(idComplejo);
+            espaciosActivos = todos.stream().filter(e -> "SALON".equals(e.getTipoEspacio())).collect(Collectors.toList());
+            model.addAttribute("activeTab", "salones");
+        } else {
+            // Fallback: todos los espacios activos
+            espaciosActivos = servicioEspacio.obtenerEspaciosActivosDeComplejo(idComplejo);
+            model.addAttribute("activeTab", "canchas");
+        }
+
         logger.debug("Total espacios activos obtenidos: {}", espaciosActivos.size());
         
         // Separar por tipo

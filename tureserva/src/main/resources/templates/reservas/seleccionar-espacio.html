@@ -135,6 +135,27 @@
                     </div>
                 </div>
 
+                        <!-- Selector de Deporte / Salon (mostrar antes de listar espacios) -->
+                        <div th:if="${mostrarSelectorDeporte}" class="card mb-4">
+                            <div class="card-body">
+                                <h5>¿Para qué deporte quieres reservar?</h5>
+                                <p class="text-muted">Selecciona el deporte para filtrar las canchas disponibles, o elige "Salón" si prefieres reservar un salón.</p>
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a th:each="deporte : ${deportes}"
+                                       th:href="@{/reservas/complejo/{id}(id=${complejo.id_complejo}, fecha=${fecha}, deporteId=${deporte.id})}"
+                                       class="btn btn-outline-primary"> 
+                                        <i class="bi bi-life-preserver me-1"></i>
+                                        <span th:text="${deporte.nombre}">Fútbol</span>
+                                    </a>
+
+                                    <a th:href="@{/reservas/complejo/{id}(id=${complejo.id_complejo}, fecha=${fecha}, soloSalones=true)}" class="btn btn-outline-success">
+                                        <i class="bi bi-door-open me-1"></i> Reservar Salón
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
                 <!-- Mensaje si no hay espacios -->
                 <div th:if="${totalEspacios == 0}" class="card">
                     <div class="card-body">
@@ -151,12 +172,13 @@
                     <div class="card-body">
                         <ul class="nav nav-tabs mb-4" id="espaciosTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" 
+                                <button class="nav-link" 
                                         id="canchas-tab" 
                                         data-bs-toggle="tab" 
                                         data-bs-target="#canchas-panel" 
                                         type="button" 
-                                        role="tab">
+                                        role="tab"
+                                        th:classappend="${activeTab} == 'canchas' ? ' active' : ''">
                                     <i class="bi bi-dribbble me-2"></i>
                                     Canchas 
                                     <span class="badge bg-primary ms-2" th:text="${#lists.size(canchas)}">0</span>
@@ -168,7 +190,8 @@
                                         data-bs-toggle="tab" 
                                         data-bs-target="#salones-panel" 
                                         type="button" 
-                                        role="tab">
+                                        role="tab"
+                                        th:classappend="${activeTab} == 'salones' ? ' active' : ''">
                                     <i class="bi bi-door-open me-2"></i>
                                     Salones 
                                     <span class="badge bg-primary ms-2" th:text="${#lists.size(salones)}">0</span>
@@ -178,9 +201,10 @@
 
                         <div class="tab-content" id="espaciosTabContent">
                             <!-- Panel de Canchas -->
-                            <div class="tab-pane fade show active" 
-                                 id="canchas-panel" 
-                                 role="tabpanel">
+                               <div class="tab-pane fade" 
+                                   id="canchas-panel" 
+                                   role="tabpanel"
+                                   th:classappend="${activeTab} == 'canchas' ? ' show active' : ''">
                                 
                                 <!-- Sin canchas -->
                                 <div th:if="${#lists.isEmpty(canchas)}" class="empty-state">
@@ -271,9 +295,10 @@
                             </div>
 
                             <!-- Panel de Salones -->
-                            <div class="tab-pane fade" 
-                                 id="salones-panel" 
-                                 role="tabpanel">
+                               <div class="tab-pane fade" 
+                                   id="salones-panel" 
+                                   role="tabpanel"
+                                   th:classappend="${activeTab} == 'salones' ? ' show active' : ''">
                                 
                                 <!-- Sin salones -->
                                 <div th:if="${#lists.isEmpty(salones)}" class="empty-state">
