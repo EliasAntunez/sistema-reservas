@@ -134,7 +134,7 @@
                     </div>
                     <div class="card-body">
                         
-                        <div th:each="item, iterStat : ${datosReserva.items}" class="espacio-item">
+                        <div th:each="item, iterStat : ${datosReserva.items}" class="espacio-item" th:attr="data-duracion=${item.duracionHoras}">
                             <span class="espacio-badge badge" 
                                   th:classappend="${item.tipoEspacio == 'CANCHA'} ? 'bg-success' : 'bg-info'"
                                   th:text="${item.tipoEspacio}">CANCHA</span>
@@ -186,11 +186,55 @@
                                 <span class="info-label"><strong>Subtotal</strong></span>
                                 <span class="info-value">
                                     <strong class="text-success">
-                                        $<span th:text="${#numbers.formatDecimal(item.calcularSubtotal(), 1, 2)}">0.00</span>
+                                        $<span th:id="${'subtotal-item-' + iterStat.index}"
+                                            th:data-base="${item.calcularSubtotal()}"
+                                            th:text="${#numbers.formatDecimal(item.calcularSubtotal(), 1, 2)}">0.00</span>
                                     </strong>
                                 </span>
                             </div>
                             
+                            <!-- Servicios adicionales disponibles para este complejo -->
+                            <div class="mt-3">
+                                <h6>Servicios Adicionales</h6>
+                                <div th:if="${serviciosAdicionalesDisponibles == null or #lists.isEmpty(serviciosAdicionalesDisponibles)}" class="text-muted small">
+                                    No hay servicios adicionales disponibles.
+                                </div>
+                                <div th:if="${serviciosAdicionalesDisponibles != null}" class="row g-2">
+                                    <div th:each="svc : ${serviciosAdicionalesDisponibles}" class="col-md-6"
+                                         th:if="${svc.aplicableA.toString() == 'AMBOS' or svc.aplicableA.toString() == item.tipoEspacio}">
+                                        <label class="d-flex justify-content-between align-items-center border p-2 rounded">
+                                            <div>
+                                                <div class="fw-semibold" th:text="${svc.nombre}">Servicio</div>
+                                                <div class="small text-muted">
+                                                    $<span th:text="${#numbers.formatDecimal(svc.precio, 1, 2)}">0.00</span>
+                                                    <span th:if="${svc.maximoCantidad != null}"> - Máx: <strong th:text="${svc.maximoCantidad}">1</strong></span>
+                                                    <span class="d-block small text-muted" th:text="${svc.tipoDeCobro}"></span>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                <!-- Checkbox cuando no permite cantidad o máximo==1 -->
+                                                <div th:if="${!svc.tipoDeCobro.permiteCantidad() or (svc.maximoCantidad != null and svc.maximoCantidad == 1)}">
+                                                       <input type="checkbox" class="form-check-input servicio-checkbox"
+                                                           th:name="${'servicio_' + iterStat.index + '_' + svc.id}"
+                                                           th:data-precio="${svc.precio}"
+                                                           th:data-tipocobro="${svc.tipoDeCobro}"
+                                                           th:data-maximo="${svc.maximoCantidad}" />
+                                                </div>
+                                                <!-- Number input cuando permite cantidad y máximo>1 or sin maximo -->
+                                                <div th:if="${svc.tipoDeCobro.permiteCantidad() and (svc.maximoCantidad == null or svc.maximoCantidad > 1)}">
+                                                       <input type="number" min="0" step="1" class="form-control form-control-sm servicio-input"
+                                                           th:name="${'servicio_' + iterStat.index + '_' + svc.id}"
+                                                           th:data-precio="${svc.precio}"
+                                                           th:data-maximo="${svc.maximoCantidad}"
+                                                           th:data-tipocobro="${svc.tipoDeCobro}"
+                                                           value="0" style="width:80px; display:inline-block" />
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Botón remover -->
                             <form th:action="@{/reservas/remover-espacio}" method="post" class="mt-2">
                                 <input type="hidden" name="indice" th:value="${iterStat.index}"/>
@@ -210,7 +254,7 @@
                             <div class="col-md-6 text-center text-md-start">
                                 <div class="info-label">TOTAL A PAGAR</div>
                                 <div class="precio-total">
-                                    $<span th:text="${#numbers.formatDecimal(datosReserva.calcularMontoTotal(), 1, 2)}">0.00</span>
+                                    $<span id="total-general" th:text="${#numbers.formatDecimal(datosReserva.calcularMontoTotal(), 1, 2)}">0.00</span>
                                 </div>
                             </div>
                             <div class="col-md-6 text-center text-md-end">
@@ -223,9 +267,10 @@
                                     </a>
                                     
                                     <!-- Botón confirmar reserva -->
-                                    <form th:if="${!requiereSeña}" 
-                                          th:action="@{/reservas/confirmar-final}" 
+                                    <form id="form-confirmar" th:if="${!requiereSeña}"
+                                          th:action="@{/reservas/confirmar-final}"
                                           method="post">
+                                        <div id="servicios-hidden-container" style="display:none"></div>
                                         <button type="submit" class="btn btn-success btn-lg w-100">
                                             <i class="bi bi-check-circle me-2"></i>
                                             Confirmar Reserva
@@ -259,6 +304,150 @@
 
             </div>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                
+                // Configuración para mostrar moneda en pantalla (AR)
+                const formatter = new Intl.NumberFormat('es-AR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+                // Función para leer números crudos (1500.00) o arreglar formatos (1,500.00)
+                function parseMoney(value) {
+                    if (!value) return 0.0;
+                    // Eliminamos puntos de miles si existen, y cambiamos coma decimal por punto
+                    // Ej: "1.500,00" -> "1500.00"
+                    // Ej: "1500.00" -> "1500.00"
+                    let cleanValue = value.toString().trim();
+                    
+                    // Si tiene coma como decimal, asumimos formato latino/europeo
+                    if (cleanValue.includes(',')) {
+                        cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
+                    }
+                    
+                    return parseFloat(cleanValue) || 0.0;
+                }
+
+                function calcularTotal() {
+                    console.log("--- Iniciando cálculo ---");
+                    let granTotal = 0.0;
+
+                    // 1. Recorrer cada espacio (cancha/salon)
+                    const items = document.querySelectorAll('.espacio-item');
+
+                    items.forEach((item, index) => {
+                        // Buscar el elemento que tiene el precio base de este espacio
+                        // Nota: index proviene del loop de thymeleaf (iterStat.index)
+                        const subtotalEl = document.getElementById('subtotal-item-' + index);
+                        
+                        if (!subtotalEl) {
+                            console.warn("No se encontró elemento subtotal para indice " + index);
+                            return;
+                        }
+
+                        // Leer precio base y duración
+                        let basePrice = parseMoney(subtotalEl.getAttribute('data-base'));
+                        let duracion = parseMoney(item.getAttribute('data-duracion'));
+
+                        console.log(`Item ${index}: Base=${basePrice}, Duración=${duracion}h`);
+
+                        // 2. Sumar servicios de este item
+                        let totalServicios = 0.0;
+                        // Buscamos inputs que empiecen con "servicio_INDEX_"
+                        const inputsServicios = item.querySelectorAll(`input[name^="servicio_${index}_"]`);
+
+                        inputsServicios.forEach(input => {
+                            let cantidad = 0;
+                            
+                            if (input.type === 'checkbox') {
+                                cantidad = input.checked ? 1 : 0;
+                            } else if (input.type === 'number') {
+                                cantidad = parseMoney(input.value);
+                                // Validar máximo visualmente si es necesario
+                                const max = parseMoney(input.getAttribute('data-maximo'));
+                                if (max > 0 && cantidad > max) cantidad = max;
+                            }
+
+                            if (cantidad > 0) {
+                                const precio = parseMoney(input.getAttribute('data-precio'));
+                                const tipo = input.getAttribute('data-tipocobro');
+                                let costo = 0;
+
+                                switch(tipo) {
+                                    case 'POR_HORA':
+                                        costo = precio * duracion * cantidad;
+                                        break;
+                                    default: // POR_PERSONA, FIJO, UNICO, etc.
+                                        costo = precio * cantidad;
+                                }
+                                console.log(`  -> Servicio agregado: ${tipo} $${precio} x ${cantidad} = $${costo}`);
+                                totalServicios += costo;
+                            }
+                        });
+
+                        // 3. Subtotal del Item
+                        const subtotalItem = basePrice + totalServicios;
+                        
+                        // Actualizar texto en pantalla del item
+                        subtotalEl.textContent = formatter.format(subtotalItem);
+                        
+                        granTotal += subtotalItem;
+                    });
+
+                    console.log("Gran Total Calculado: " + granTotal);
+
+                    // 4. Actualizar Total General
+                    const totalEl = document.getElementById('total-general');
+                    if (totalEl) {
+                        totalEl.textContent = formatter.format(granTotal);
+                    }
+                }
+
+                // --- LISTENERS ---
+
+                // 1. Escuchar cambios en inputs de servicios (checkbox o number)
+                document.body.addEventListener('change', function(e) {
+                    if (e.target.classList.contains('servicio-checkbox') || e.target.classList.contains('servicio-input')) {
+                        calcularTotal();
+                    }
+                });
+
+                // 2. Escuchar escritura en inputs numéricos (tiempo real)
+                document.body.addEventListener('input', function(e) {
+                    if (e.target.classList.contains('servicio-input')) {
+                        calcularTotal();
+                    }
+                });
+
+                // 3. Calcular al cargar la página (por si el navegador guardó estados de checkbox)
+                calcularTotal();
+
+                // 4. Manejo del Submit (tu lógica para copiar a hidden inputs)
+                const form = document.getElementById('form-confirmar');
+                if (form) {
+                    form.addEventListener('submit', function() {
+                        const container = document.getElementById('servicios-hidden-container');
+                        if (!container) return;
+                        container.innerHTML = '';
+                        
+                        document.querySelectorAll('input[name^="servicio_"]').forEach(inp => {
+                            let val = 0;
+                            if (inp.type === 'checkbox') val = inp.checked ? 1 : 0;
+                            else val = parseInt(inp.value) || 0;
+                            
+                            if (val > 0) {
+                                const h = document.createElement('input');
+                                h.type = 'hidden';
+                                h.name = inp.name;
+                                h.value = val.toString();
+                                container.appendChild(h);
+                            }
+                        });
+                    });
+                }
+            });
+        </script>
     </div>
 </body>
 </html>

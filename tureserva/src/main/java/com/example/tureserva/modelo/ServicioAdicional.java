@@ -64,6 +64,11 @@ public class ServicioAdicional implements Serializable {
     @Column(name = "maximo_cantidad")
     private Integer maximoCantidad;
 
+    // Capacidad total disponible por franja/hora en el complejo (null = sin límite global)
+    @Min(1)
+    @Column(name = "capacidad_total")
+    private Integer capacidadTotal;
+
     // Relación inversa: un servicio puede aparecer en muchos detalles de reserva
     @ToString.Exclude
     @OneToMany(mappedBy = "servicioAdicional", fetch = FetchType.LAZY)

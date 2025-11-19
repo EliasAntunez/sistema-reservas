@@ -53,6 +53,15 @@
                             <div class="invalid-feedback" th:if="${#fields.hasErrors('aplicableA')}" th:errors="*{aplicableA}"></div>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="maximoCantidad" class="form-label">Cantidad Máxima (opcional)</label>
+                            <input type="number" th:field="*{maximoCantidad}" id="maximoCantidad" class="form-control"
+                                   min="1" step="1" placeholder="Dejar vacío para sin límite"
+                                   th:classappend="${#fields.hasErrors('maximoCantidad')}? ' is-invalid' : ''" />
+                            <div class="invalid-feedback" th:if="${#fields.hasErrors('maximoCantidad')}" th:errors="*{maximoCantidad}"></div>
+                            <div class="form-text">Si se indica, limita la cantidad máxima que un cliente puede solicitar por detalle.</div>
+                        </div>
+
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" th:field="*{activo}" id="activo">
                             <label class="form-check-label" for="activo">Activo</label>

@@ -24,10 +24,6 @@ import java.util.List;
  */
 @Entity
 @Table(name = "detalle_reserva",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_detalle_espacio_fecha_hora",
-                         columnNames = {"espacio_reservable_id", "fecha_reserva", "hora_inicio", "hora_fin"})
-    },
     indexes = {
         @Index(name = "idx_detalle_reserva", columnList = "reserva_id"),
         @Index(name = "idx_detalle_espacio", columnList = "espacio_reservable_id"),
@@ -135,6 +131,19 @@ public class DetalleReserva {
     public void calcularSubtotal() {
         if (precioPorHora != null && duracionHoras != null) {
             this.subtotal = precioPorHora.multiply(duracionHoras);
+        } else {
+            this.subtotal = java.math.BigDecimal.ZERO;
+        }
+
+        // Incluir el subtotal de los servicios adicionales asociados a este detalle
+        try {
+            java.math.BigDecimal serviciosSum = serviciosAdicionales.stream()
+                    .map(s -> s.getSubtotal() == null ? java.math.BigDecimal.ZERO : s.getSubtotal())
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            this.subtotal = this.subtotal.add(serviciosSum);
+        } catch (Exception ex) {
+            // En caso de que la colección aún no esté inicializada o haya otro problema,
+            // no queremos romper la validación; dejamos el subtotal como estaba.
         }
     }
 

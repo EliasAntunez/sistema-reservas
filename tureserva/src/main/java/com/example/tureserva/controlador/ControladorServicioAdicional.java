@@ -150,6 +150,9 @@ public class ControladorServicioAdicional {
         servicioExistente.setPrecio(servicioAdicional.getPrecio());
         servicioExistente.setTipoDeCobro(servicioAdicional.getTipoDeCobro());
         servicioExistente.setAplicableA(servicioAdicional.getAplicableA());
+        // Nuevo: persistir la cantidad máxima y el flag activo si se editan
+        servicioExistente.setMaximoCantidad(servicioAdicional.getMaximoCantidad());
+        servicioExistente.setActivo(servicioAdicional.getActivo());
 
         try {
             servicioServicioAdicional.guardarServicioAdicional(servicioExistente);
