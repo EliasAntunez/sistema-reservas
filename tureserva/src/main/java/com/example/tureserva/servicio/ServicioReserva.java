@@ -32,6 +32,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 /**
  * Servicio para gestión de reservas.
@@ -47,15 +49,50 @@ public class ServicioReserva {
     private final RepositorioEspacioReservable repositorioEspacioReservable;
     private final RepositorioReserva repositorioReserva;
     private final RepositorioPago repositorioPago;
+    private final ServicioServicioAdicional servicioServicioAdicional;
+    private final com.example.tureserva.repositorio.RepositorioDetalleServicioAdicional repositorioDetalleServicioAdicional;
+    private final EntityManager entityManager;
+
+    // Helper key para agrupar por franja horaria
+    private static class FranjaKey {
+        private final java.time.LocalDate fecha;
+        private final java.time.LocalTime inicio;
+        private final java.time.LocalTime fin;
+
+        FranjaKey(java.time.LocalDate fecha, java.time.LocalTime inicio, java.time.LocalTime fin) {
+            this.fecha = fecha;
+            this.inicio = inicio;
+            this.fin = fin;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            FranjaKey that = (FranjaKey) o;
+            return java.util.Objects.equals(fecha, that.fecha) && java.util.Objects.equals(inicio, that.inicio) && java.util.Objects.equals(fin, that.fin);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(fecha, inicio, fin);
+        }
+    }
     
     public ServicioReserva(RepositorioDetalleReserva repositorioDetalleReserva,
                          RepositorioEspacioReservable repositorioEspacioReservable,
                          RepositorioReserva repositorioReserva,
-                         RepositorioPago repositorioPago) {
+                         RepositorioPago repositorioPago,
+                         ServicioServicioAdicional servicioServicioAdicional,
+                         com.example.tureserva.repositorio.RepositorioDetalleServicioAdicional repositorioDetalleServicioAdicional,
+                         EntityManager entityManager) {
         this.repositorioDetalleReserva = repositorioDetalleReserva;
         this.repositorioEspacioReservable = repositorioEspacioReservable;
         this.repositorioReserva = repositorioReserva;
         this.repositorioPago = repositorioPago;
+        this.servicioServicioAdicional = servicioServicioAdicional;
+        this.repositorioDetalleServicioAdicional = repositorioDetalleServicioAdicional;
+        this.entityManager = entityManager;
     }
 
     /**
@@ -240,6 +277,16 @@ public class ServicioReserva {
      */
     @Transactional
     public Reserva crearReservaDesdeDatosTemp(Cliente cliente, DatosReservaTemp datosReserva) {
+        return crearReservaDesdeDatosTemp(cliente, datosReserva, null);
+    }
+
+    /**
+     * Crea una reserva desde los datos temporales y además procesa las selecciones
+     * de servicios por item. El mapa `serviciosPorItem` tiene clave = índice del item
+     * en la lista de `DatosReservaTemp.items` y valor = mapa (idServicio -> cantidad).
+     */
+    @Transactional
+    public Reserva crearReservaDesdeDatosTemp(Cliente cliente, DatosReservaTemp datosReserva, Map<Integer, Map<Long, Integer>> serviciosPorItem) {
         
         logger.info("Creando reserva para cliente {} con {} espacios para fecha {}", 
             cliente.getId(), datosReserva.cantidadEspacios(), datosReserva.getFecha());
@@ -254,8 +301,12 @@ public class ServicioReserva {
         reserva.setFechaReserva(datosReserva.getFecha());
         reserva.setEstado(EstadoReserva.CONFIRMADA);
         
+        // Map para acumular la cantidad solicitada por servicio por franja (antes de persistir)
+        Map<Long, Map<FranjaKey, Integer>> solicitadoPorServicio = new java.util.HashMap<>();
+
         // Procesar cada item (espacio + horario)
-        for (ItemReserva item : datosReserva.getItems()) {
+        for (int idx = 0; idx < datosReserva.getItems().size(); idx++) {
+            ItemReserva item = datosReserva.getItems().get(idx);
             // Obtener el espacio
             EspacioReservable espacio = repositorioEspacioReservable.findById(item.getEspacioId())
                 .orElseThrow(() -> new IllegalStateException("El espacio " + item.getEspacioId() + " no existe"));
@@ -289,11 +340,83 @@ public class ServicioReserva {
             
             // Agregar detalle a la reserva
             reserva.agregarDetalle(detalle);
+
+            // Procesar servicios adicionales seleccionados para este item (si hay)
+            if (serviciosPorItem != null) {
+                Map<Long, Integer> serviciosSeleccionados = serviciosPorItem.get(idx);
+                if (serviciosSeleccionados != null && !serviciosSeleccionados.isEmpty()) {
+                    for (Map.Entry<Long, Integer> e : serviciosSeleccionados.entrySet()) {
+                        Long idServicio = e.getKey();
+                        Integer cantidad = e.getValue();
+                        if (cantidad == null || cantidad <= 0) continue;
+
+                        var servicioOpt = servicioServicioAdicional.obtenerPorId(idServicio);
+                        if (servicioOpt.isEmpty()) {
+                            throw new IllegalStateException("Servicio adicional no encontrado: " + idServicio);
+                        }
+
+                        ServicioAdicional svc = servicioOpt.get();
+
+                        // Validación de cantidad máxima si está definida
+                        if (svc.getMaximoCantidad() != null && cantidad > svc.getMaximoCantidad()) {
+                            throw new IllegalStateException("La cantidad solicitada para el servicio '" + svc.getNombre() + "' excede el máximo permitido: " + svc.getMaximoCantidad());
+                        }
+
+                        // Validar aplicabilidad al tipo de espacio (si aplica)
+                        if (svc.getAplicableA() != null && !"AMBOS".equals(svc.getAplicableA().toString()) && item.getTipoEspacio() != null) {
+                            if (!svc.getAplicableA().toString().equals(item.getTipoEspacio())) {
+                                throw new IllegalStateException("El servicio '" + svc.getNombre() + "' no es aplicable al tipo de espacio: " + item.getTipoEspacio());
+                            }
+                        }
+
+                        // Crear DetalleServicioAdicional y asociarlo
+                        DetalleServicioAdicional detSvc = new DetalleServicioAdicional();
+                        detSvc.setServicioAdicional(svc);
+                        detSvc.setCantidad(cantidad);
+                        detSvc.setPrecioUnitario(svc.getPrecio());
+                        detSvc.calcularSubtotal();
+
+                        detalle.agregarServicioAdicional(detSvc);
+
+                        // Registrar en el mapa de solicitado por servicio+franja
+                        FranjaKey fk = new FranjaKey(detalle.getFechaReserva(), detalle.getHoraInicio(), detalle.getHoraFin());
+                        solicitadoPorServicio
+                            .computeIfAbsent(idServicio, k -> new java.util.HashMap<>())
+                            .merge(fk, cantidad, Integer::sum);
+                    }
+                }
+            }
             
             logger.debug("Detalle agregado - Espacio: {}, Horario: {} - {}, Subtotal: ${}", 
                 espacio.getNombre(), item.getHoraInicio(), item.getHoraFin(), detalle.getSubtotal());
         }
         
+        // Antes de persistir, validar disponibilidad de servicios por franja
+        for (Map.Entry<Long, Map<FranjaKey, Integer>> entry : solicitadoPorServicio.entrySet()) {
+            Long svcId = entry.getKey();
+            // Lock pesimista sobre el servicio para evitar race conditions
+            ServicioAdicional svc = entityManager.find(ServicioAdicional.class, svcId, LockModeType.PESSIMISTIC_WRITE);
+            if (svc == null) throw new IllegalStateException("Servicio adicional no encontrado: " + svcId);
+
+            Integer capacidad = svc.getCapacidadTotal() != null ? svc.getCapacidadTotal() : svc.getMaximoCantidad();
+            if (capacidad == null) {
+                // Sin límite global definido -> no validar
+                continue;
+            }
+
+            for (Map.Entry<FranjaKey, Integer> fe : entry.getValue().entrySet()) {
+                FranjaKey fk = fe.getKey();
+                Integer solicitado = fe.getValue() == null ? 0 : fe.getValue();
+
+                Integer existente = repositorioDetalleServicioAdicional.sumCantidadParaServicioEnFranja(svcId, fk.fecha, fk.inicio, fk.fin);
+                existente = existente == null ? 0 : existente;
+
+                if (existente + solicitado > capacidad) {
+                    throw new IllegalStateException("No hay suficiente disponibilidad para el servicio '" + svc.getNombre() + "' en la franja " + fk.inicio + "-" + fk.fin + ". Disponible: " + capacidad + ", ya reservado: " + existente + ", solicitado: " + solicitado);
+                }
+            }
+        }
+
         // Generar código único
         String codigo;
         int intentos = 0;
@@ -334,6 +457,34 @@ public class ServicioReserva {
      */
     public Optional<Reserva> obtenerReservaPorId(Long id) {
         return repositorioReserva.findByIdWithDetalles(id);
+    }
+
+    /**
+     * Obtiene una reserva por id incluyendo detalles y servicios adicionales (pre-fetch).
+     */
+    public Optional<Reserva> obtenerReservaPorIdConServicios(Long id) {
+        Optional<Reserva> resOpt = repositorioReserva.findByIdWithDetalles(id);
+        if (resOpt.isEmpty()) return resOpt;
+
+        Reserva reserva = resOpt.get();
+
+        // Cargar servicios adicionales en una consulta separada para evitar MultipleBagFetchException
+        List<com.example.tureserva.modelo.DetalleServicioAdicional> servicios = repositorioDetalleServicioAdicional.findByReservaIdWithServicioAdicional(id);
+
+        // Agrupar por detalleReserva.id
+        java.util.Map<Long, java.util.List<com.example.tureserva.modelo.DetalleServicioAdicional>> porDetalle = servicios.stream()
+                .collect(java.util.stream.Collectors.groupingBy(s -> s.getDetalleReserva().getId()));
+
+        // Asociar a cada detalle las entidades cargadas
+        for (com.example.tureserva.modelo.DetalleReserva det : reserva.getDetalles()) {
+            java.util.List<com.example.tureserva.modelo.DetalleServicioAdicional> lista = porDetalle.get(det.getId());
+            det.getServiciosAdicionales().clear();
+            if (lista != null) {
+                det.getServiciosAdicionales().addAll(lista);
+            }
+        }
+
+        return Optional.of(reserva);
     }
     
     // ==================== MÉTODOS DE CANCELACIÓN ====================

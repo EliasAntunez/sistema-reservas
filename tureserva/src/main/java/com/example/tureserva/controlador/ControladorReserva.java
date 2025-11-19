@@ -8,6 +8,7 @@ import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.servicio.ServicioEspacioReservable;
 import com.example.tureserva.servicio.ServicioDeporte;
 import com.example.tureserva.servicio.ServicioReserva;
+import com.example.tureserva.servicio.ServicioServicioAdicional;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,7 @@ public class ControladorReserva {
     private final ServicioEspacioReservable servicioEspacio;
     private final ServicioDeporte servicioDeporte;
     private final ServicioReserva servicioReserva;
+    private final ServicioServicioAdicional servicioServicioAdicional;
     private final RepositorioCliente repositorioCliente;
     private final RepositorioReserva repositorioReserva;
     
@@ -55,12 +57,14 @@ public class ControladorReserva {
                               ServicioEspacioReservable servicioEspacio,
                               ServicioDeporte servicioDeporte,
                               ServicioReserva servicioReserva,
+                              ServicioServicioAdicional servicioServicioAdicional,
                               RepositorioCliente repositorioCliente,
                               RepositorioReserva repositorioReserva) {
         this.servicioComplejo = servicioComplejo;
         this.servicioEspacio = servicioEspacio;
         this.servicioDeporte = servicioDeporte;
         this.servicioReserva = servicioReserva;
+        this.servicioServicioAdicional = servicioServicioAdicional;
         this.repositorioCliente = repositorioCliente;
         this.repositorioReserva = repositorioReserva;
     }
@@ -339,6 +343,14 @@ public class ControladorReserva {
         model.addAttribute("complejo", complejo);
         model.addAttribute("datosReserva", datosReserva);
         model.addAttribute("requiereSeña", requiereSeña);
+        // Cargar servicios adicionales activos del complejo para mostrarlos en la confirmación
+        try {
+            var serviciosDisponibles = servicioServicioAdicional.obtenerServiciosAdicionalesPorComplejoYActivoTrue(datosReserva.getComplejoId());
+            model.addAttribute("serviciosAdicionalesDisponibles", serviciosDisponibles);
+        } catch (Exception ex) {
+            logger.warn("No se pudieron cargar servicios adicionales para el complejo {}: {}", datosReserva.getComplejoId(), ex.getMessage());
+            model.addAttribute("serviciosAdicionalesDisponibles", java.util.Collections.emptyList());
+        }
         
         return "reservas/confirmar-reserva";
     }
@@ -427,7 +439,8 @@ public class ControladorReserva {
     @PostMapping("/confirmar-final")
     public String confirmarReservaFinal(HttpSession session, 
                                        Authentication authentication,
-                                       RedirectAttributes redirectAttributes) {
+                                       RedirectAttributes redirectAttributes,
+                                       @RequestParam Map<String,String> allRequestParams) {
         
         DatosReservaTemp datosReserva = (DatosReservaTemp) session.getAttribute("datosReserva");
         
@@ -467,8 +480,31 @@ public class ControladorReserva {
             
             logger.debug("Cliente encontrado: ID={}, Email={}", cliente.getId(), cliente.getEmail());
             
-            // Crear la reserva usando el servicio (ahora procesa múltiples items)
-            Reserva reserva = servicioReserva.crearReservaDesdeDatosTemp(cliente, datosReserva);
+            // Parsear parámetros de servicios enviados desde la vista
+            // Los inputs tienen nombres del tipo: servicio_{indice}_{idServicio}
+            Map<Integer, Map<Long, Integer>> serviciosPorItem = new HashMap<>();
+            for (Map.Entry<String, String> entry : allRequestParams.entrySet()) {
+                String key = entry.getKey();
+                if (key == null) continue;
+                if (!key.startsWith("servicio_")) continue;
+
+                // formato: servicio_{indice}_{idServicio}
+                String[] parts = key.split("_");
+                if (parts.length < 3) continue;
+                try {
+                    int indice = Integer.parseInt(parts[1]);
+                    Long idServicio = Long.parseLong(parts[2]);
+                    int cantidad = Integer.parseInt(entry.getValue());
+
+                    serviciosPorItem.computeIfAbsent(indice, k -> new HashMap<>())
+                                   .put(idServicio, cantidad);
+                } catch (NumberFormatException nfe) {
+                    logger.warn("Parámetro de servicio con formato inesperado: {}", key);
+                }
+            }
+
+            // Crear la reserva usando el servicio (procesa múltiples items y servicios)
+            Reserva reserva = servicioReserva.crearReservaDesdeDatosTemp(cliente, datosReserva, serviciosPorItem);
             
             // Limpiar sesión
             session.removeAttribute("datosReserva");
@@ -492,7 +528,8 @@ public class ControladorReserva {
     @GetMapping("/exitosa/{id}")
     public String mostrarReservaExitosa(@PathVariable("id") Long reservaId, Model model, RedirectAttributes redirectAttributes) {
         
-        Optional<Reserva> reservaOpt = servicioReserva.obtenerReservaPorId(reservaId);
+        // Cargar la reserva con detalles y servicios adicionales ya inicializados
+        Optional<Reserva> reservaOpt = servicioReserva.obtenerReservaPorIdConServicios(reservaId);
         
         if (reservaOpt.isEmpty()) {
             redirectAttributes.addFlashAttribute("error", "La reserva solicitada no existe.");

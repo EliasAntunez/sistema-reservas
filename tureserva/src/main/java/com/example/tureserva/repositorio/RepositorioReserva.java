@@ -52,6 +52,20 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
            "LEFT JOIN FETCH e.complejoDeportivo c " +
            "WHERE r.id = :id")
     Optional<Reserva> findByIdWithDetalles(@Param("id") Long id);
+
+    /**
+     * Encuentra una reserva con sus detalles, servicios adicionales y espacios cargados.
+     * Útil para vistas que necesitan listar los servicios asociados a cada detalle.
+     */
+    @Query("SELECT DISTINCT r FROM Reserva r " +
+           "LEFT JOIN FETCH r.cliente " +
+           "LEFT JOIN FETCH r.detalles d " +
+           "LEFT JOIN FETCH d.serviciosAdicionales s " +
+           "LEFT JOIN FETCH s.servicioAdicional sa " +
+           "LEFT JOIN FETCH d.espacioReservable e " +
+           "LEFT JOIN FETCH e.complejoDeportivo c " +
+           "WHERE r.id = :id")
+    Optional<Reserva> findByIdWithDetallesAndServicios(@Param("id") Long id);
     
     /**
      * Encuentra todas las reservas de un cliente con detalles y espacios cargados
