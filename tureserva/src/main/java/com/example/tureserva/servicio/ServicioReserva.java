@@ -52,6 +52,7 @@ public class ServicioReserva {
     private final ServicioServicioAdicional servicioServicioAdicional;
     private final com.example.tureserva.repositorio.RepositorioDetalleServicioAdicional repositorioDetalleServicioAdicional;
     private final EntityManager entityManager;
+    private final ServicioEmail servicioEmail;
 
     // Helper key para agrupar por franja horaria
     private static class FranjaKey {
@@ -85,7 +86,8 @@ public class ServicioReserva {
                          RepositorioPago repositorioPago,
                          ServicioServicioAdicional servicioServicioAdicional,
                          com.example.tureserva.repositorio.RepositorioDetalleServicioAdicional repositorioDetalleServicioAdicional,
-                         EntityManager entityManager) {
+                         EntityManager entityManager,
+                         ServicioEmail servicioEmail) {
         this.repositorioDetalleReserva = repositorioDetalleReserva;
         this.repositorioEspacioReservable = repositorioEspacioReservable;
         this.repositorioReserva = repositorioReserva;
@@ -93,6 +95,7 @@ public class ServicioReserva {
         this.servicioServicioAdicional = servicioServicioAdicional;
         this.repositorioDetalleServicioAdicional = repositorioDetalleServicioAdicional;
         this.entityManager = entityManager;
+        this.servicioEmail = servicioEmail;
     }
 
     /**
@@ -441,14 +444,135 @@ public class ServicioReserva {
         
         reserva.setCodigoReserva(codigo);
         
-        // Persistir (cascade guardará también los detalles)
+        // Persistir (cascade guardará también los detalles y los servicios adicionales)
         Reserva reservaGuardada = repositorioReserva.save(reserva);
-        
-        logger.info("Reserva {} creada exitosamente con {} detalles. Total: ${}", 
-            reservaGuardada.getCodigoReserva(), 
-            reservaGuardada.getDetalles().size(), 
-            reservaGuardada.getMontoTotal());
-        
+
+        // Recalcular subtotales de cada detalle incluyendo los servicios adicionales
+        // y actualizar el montoTotal de la reserva. Esto cubre el caso donde
+        // Hibernate insertó los detalles antes que los servicios y el subtotal
+        // quedó sin incluir los servicios adicionales.
+        try {
+            List<com.example.tureserva.modelo.DetalleServicioAdicional> serviciosPersistidos = repositorioDetalleServicioAdicional.findByReservaIdWithServicioAdicional(reservaGuardada.getId());
+
+            java.util.Map<Long, java.util.List<com.example.tureserva.modelo.DetalleServicioAdicional>> serviciosPorDetalle = serviciosPersistidos.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(s -> s.getDetalleReserva().getId()));
+
+            java.math.BigDecimal nuevoMontoTotal = java.math.BigDecimal.ZERO;
+
+            for (DetalleReserva det : reservaGuardada.getDetalles()) {
+                // Recalcular subtotal espacio
+                java.math.BigDecimal subtotalEspacio = det.getPrecioPorHora() == null || det.getDuracionHoras() == null
+                        ? java.math.BigDecimal.ZERO
+                        : det.getPrecioPorHora().multiply(det.getDuracionHoras());
+
+                // Sumar servicios asociados (si existen)
+                java.util.List<com.example.tureserva.modelo.DetalleServicioAdicional> listaSvc = serviciosPorDetalle.get(det.getId());
+                java.math.BigDecimal subtotalServicios = java.math.BigDecimal.ZERO;
+                det.getServiciosAdicionales().clear();
+                if (listaSvc != null) {
+                    for (com.example.tureserva.modelo.DetalleServicioAdicional s : listaSvc) {
+                        subtotalServicios = subtotalServicios.add(s.getSubtotal() == null ? java.math.BigDecimal.ZERO : s.getSubtotal());
+                        det.getServiciosAdicionales().add(s);
+                    }
+                }
+
+                java.math.BigDecimal subtotalDet = subtotalEspacio.add(subtotalServicios);
+                det.setSubtotal(subtotalDet);
+                nuevoMontoTotal = nuevoMontoTotal.add(subtotalDet);
+            }
+
+            reservaGuardada.setMontoTotal(nuevoMontoTotal);
+            reservaGuardada.calcularMontoRestante();
+
+            // Guardar los cambios si hubo diferencia
+            repositorioReserva.save(reservaGuardada);
+
+            logger.info("Reserva {} creada exitosamente con {} detalles. Total: ${}", 
+                reservaGuardada.getCodigoReserva(), 
+                reservaGuardada.getDetalles().size(), 
+                reservaGuardada.getMontoTotal());
+
+        } catch (Exception exRecalc) {
+            // Si falla la recalculación, registrar pero seguir con el flujo (enviar email con lo que haya)
+            logger.warn("No fue posible recalcular subtotales tras persistir reserva {}: {}", reservaGuardada.getId(), exRecalc.getMessage());
+        }
+
+        // Preparar DTO ligero para el envío de correo y evitar problemas de LazyInitialization
+        try {
+            String nombreCliente = reservaGuardada.getCliente() != null ? reservaGuardada.getCliente().getNombre() : null;
+            String destinatario = reservaGuardada.getCliente() != null ? reservaGuardada.getCliente().getEmail() : null;
+            String nombreComplejo = "";
+            if (!reservaGuardada.getDetalles().isEmpty()) {
+                var d = reservaGuardada.getDetalles().get(0);
+                if (d.getEspacioReservable() != null && d.getEspacioReservable().getComplejoDeportivo() != null) {
+                    nombreComplejo = d.getEspacioReservable().getComplejoDeportivo().getNombre_complejo();
+                }
+            }
+
+            com.example.tureserva.servicio.dto.EmailReservaDTO dto = new com.example.tureserva.servicio.dto.EmailReservaDTO(
+                nombreCliente,
+                reservaGuardada.getCodigoReserva(),
+                reservaGuardada.getFechaReserva(),
+                nombreComplejo,
+                reservaGuardada.getMontoTotal()
+            );
+
+            // Llenar detalles y servicios adicionales
+            java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detallesDto = new java.util.ArrayList<>();
+            java.util.Set<String> politicas = new java.util.HashSet<>();
+
+            for (DetalleReserva det : reservaGuardada.getDetalles()) {
+                com.example.tureserva.servicio.dto.EmailDetalleDTO detDto = new com.example.tureserva.servicio.dto.EmailDetalleDTO();
+                detDto.setId(det.getId());
+                detDto.setEspacioNombre(det.getEspacioReservable() != null ? det.getEspacioReservable().getNombre() : "");
+                detDto.setFecha(det.getFechaReserva());
+                detDto.setHoraInicio(det.getHoraInicio());
+                detDto.setHoraFin(det.getHoraFin());
+                detDto.setDuracionHoras(det.getDuracionHoras());
+                detDto.setPrecioPorHora(det.getPrecioPorHora());
+                detDto.setSubtotal(det.getSubtotal());
+
+                // Politica de cancelación del espacio (si aplica)
+                if (det.getEspacioReservable() != null && det.getEspacioReservable().getPoliticaCancelacion() != null) {
+                    PoliticaCancelacion pc = det.getEspacioReservable().getPoliticaCancelacion();
+                    detDto.setPoliticaCancelacionNombre(pc.getNombre());
+                    detDto.setPoliticaHorasAnticipacion(pc.getHorasAnticipacionMinima());
+                    detDto.setPoliticaPorcentajeDevolucion(pc.getPorcentajeDevolucion());
+                    politicas.add(pc.getNombre() + " (" + pc.getHorasAnticipacionMinima() + "h antes, " + pc.getPorcentajeDevolucion() + "% devolución)");
+                }
+
+                // Servicios adicionales asociados al detalle
+                if (det.getServiciosAdicionales() != null) {
+                    for (DetalleServicioAdicional s : det.getServiciosAdicionales()) {
+                        var svc = s.getServicioAdicional();
+                        com.example.tureserva.servicio.dto.EmailServicioAdicionalDTO svcDto = new com.example.tureserva.servicio.dto.EmailServicioAdicionalDTO();
+                        svcDto.setId(svc != null ? svc.getId() : null);
+                        svcDto.setNombre(svc != null ? svc.getNombre() : "");
+                        svcDto.setCantidad(s.getCantidad());
+                        svcDto.setPrecioUnitario(s.getPrecioUnitario());
+                        svcDto.setSubtotal(s.getSubtotal());
+                        detDto.getServicios().add(svcDto);
+                    }
+                }
+
+                detallesDto.add(detDto);
+            }
+
+            dto.setDetalles(detallesDto);
+
+            // Recordatorios básicos (puedes extender esto)
+            dto.getRecordatorios().add("Por favor presentarse 10 minutos antes del horario reservado.");
+            if (!politicas.isEmpty()) {
+                dto.setPoliticaCancelacionResumen(String.join("; ", politicas));
+            } else {
+                dto.setPoliticaCancelacionResumen("Política de cancelación por defecto: reembolso completo si cancela con al menos 1 hora de anticipación.");
+            }
+
+            servicioEmail.enviarConfirmacionReserva(dto, destinatario);
+        } catch (Exception e) {
+            logger.error("Error al disparar envío de correo para reserva {}: {}", reservaGuardada.getCodigoReserva(), e.getMessage(), e);
+        }
+
         return reservaGuardada;
     }
     
@@ -482,6 +606,30 @@ public class ServicioReserva {
             if (lista != null) {
                 det.getServiciosAdicionales().addAll(lista);
             }
+        }
+
+        // Recalcular subtotales de detalle y montoTotal de la reserva teniendo en cuenta los servicios
+        try {
+            java.math.BigDecimal nuevoMontoTotal = java.math.BigDecimal.ZERO;
+            for (com.example.tureserva.modelo.DetalleReserva det : reserva.getDetalles()) {
+                java.math.BigDecimal subtotalEspacio = java.math.BigDecimal.ZERO;
+                if (det.getPrecioPorHora() != null && det.getDuracionHoras() != null) {
+                    subtotalEspacio = det.getPrecioPorHora().multiply(det.getDuracionHoras());
+                }
+
+                java.math.BigDecimal subtotalServicios = det.getServiciosAdicionales().stream()
+                        .map(s -> s.getSubtotal() == null ? java.math.BigDecimal.ZERO : s.getSubtotal())
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+                java.math.BigDecimal subtotalDet = subtotalEspacio.add(subtotalServicios);
+                det.setSubtotal(subtotalDet);
+                nuevoMontoTotal = nuevoMontoTotal.add(subtotalDet);
+            }
+
+            reserva.setMontoTotal(nuevoMontoTotal);
+            reserva.calcularMontoRestante();
+        } catch (Exception ex) {
+            logger.warn("No fue posible recalcular montos para reserva {}: {}", reserva.getId(), ex.getMessage());
         }
 
         return Optional.of(reserva);
