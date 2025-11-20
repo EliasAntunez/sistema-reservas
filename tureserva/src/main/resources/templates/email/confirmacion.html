@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmación de Reserva</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    body { 
+      background: linear-gradient(135deg, #f0f2f5 0%, #e8eaed 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #333;
+    }
+    
+    /* Dark mode background - deep dark gray */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
+        color: #e0e0e0;
+      }
+    }
+
+    .container { 
+      max-width: 650px; 
+      margin: 0 auto; 
+      padding: 20px; 
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Clean white wrapper with subtle shadow */
+    .email-wrapper { 
+      background: #ffffff; 
+      border-radius: 12px; 
+      overflow: hidden; 
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      .email-wrapper {
+        background: #262626;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      }
+    }
+
+    .header { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); padding: 40px 30px; text-align: center; color: #fff; }
+    .header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 700; }
+    .header p { font-size: 15px; opacity: 0.95; margin: 0; }
+    
+    .content { padding: 40px 30px; }
+    /* Dark mode text color for content */
+    @media (prefers-color-scheme: dark) {
+      .content {
+        color: #e0e0e0;
+      }
+    }
+
+    .greeting { margin-bottom: 25px; }
+    .greeting p:first-child { font-size: 16px; margin-bottom: 10px; font-weight: 600; }
+    .greeting p:last-child { color: #666; font-size: 14px; margin: 0; }
+    
+    /* Dark mode text for greeting paragraph */
+    @media (prefers-color-scheme: dark) {
+      .greeting p:last-child {
+        color: #aaa;
+      }
+    }
+
+    .info-grid { display: table; width: 100%; margin: 30px 0; border-collapse: collapse; }
+    .info-box { display: table-cell; width: 48%; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center; border: 1px solid #e9ecef; vertical-align: middle; }
+    .info-box:first-child { margin-right: 4%; }
+    
+    /* Dark mode support for info boxes */
+    @media (prefers-color-scheme: dark) {
+      .info-box {
+        background: #3a3a3a;
+        border-color: #444;
+      }
+    }
+
+    .info-label { font-size: 11px; text-transform: uppercase; color: #6c757d; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600; }
+    /* Dark mode label color */
+    @media (prefers-color-scheme: dark) {
+      .info-label {
+        color: #999;
+      }
+    }
+
+    .info-value { font-size: 18px; font-weight: 700; color: #0d6efd; }
+    .section-title { font-size: 16px; font-weight: 700; color: #1a1a1a; margin: 30px 0 20px 0; padding-bottom: 10px; border-bottom: 2px solid #0d6efd; display: inline-block; }
+    
+    /* Dark mode section title */
+    @media (prefers-color-scheme: dark) {
+      .section-title {
+        color: #e0e0e0;
+      }
+    }
+
+    .space-card { border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+    /* Dark mode space card border */
+    @media (prefers-color-scheme: dark) {
+      .space-card {
+        border-color: #444;
+      }
+    }
+
+    .space-header { background: #f8f9fa; padding: 14px 16px; border-bottom: 1px solid #e0e0e0; font-weight: 600; color: #1a1a1a; }
+    /* Dark mode space header */
+    @media (prefers-color-scheme: dark) {
+      .space-header {
+        background: #3a3a3a;
+        border-bottom-color: #444;
+        color: #e0e0e0;
+      }
+    }
+
+    .space-body { padding: 16px; }
+    .detail-row { display: table; width: 100%; margin-bottom: 10px; font-size: 14px; }
+    .detail-label { display: table-cell; color: #666; font-weight: 500; width: 50%; padding-bottom: 8px; }
+    
+    /* Dark mode detail label */
+    @media (prefers-color-scheme: dark) {
+      .detail-label {
+        color: #aaa;
+      }
+    }
+
+    .detail-value { display: table-cell; text-align: right; color: #333; padding-bottom: 8px; font-weight: 600; }
+    /* Dark mode detail value */
+    @media (prefers-color-scheme: dark) {
+      .detail-value {
+        color: #e0e0e0;
+      }
+    }
+
+    .detail-small { font-size: 12px; color: #999; }
+    /* Dark mode detail small text */
+    @media (prefers-color-scheme: dark) {
+      .detail-small {
+        color: #777;
+      }
+    }
+
+    .divider { border-top: 1px dashed #e9ecef; margin: 12px 0; }
+    /* Dark mode divider */
+    @media (prefers-color-scheme: dark) {
+      .divider {
+        border-top-color: #444;
+      }
+    }
+
+    .services-section { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e9ecef; font-size: 13px; }
+    /* Dark mode services section */
+    @media (prefers-color-scheme: dark) {
+      .services-section {
+        border-top-color: #444;
+      }
+    }
+
+    .services-title { font-weight: 700; color: #666; margin-bottom: 8px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    /* Dark mode services title */
+    @media (prefers-color-scheme: dark) {
+      .services-title {
+        color: #999;
+      }
+    }
+
+    .service-item { display: table; width: 100%; margin-bottom: 6px; color: #555; }
+    /* Dark mode service item */
+    @media (prefers-color-scheme: dark) {
+      .service-item {
+        color: #ccc;
+      }
+    }
+
+    .service-name { display: table-cell; width: 70%; }
+    .service-price { display: table-cell; text-align: right; font-weight: 600; color: #0d6efd; }
+    .subtotal-row { margin-top: 14px; padding-top: 12px; border-top: 2px solid #e9ecef; display: table; width: 100%; text-align: right; font-weight: 700; }
+    /* Dark mode subtotal row */
+    @media (prefers-color-scheme: dark) {
+      .subtotal-row {
+        border-top-color: #444;
+      }
+    }
+
+    .subtotal-label { display: table-cell; color: #666; font-size: 13px; text-align: left; }
+    /* Dark mode subtotal label */
+    @media (prefers-color-scheme: dark) {
+      .subtotal-label {
+        color: #aaa;
+      }
+    }
+
+    .subtotal-value { display: table-cell; font-size: 16px; color: #0d6efd; }
+    .policy-box { margin-top: 12px; padding: 10px 12px; background: #fffbf0; border-left: 3px solid #ffc107; border-radius: 4px; font-size: 12px; color: #664d03; line-height: 1.5; }
+    
+    /* Dark mode policy box */
+    @media (prefers-color-scheme: dark) {
+      .policy-box {
+        background: #3a2a1a;
+        border-left-color: #ff9800;
+        color: #ffb74d;
+      }
+    }
+
+    .total-section { margin: 35px 0; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border-radius: 8px; padding: 30px; text-align: center; color: #fff; }
+    /* Dark mode total section with inverted gradient */
+    @media (prefers-color-scheme: dark) {
+      .total-section {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+      }
+    }
+
+    .total-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; margin-bottom: 10px; }
+    .total-amount { font-size: 36px; font-weight: 700; }
+    .reminders { margin: 30px 0; background: #e7f5ff; border-left: 4px solid #0d6efd; border-radius: 6px; padding: 18px; }
+    
+    /* Dark mode reminders */
+    @media (prefers-color-scheme: dark) {
+      .reminders {
+        background: #1a3a52;
+        border-left-color: #0d6efd;
+      }
+    }
+
+    .reminders h4 { font-size: 14px; color: #004085; margin-bottom: 12px; font-weight: 700; }
+    /* Dark mode reminders h4 */
+    @media (prefers-color-scheme: dark) {
+      .reminders h4 {
+        color: #64b5f6;
+      }
+    }
+
+    .reminders ul { margin: 0; padding-left: 20px; list-style: none; }
+    .reminders li { color: #004085; font-size: 13px; margin-bottom: 6px; line-height: 1.5; }
+    /* Dark mode reminders list items */
+    @media (prefers-color-scheme: dark) {
+      .reminders li {
+        color: #64b5f6;
+      }
+    }
+
+    .reminders li:before { content: "✓ "; margin-right: 6px; font-weight: 700; }
+    
+    /* Improved CTA button with solid color and better contrast */
+    .cta-button { 
+      background: #0d6efd;
+      color: #fff; 
+      padding: 16px 40px; 
+      text-decoration: none; 
+      border-radius: 6px; 
+      font-weight: 600; 
+      font-size: 15px; 
+      display: inline-block; 
+      box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+      transition: all 0.2s ease;
+      border: 2px solid #0d6efd;
+    }
+
+    .cta-button:hover { 
+      opacity: 0.9;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(13, 110, 253, 0.4);
+    }
+    
+    /* Dark mode CTA button remains consistent */
+    @media (prefers-color-scheme: dark) {
+      .cta-button {
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+      }
+
+      .cta-button:hover {
+        background: #0a58ca;
+        border-color: #0a58ca;
+      }
+    }
+
+    .cta-section { text-align: center; margin: 35px 0; }
+    .cta-helper { margin-top: 12px; font-size: 12px; color: #999; }
+    /* Dark mode helper text */
+    @media (prefers-color-scheme: dark) {
+      .cta-helper {
+        color: #777;
+      }
+    }
+
+    .footer { background: #f8f9fa; padding: 25px 30px; text-align: center; color: #888; font-size: 12px; border-top: 1px solid #e9ecef; }
+    /* Dark mode footer */
+    @media (prefers-color-scheme: dark) {
+      .footer {
+        background: #3a3a3a;
+        color: #999;
+        border-top-color: #444;
+      }
+    }
+
+    .footer p { margin: 6px 0; }
+    .footer-highlight { color: #666; font-weight: 500; }
+    /* Dark mode footer highlight */
+    @media (prefers-color-scheme: dark) {
+      .footer-highlight {
+        color: #aaa;
+      }
+    }
+
+    /* Improved mobile responsiveness */
+    @media (max-width: 600px) {
+      .container { padding: 10px; min-height: auto; display: block; }
+      .header { padding: 30px 20px; }
+      .header h1 { font-size: 24px; }
+      .content { padding: 25px 20px; }
+      
+      .info-grid { display: block; }
+      .info-box { 
+        display: block; 
+        width: 100% !important; 
+        margin: 0 0 15px 0 !important; 
+        padding: 20px !important;
+      }
+      .info-box:first-child { margin-right: 0; }
+
+      .section-title { 
+        display: block;
+        margin: 25px 0 15px 0;
+      }
+
+      .detail-row, .service-item, .subtotal-row {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .detail-label, .service-name, .subtotal-label {
+        width: 100%;
+        text-align: left;
+        margin-bottom: 6px;
+      }
+
+      .detail-value, .service-price, .subtotal-value {
+        width: 100%;
+        text-align: left;
+        margin-top: 4px;
+      }
+
+      .total-amount { font-size: 28px; }
+      
+      .cta-section { margin: 30px 0; }
+      .cta-button {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 14px 20px;
+      }
+
+      .footer { padding: 20px 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="email-wrapper">
+      
+      <!-- HEADER -->
+      <div class="header">
+        <h1>✓ ¡Reserva Confirmada!</h1>
+        <p>Gracias por confiar en <strong th:text="${nombreComplejo}">Nombre del Complejo</strong></p>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="content">
+        
+        <!-- GREETING -->
+        <div class="greeting">
+          <p>Hola <strong th:text="${nombreCliente}">Cliente</strong>,</p>
+          <p>Tu reserva ha sido procesada exitosamente. A continuación encontrarás todos los detalles de tu reservación.</p>
+        </div>
+
+        <!-- KEY INFO -->
+        <div class="info-grid">
+          <div class="info-box">
+            <div class="info-label">Código de Reserva</div>
+            <div class="info-value" th:text="${codigoReserva}">RES-123456</div>
+          </div>
+          <div class="info-box">
+            <div class="info-label">Fecha de Reserva</div>
+            <div class="info-value" th:text="${fecha}">01/01/2026</div>
+          </div>
+        </div>
+
+        <!-- SPACES DETAIL -->
+        <div class="section-title">Detalle de Espacios</div>
+        
+        <div th:each="det : ${detalles}" class="space-card">
+          <div class="space-header" th:text="${det.espacioNombre}">Cancha 1</div>
+          
+          <div class="space-body">
+            
+            <!-- HORARIO -->
+            <div class="detail-row">
+              <div class="detail-label">📅 Horario</div>
+              <div class="detail-value">
+                <span th:text="${det.horaInicio}">10:00</span> - <span th:text="${det.horaFin}">11:00</span>
+                <span class="detail-small">(<span th:text="${det.duracionHoras}">1</span>h)</span>
+              </div>
+            </div>
+
+            <!-- PRECIO BASE -->
+            <div class="detail-row">
+              <div class="detail-label">💰 Precio por hora</div>
+              <div class="detail-value" th:text="${det.precioPorHora}">$500.00</div>
+            </div>
+
+            <!-- SERVICIOS ADICIONALES -->
+            <div th:if="${det.servicios != null and det.servicios.size() > 0}" class="services-section">
+              <div class="services-title">📦 Servicios Adicionales</div>
+              <div th:each="s : ${det.servicios}" class="service-item">
+                <div class="service-name">• <span th:text="${s.nombre}">Paletas</span> <span class="detail-small">(x<span th:text="${s.cantidad}">1</span>)</span></div>
+                <div class="service-price" th:text="${s.subtotal}">$50.00</div>
+              </div>
+            </div>
+
+            <!-- SUBTOTAL -->
+            <div class="subtotal-row">
+              <div class="subtotal-label">Subtotal:</div>
+              <div class="subtotal-value" th:text="${det.subtotal}">$550.00</div>
+            </div>
+
+            <!-- CANCELLATION POLICY -->
+            <div th:if="${det.politicaCancelacionNombre != null}" class="policy-box">
+              <strong>⚠️ Política de Cancelación:</strong> <span th:text="${det.politicaCancelacionNombre}">Estándar</span> — Cancela hasta <span th:text="${det.politicaHorasAnticipacion}">24</span>h antes y recibe <span th:text="${det.politicaPorcentajeDevolucion}">100</span>% de devolución
+            </div>
+
+          </div>
+        </div>
+
+        <!-- TOTAL -->
+        <div class="total-section">
+          <div class="total-label">Monto Total a Pagar</div>
+          <div class="total-amount" th:text="${montoTotal}">$1,500.00</div>
+        </div>
+
+        <!-- REMINDERS -->
+        <div th:if="${recordatorios != null and recordatorios.size() > 0}" class="reminders">
+          <h4>Recordatorios Importantes</h4>
+          <ul>
+            <li th:each="r : ${recordatorios}" th:text="${r}">Llegar 10 min antes</li>
+          </ul>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-section">
+          <a href="http://localhost:8080/reservas/mis-reservas" class="cta-button">Ver Mis Reservas</a>
+          <p class="cta-helper">Si el botón no funciona, ingresa a tu cuenta en nuestro sitio web</p>
+        </div>
+
+      </div>
+
+      <!-- FOOTER -->
+      <div class="footer">
+        <p>Este es un correo automático. Por favor, no respondas a este mensaje.</p>
+        <p><span class="footer-highlight">© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> TuReserva</span> · Todos los derechos reservados</p>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
