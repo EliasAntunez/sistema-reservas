@@ -89,6 +89,19 @@
 			<groupId>org.hibernate.validator</groupId>
 			<artifactId>hibernate-validator</artifactId>
 		</dependency>
+
+		<!-- OpenPDF para generación de PDFs -->
+		<dependency>
+			<groupId>com.github.librepdf</groupId>
+			<artifactId>openpdf</artifactId>
+			<version>1.3.30</version>
+		</dependency>
+		<!-- JFreeChart para generar gráficos en el servidor -->
+		<dependency>
+			<groupId>org.jfree</groupId>
+			<artifactId>jfreechart</artifactId>
+			<version>1.5.4</version>
+		</dependency>
 	</dependencies>
 
 	<build>
