@@ -3,6 +3,7 @@ package com.example.tureserva.servicio;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Service;
+import com.example.tureserva.modelo.AdministradorComplejo;
 
 import com.example.tureserva.modelo.Cliente;
 
@@ -10,9 +11,11 @@ import com.example.tureserva.modelo.Cliente;
 public class ServicioUsuarioUnificado {
     
     private final ServicioCliente servicioCliente;
+    private final ServicioAdministradorComplejo servicioAdministradorComplejo;
     
-    public ServicioUsuarioUnificado(ServicioCliente servicioCliente) {
+    public ServicioUsuarioUnificado(ServicioCliente servicioCliente, ServicioAdministradorComplejo servicioAdministradorComplejo) {
         this.servicioCliente = servicioCliente;
+        this.servicioAdministradorComplejo = servicioAdministradorComplejo;
     }
     
     // Clase interna para almacenar información del usuario de forma eficiente
@@ -20,11 +23,13 @@ public class ServicioUsuarioUnificado {
         final String email;
         final boolean esOAuth2;
         final Cliente cliente;
+        final AdministradorComplejo adminComplejo;
         
-        InfoUsuario(String email, boolean esOAuth2, Cliente cliente) {
+        InfoUsuario(String email, boolean esOAuth2, Cliente cliente, AdministradorComplejo adminComplejo) {
             this.email = email;
             this.esOAuth2 = esOAuth2;
             this.cliente = cliente;
+            this.adminComplejo = adminComplejo;
         }
     }
     
@@ -39,8 +44,13 @@ public class ServicioUsuarioUnificado {
             : authentication.getName();
             
         Cliente cliente = servicioCliente.obtenerClientePorEmail(email);
+        AdministradorComplejo adminComplejo = null;
+        if (cliente == null) {
+            // Intentar cargar como AdminComplejo si no es Cliente
+            adminComplejo = servicioAdministradorComplejo.obtenerAdministradorPorEmail(email);
+        }
         
-        return new InfoUsuario(email, esOAuth2, cliente);
+        return new InfoUsuario(email, esOAuth2, cliente, adminComplejo);
     }
     
     /**
@@ -74,7 +84,9 @@ public class ServicioUsuarioUnificado {
                 return nombreCompleto;
             }
         }
-        
+        if (info.adminComplejo != null && info.adminComplejo.getNombre() != null && info.adminComplejo.getApellido() != null) {
+            return info.adminComplejo.getNombre() + " " + info.adminComplejo.getApellido();
+        }
         return info.email; // Fallback final al email
     }
     

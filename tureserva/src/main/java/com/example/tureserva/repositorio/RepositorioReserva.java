@@ -257,6 +257,32 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
     Optional<Reserva> findByCodigoReserva(String codigoReserva);
 
        /**
+        * Obtiene un reporte financiero agregando por espacio (nombre y tipo),
+        * con la cantidad de reservas e ingresos (suma de subtotales) dentro
+        * de un rango de fechas y opcionalmente por complejo.
+        */
+       @Query("SELECT new com.example.tureserva.servicio.dto.ReporteFinancieroDTO(" +
+                 "e.nombre, " +
+                 "CASE WHEN TYPE(e) = com.example.tureserva.modelo.Cancha THEN 'CANCHA' " +
+                 "     WHEN TYPE(e) = com.example.tureserva.modelo.Salon THEN 'SALON' " +
+                 "     ELSE 'N/A' END, " +
+                 "COUNT(DISTINCT r.id), COALESCE(SUM(d.subtotal),0) ) " +
+                 "FROM Reserva r " +
+                 "JOIN r.detalles d " +
+                 "JOIN d.espacioReservable e " +
+                 "JOIN e.complejoDeportivo c " +
+                 "WHERE r.fechaReserva BETWEEN :inicio AND :fin " +
+                 "AND (:complejoId IS NULL OR c.id = :complejoId) " +
+                 "GROUP BY e.nombre, CASE WHEN TYPE(e) = com.example.tureserva.modelo.Cancha THEN 'CANCHA' " +
+                 "                      WHEN TYPE(e) = com.example.tureserva.modelo.Salon THEN 'SALON' " +
+                 "                      ELSE 'N/A' END " +
+                 "ORDER BY SUM(d.subtotal) DESC")
+       List<com.example.tureserva.servicio.dto.ReporteFinancieroDTO> obtenerReporteFinanciero(
+              @Param("inicio") java.time.LocalDate inicio,
+              @Param("fin") java.time.LocalDate fin,
+              @Param("complejoId") Long complejoId);
+
+       /**
         * Obtiene los IDs de reservas de un cliente con paginación (sin JOIN FETCH).
         */
        @Query("SELECT DISTINCT r.id FROM Reserva r WHERE r.cliente = :cliente")

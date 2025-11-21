@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layouts/base}">
+
+<head>
+    <title layout:fragment="title">Reporte Financiero</title>
+    <th:block layout:fragment="css">
+        <!-- Si hace falta CSS adicional para este reporte, añadir aquí -->
+    </th:block>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="container my-4">
+        <div class="card card-unified shadow-sm">
+            <div class="card-header card-header-unified d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Reporte Financiero</h5>
+                <div>
+                    <a th:href="@{'/reportes/financiero/pdf'(inicio=${inicio},fin=${fin},complejoId=${complejoId})}" class="btn btn-role btn-sm">
+                        <i class="bi bi-download"></i> 📥 Exportar a PDF
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form method="get" th:action="@{/reportes/financiero}" class="row g-2 align-items-end mb-3">
+                    <div class="col-auto">
+                        <label class="form-label small">Inicio</label>
+                        <input type="date" name="inicio" th:value="${inicio}" class="form-control form-control-unified" />
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small">Fin</label>
+                        <input type="date" name="fin" th:value="${fin}" class="form-control form-control-unified" />
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label small">Complejo</label>
+                        <select name="complejoId" class="form-select form-select-unified">
+                            <option value="" th:selected="${complejoId == null}">Todos</option>
+                            <option th:each="c : ${complejos}"
+                                    th:value="${c.id_complejo}"
+                                    th:text="${c.nombre_complejo}"
+                                    th:selected="${complejoId != null and complejoId == c.id_complejo}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-role">Filtrar</button>
+                    </div>
+                </form>
+
+                <div class="mb-4">
+                    <canvas id="chartIngresos" width="800" height="300"></canvas>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-unified">
+                        <thead>
+                        <tr>
+                            <th>Espacio</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Cantidad Reservas</th>
+                            <th class="text-end">Ingresos</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${datos}">
+                            <td th:text="${row.espacioNombre}"></td>
+                            <td th:text="${row.tipoEspacio}"></td>
+                            <td class="text-end" th:text="${row.cantidadReservas}"></td>
+                            <td class="text-end" th:text="${row.ingresos != null ? #numbers.formatDecimal(row.ingresos,2,2) : '0.00'}"></td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(datos)}">
+                            <td colspan="4" class="text-center text-muted-unified">No hay datos para el periodo seleccionado.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts específicos de la página (versión reducida temporal) -->
+<th:block layout:fragment="scripts">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script th:inline="javascript">
+    /*<![CDATA[*/
+        const datos = /*[[${datos}]]*/ [];
+        console.debug('Reporte financiero - datos:', datos);
+        const labels = datos.map(d => d && d.espacioNombre ? d.espacioNombre : '');
+        const ingresos = datos.map(d => d && d.ingresos != null ? +d.ingresos : 0);
+
+        // Paleta de colores distintivos (se repite si hay más barras)
+        const COLORS = ['#2563eb','#ef4444','#10b981','#f59e0b','#0ea5e9','#7c3aed','#ff6b6b','#00b894','#ff9f43','#fdcb6e'];
+        const backgroundColors = labels.map((_, i) => COLORS[i % COLORS.length]);
+
+        if (window.Chart && window.ChartDataLabels) {
+            Chart.register(ChartDataLabels);
+        }
+
+        const ctx = document.getElementById('chartIngresos') ? document.getElementById('chartIngresos').getContext('2d') : null;
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Ingresos',
+                        data: ingresos,
+                        backgroundColor: backgroundColors,
+                        borderRadius: 6,
+                        barThickness: 'flex'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'center',
+                            align: 'center',
+                            color: '#ffffff',
+                            font: { weight: '700', size: 12 },
+                            formatter: function(value) {
+                                try {
+                                    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
+                                } catch (e) {
+                                    return value;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: function(v){ return v >= 1000 ? (v/1000)+'k' : v; } }
+                        }
+                    }
+                }
+            });
+        }
+    /*]]>*/
+    </script>
+</th:block>
+
+</body>
+</html>
