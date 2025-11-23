@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" layout:decorate="~{layouts/base}">
+<head>
+    <title layout:fragment="title">Reporte de Ocupación Horaria</title>
+    <th:block layout:fragment="css">
+        <style>
+            .heat-zero { background-color: #ffffff; color: #333 !important; }
+            /* Colores con buen contraste para fondo claro */
+            .heat-low  { background-color: #00ff8c !important; color: #0f5132 !important; } /* verde claro */
+            .heat-mid  { background-color: #ffa600 !important; color: #7a4b00 !important; } /* naranja claro */
+            .heat-high { background-color: #cc0000 !important; color: #fff !important; }
+            .hour-col { font-weight: 700; background: #f8f9fa; }
+            .legend-box { width: 18px; height: 18px; display:inline-block; margin-right:6px; vertical-align:middle; }
+
+            /* Forzar contraste y legibilidad en las celdas de la tabla */
+            .table.table-bordered td {
+                color: #000 !important; /* color por defecto para celdas */
+                font-weight: 600 !important;
+                vertical-align: middle;
+            }
+
+            /* Excepciones: cuando el fondo es oscuro usar texto blanco */
+            .table.table-bordered td.heat-high {
+                color: #fff !important;
+                text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+            }
+
+            /* Para niveles claros asegurar texto específico (evita que la regla genérica lo sobrescriba) */
+            .table.table-bordered td.heat-low {
+                color: #0f5132 !important; /* texto oscuro verdoso */
+                text-shadow: none !important;
+            }
+            .table.table-bordered td.heat-mid {
+                color: #7a4b00 !important; /* texto oscuro anaranjado */
+                text-shadow: none !important;
+            }
+            .table.table-bordered td.heat-zero {
+                color: #333 !important;
+                text-shadow: none !important;
+            }
+            /* Eliminar cualquier efecto 3D/gradiente en niveles medios y bajos */
+            .table.table-bordered td.heat-mid,
+            .table.table-bordered td.heat-low,
+            .heat-mid,
+            .heat-low,
+            .legend-box.heat-mid,
+            .legend-box.heat-low {
+                background-image: none !important;
+                background-repeat: no-repeat !important;
+                background-size: cover !important;
+                box-shadow: none !important;
+                filter: none !important;
+                -webkit-text-stroke: 0 !important;
+                text-shadow: none !important;
+            }
+            /* Asegurar bordes suaves para mejor contraste */
+            .table.table-bordered td.heat-low,
+            .table.table-bordered td.heat-mid {
+                border-color: rgba(0,0,0,0.06) !important;
+            }
+            /* Grid para el resumen por día */
+            .resumen-grid {
+                display: grid;
+                gap: 12px;
+                grid-template-columns: repeat(7, 1fr);
+                align-items: start;
+            }
+            @media (max-width: 992px) {
+                .resumen-grid { grid-template-columns: repeat(4, 1fr); }
+            }
+            @media (max-width: 576px) {
+                .resumen-grid { grid-template-columns: repeat(2, 1fr); }
+            }
+            .resumen-card { padding: 0.5rem; }
+            .resumen-card .card-body { padding: 0.5rem; }
+            .resumen-card table td { padding: 0.2rem 0.4rem; }
+        </style>
+    </th:block>
+</head>
+
+<body>
+<div layout:fragment="content">
+    <div class="container py-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Mapa de Calor — Ocupación Horaria</h4>
+                    <div>
+                        <a th:href="@{/reportes/ocupacion/pdf(complejoId=${complejoId},inicio=${inicio},fin=${fin},horaInicio=${horaInicio},horaFin=${horaFin})}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Descargar PDF
+                        </a>
+                    </div>
+                </div>
+                <!-- Formulario de filtros -->
+                <form class="row g-2 align-items-end mb-3" method="get" th:action="@{/reportes/ocupacion}">
+                    <div class="col-md-3">
+                        <label class="form-label">Complejo</label>
+                        <select name="complejoId" class="form-select">
+                            <option th:value="''" th:text="'Todos'" th:if="${complejos == null || #lists.isEmpty(complejos)}"></option>
+                            <option th:each="c : ${complejos}"
+                                    th:value="${c.id_complejo}"
+                                    th:text="${c.nombre_complejo}"
+                                    th:selected="${c.id_complejo == complejoId}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Inicio</label>
+                        <input type="date" name="inicio" class="form-control" th:value="${inicio}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Fin</label>
+                        <input type="date" name="fin" class="form-control" th:value="${fin}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Hora Inicio</label>
+                        <select name="horaInicio" class="form-select">
+                            <option th:value="''" th:text="'--'" th:selected="${horaInicio == null}"></option>
+                            <option th:each="h : ${#numbers.sequence(0,23)}" th:value="${h}"
+                                    th:text="${'' + h + ':00'}"
+                                    th:selected="${horaInicio != null && h == horaInicio}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Hora Fin</label>
+                        <select name="horaFin" class="form-select">
+                            <option th:value="''" th:text="'--'" th:selected="${horaFin == null}"></option>
+                            <option th:each="h : ${#numbers.sequence(0,23)}" th:value="${h}"
+                                    th:text="${'' + h + ':00'}"
+                                    th:selected="${horaFin != null && h == horaFin}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-grid">
+                        <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+                    </div>
+                </form>
+
+                <!-- Leyenda -->
+                <div class="mb-3">
+                    <span class="me-3"><span class="legend-box heat-zero"></span>0</span>
+                    <span class="me-3"><span class="legend-box heat-low"></span>Bajo</span>
+                    <span class="me-3"><span class="legend-box heat-mid"></span>Medio</span>
+                    <span class="me-3"><span class="legend-box heat-high"></span>Alto</span>
+                </div>
+                <!-- Tabla responsiva -->
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hora</th>
+                                <th>Lunes</th>
+                                <th>Martes</th>
+                                <th>Miércoles</th>
+                                <th>Jueves</th>
+                                <th>Viernes</th>
+                                <th>Sábado</th>
+                                <th>Domingo</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="row, rowStat : ${matrix}">
+                                <td class="hour-col" th:text="${#lists.isEmpty(horas) ? '' : ('' + horas[rowStat.index] + ':00')}"></td>
+                                <td th:each="cell, cellStat : ${row}"
+                                    th:classappend="${(cellClasses != null && cellClasses.size() > rowStat.index && cellClasses[rowStat.index].size() > cellStat.index) ? cellClasses[rowStat.index][cellStat.index] : ((cell == 0) ? 'heat-zero' : ((cell <= (maxCount * 0.25)) ? 'heat-low' : ((cell <= (maxCount * 0.6)) ? 'heat-mid' : 'heat-high')))}"
+                                    th:text="${cell}"></td>
+                                <td class="fw-bold" th:text="${totalesPorHora != null && totalesPorHora.size() > rowStat.index ? totalesPorHora[rowStat.index] : 0}"></td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th>Total</th>
+                                <th th:each="d, dStat : ${totalesPorDia}" th:text="${totalesPorDia[dStat.index]}"></th>
+                                <th th:text="${totalGeneral}"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

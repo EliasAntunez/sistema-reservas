@@ -295,4 +295,40 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
        Page<Long> findIdsByClienteAndEstado(@Param("cliente") Cliente cliente, @Param("estado") EstadoReserva estado, Pageable pageable);
 
        Boolean existsByCodigoReserva(String codigoReserva);
+
+       /**
+        * Consulta nativa para obtener la ocupación horaria (cantidad de detalles de reserva)
+        * agrupada por día ISO (1=Lunes .. 7=Domingo) y hora (0..23).
+        */
+                      @Query(value = """
+                                                  WITH details AS (
+                                                         SELECT d.id AS detalle_id,
+                                                                                    COALESCE(d.fecha_reserva, r.fecha_reserva) AS fecha_base,
+                                                                                    (COALESCE(d.fecha_reserva, r.fecha_reserva) + d.hora_inicio)::timestamp AS start_ts,
+                                                                                    (COALESCE(d.fecha_reserva, r.fecha_reserva) + (CASE WHEN d.hora_fin <= d.hora_inicio THEN d.hora_fin + interval '24 hours' ELSE d.hora_fin END))::timestamp AS end_ts
+                                                         FROM detalle_reserva d
+                                                         JOIN reserva r ON d.reserva_id = r.id
+                                                         JOIN espacio_reservable e ON d.espacio_reservable_id = e.id_espacio_reservable
+                                                         JOIN complejo_deportivo c ON e.complejo_id = c.id_complejo
+                                                         WHERE COALESCE(d.fecha_reserva, r.fecha_reserva) BETWEEN :inicio AND :fin
+                                                                AND (:complejoId IS NULL OR c.id_complejo = :complejoId)
+                                                                AND r.estado IN ('CONFIRMADA','FINALIZADA')
+                                                  )
+                                                  SELECT EXTRACT(ISODOW FROM slot) AS day_of_week,
+                                                                             EXTRACT(HOUR FROM slot) AS hour,
+                                                                             COUNT(DISTINCT detalle_id) AS count
+                                                  FROM (
+                                                         SELECT detalle_id, (start_ts + (g * interval '1 hour')) AS slot
+                                                         FROM details
+                                                         JOIN LATERAL (
+                                                                SELECT generate_series(0, GREATEST(0, (floor(EXTRACT(EPOCH FROM (end_ts - start_ts))/3600)::int - 1))) AS g
+                                                         ) gen ON true
+                                                  ) s
+                                                  GROUP BY day_of_week, hour
+                                                  ORDER BY day_of_week, hour
+                                                  """, nativeQuery = true)
+       List<OcupacionHorariaDTO> obtenerOcupacionHoraria(
+                     @Param("complejoId") Long complejoId,
+                     @Param("inicio") java.time.LocalDate inicio,
+                     @Param("fin") java.time.LocalDate fin);
 }
