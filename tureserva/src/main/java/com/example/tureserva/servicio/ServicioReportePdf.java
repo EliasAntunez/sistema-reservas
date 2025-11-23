@@ -279,4 +279,103 @@ public class ServicioReportePdf {
     }
 
     private String nullSafe(String s) { return s == null ? "-" : s; }
+
+    public void generarReporteOcupacionPdf(java.util.List<Integer> horas,
+                                           java.util.List<java.util.List<Long>> matrix,
+                                           HttpServletResponse response,
+                                           String generadoPor, String nombreComplejo,
+                                           java.time.LocalDate inicio, java.time.LocalDate fin) {
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=\"reporte_ocupacion.pdf\"");
+
+        try (OutputStream os = response.getOutputStream()) {
+            Document document = new Document(PageSize.A4.rotate(), 36, 36, 80, 54);
+            com.lowagie.text.pdf.PdfWriter writer = com.lowagie.text.pdf.PdfWriter.getInstance(document, os);
+
+            // Reutilizar evento simple para encabezado/pie (sin total de páginas complejo)
+            writer.setPageEvent(new com.lowagie.text.pdf.PdfPageEventHelper() {
+                @Override
+                public void onEndPage(com.lowagie.text.pdf.PdfWriter writer, Document document) {
+                    try {
+                        com.lowagie.text.pdf.PdfContentByte cb = writer.getDirectContent();
+                        com.lowagie.text.Font headerFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 9, com.lowagie.text.Font.NORMAL, java.awt.Color.DARK_GRAY);
+                        String complejoHeader = "Complejo: " + (nombreComplejo == null ? "-" : nombreComplejo);
+                        String emitidoHeader = "Emitido por: " + (generadoPor == null ? "-" : generadoPor);
+                        com.lowagie.text.pdf.ColumnText.showTextAligned(cb, Element.ALIGN_LEFT, new Phrase(complejoHeader, headerFont), document.left(), document.top() + 20, 0);
+                        com.lowagie.text.pdf.ColumnText.showTextAligned(cb, Element.ALIGN_RIGHT, new Phrase(emitidoHeader, headerFont), document.right(), document.top() + 20, 0);
+                    } catch (Exception ignored) {}
+                }
+            });
+
+            document.open();
+
+            Font titleFont = new Font(com.lowagie.text.Font.HELVETICA, 16, com.lowagie.text.Font.BOLD);
+            Paragraph title = new Paragraph("Mapa de Calor - Ocupación Horaria", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+
+            Font metaFont = new Font(com.lowagie.text.Font.HELVETICA, 10, com.lowagie.text.Font.NORMAL, java.awt.Color.DARK_GRAY);
+            Paragraph info = new Paragraph();
+            info.setAlignment(Element.ALIGN_CENTER);
+            info.setSpacingAfter(8f);
+            info.add(new Phrase("Complejo: " + (nombreComplejo == null || nombreComplejo.isEmpty() ? "Todos" : nombreComplejo) + "    ", metaFont));
+            info.add(new Phrase("Emitido por: " + (generadoPor == null ? "-" : generadoPor) + "    ", metaFont));
+            info.add(new Phrase("Periodo: " + (inicio != null ? inicio.toString() : "-") + " - " + (fin != null ? fin.toString() : "-"), metaFont));
+            document.add(info);
+
+            // Calcular máximo
+            long max = 0L;
+            if (matrix != null) {
+                for (java.util.List<Long> row : matrix) for (Long v : row) if (v != null && v > max) max = v;
+            }
+
+            // Tabla: primera columna hora, luego Lunes..Domingo
+            PdfPTable table = new PdfPTable(8);
+            table.setWidthPercentage(100f);
+            table.setWidths(new float[]{2f,1f,1f,1f,1f,1f,1f,1f});
+            table.setHeaderRows(1);
+
+            Font headerFont = new Font(Font.HELVETICA, 11, Font.BOLD);
+            table.addCell(new Phrase("Hora", headerFont));
+            String[] dias = new String[]{"Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"};
+            for (String d : dias) table.addCell(new Phrase(d, headerFont));
+
+            Font cellFont = new Font(Font.HELVETICA, 9, Font.NORMAL);
+
+            // Orden de horas: la lista `horas` define el orden (ej 8..23,0)
+            if (horas != null) {
+                for (int i = 0; i < horas.size(); i++) {
+                    Integer h = horas.get(i);
+                    String horaLabel = String.format("%02d:00", h);
+                    table.addCell(new Phrase(horaLabel, cellFont));
+
+                    java.util.List<Long> row = (matrix != null && i < matrix.size()) ? matrix.get(i) : java.util.Collections.nCopies(7, 0L);
+                    for (int d = 0; d < 7; d++) {
+                        Long cnt = (row == null || d >= row.size() || row.get(d) == null) ? 0L : row.get(d);
+                        com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(new Phrase(String.valueOf(cnt), cellFont));
+                        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        // Color según intensidad relativa (usar BaseColor para compatibilidad)
+                        java.awt.Color bg;
+                        if (cnt == 0) {
+                            bg = new java.awt.Color(255,255,255);
+                        } else {
+                            double ratio = max == 0 ? 0.0 : ((double)cnt / (double)max);
+                            if (ratio <= 0.25) bg = new java.awt.Color(255,230,230);
+                            else if (ratio <= 0.6) bg = new java.awt.Color(255,160,160);
+                            else bg = new java.awt.Color(204,0,0);
+                        }
+                        cell.setBackgroundColor(bg);
+                        table.addCell(cell);
+                    }
+                }
+            }
+
+            document.add(table);
+            document.close();
+            os.flush();
+        } catch (Exception ex) {
+            logger.error("Error generando PDF de ocupación: {}", ex.getMessage(), ex);
+            try { response.reset(); response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); } catch (Exception ignored) {}
+        }
+    }
 }
