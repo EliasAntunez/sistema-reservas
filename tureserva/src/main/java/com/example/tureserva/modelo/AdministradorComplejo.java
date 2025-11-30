@@ -26,4 +26,14 @@ public class AdministradorComplejo extends Usuario {
         setDni(dni);
         setContrasena(contrasena);
     }
+
+    /**
+     * Token de acceso de Mercado Pago (por complejo/admin) para flujos
+     * multi-tenant. Guardar en entorno de pruebas o vault en producción.
+     */
+    @Column(name = "mp_access_token", length = 1024)
+    private String mpAccessToken;
+
+    @Column(name = "mp_public_key", length = 512)
+    private String mpPublicKey;
 }

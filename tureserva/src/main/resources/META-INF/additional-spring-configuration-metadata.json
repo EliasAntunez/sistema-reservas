@@ -1,0 +1,10 @@
+{
+  "properties": [
+    {
+      "name": "mp.notification.base-url",
+      "type": "java.lang.String",
+      "description": "Base URL pública para notificaciones de Mercado Pago (webhook). Debe ser una URL absoluta accesible desde Internet (ej: https://tu-dominio.com o https://xxxxx.ngrok.io para desarrollo). Si no se configura, se usará una ruta relativa que no funcionará con Mercado Pago.",
+      "sourceType": "com.example.tureserva.servicio.ServicioPago"
+    }
+  ]
+}

@@ -4,6 +4,8 @@
       layout:decorate="~{layouts/base}">
 <head>
     <title>Confirmar Reserva</title>
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
     <style>
         .resumen-card {
             border-left: 4px solid #0d6efd;
@@ -98,6 +100,35 @@
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     <span th:text="${error}">Mensaje de error</span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <!-- Contenedor para mensajes de MP (errores/estatus) -->
+                <div id="mp-feedback"></div>
+
+                <!-- Toast container (Bootstrap) -->
+                <div class="position-fixed top-0 end-0 p-3" style="z-index: 2100;">
+                    <div id="mp-toasts"></div>
+                </div>
+
+                <!-- Modal informativo para el flujo de pago -->
+                <div class="modal fade" id="mpInfoModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Información sobre el pago</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Se abrirá la ventana de Mercado Pago para completar el pago de la seña. Tras completar el pago en Mercado Pago, la plataforma recibirá la notificación y deberás volver a la aplicación para finalizar la reserva (o el sistema te guiará automáticamente).</p>
+                                <ul>
+                                    <li>No cierres esta ventana hasta que el pago termine.</li>
+                                    <li>Si tienes problemas, podrás reintentar desde la misma pantalla.</li>
+                                </ul>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Información del Complejo y Fecha -->
@@ -276,8 +307,28 @@
                                             Confirmar Reserva
                                         </button>
                                     </form>
-                                    
-                                    <button th:if="${requiereSeña}" 
+
+                                    <!-- Si requiere seña y el admin del complejo tiene MP configurado, mostrar botón activo -->
+                                    <button th:if="${requiereSeña and complejoTieneMp}"
+                                            type="button"
+                                            id="btn-pagar-senia"
+                                            class="btn btn-warning btn-lg">
+                                        <i class="bi bi-credit-card me-2"></i>
+                                        Pagar Seña
+                                    </button>
+
+                                    <!-- Botón para confirmar reserva después del pago -->
+                                    <button th:if="${requiereSeña and complejoTieneMp}"
+                                            type="button"
+                                            id="btn-confirmar-con-pago"
+                                            class="btn btn-success btn-lg mt-2"
+                                            style="display:none;">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        Confirmar Reserva
+                                    </button>
+
+                                    <!-- Si requiere seña pero no hay MP configurado, mostrar aviso deshabilitado -->
+                                    <button th:if="${requiereSeña and !complejoTieneMp}" 
                                             type="button" 
                                             class="btn btn-warning btn-lg" 
                                             disabled>
@@ -304,7 +355,7 @@
 
             </div>
         </div>
-        <script>
+        <script th:inline="javascript">
             document.addEventListener('DOMContentLoaded', function() {
                 
                 // Configuración para mostrar moneda en pantalla (AR)
@@ -446,6 +497,310 @@
                         });
                     });
                 }
+
+                // --- Lógica de Pagar Seña (separada, debe ejecutarse siempre aunque no exista el formulario) ---
+                const btnSenia = document.getElementById('btn-pagar-senia');
+                const mpFeedback = document.getElementById('mp-feedback');
+
+                function showSpinner() {
+                    let overlay = document.getElementById('mp-spinner-overlay');
+                    if (!overlay) {
+                        overlay = document.createElement('div');
+                        overlay.id = 'mp-spinner-overlay';
+                        overlay.style.position = 'fixed';
+                        overlay.style.left = '0';
+                        overlay.style.top = '0';
+                        overlay.style.width = '100%';
+                        overlay.style.height = '100%';
+                        overlay.style.background = 'rgba(255,255,255,0.6)';
+                        overlay.style.display = 'flex';
+                        overlay.style.alignItems = 'center';
+                        overlay.style.justifyContent = 'center';
+                        overlay.style.zIndex = '2000';
+                        overlay.innerHTML = '<div class="spinner-border text-warning" role="status"><span class="visually-hidden">Cargando...</span></div>';
+                        document.body.appendChild(overlay);
+                    }
+                    overlay.style.display = 'flex';
+                }
+
+                function hideSpinner() {
+                    const overlay = document.getElementById('mp-spinner-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                }
+
+                function showMpMessage(message, type) {
+                    if (!mpFeedback) return;
+                    mpFeedback.innerHTML = '<div class="alert alert-' + (type || 'danger') + ' alert-dismissible fade show" role="alert">' +
+                        message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+                }
+
+                function showToast(message, type, timeout = 5000) {
+                    const container = document.getElementById('mp-toasts');
+                    if (!container) return;
+                    const id = 'toast-' + Math.random().toString(36).substring(2,9);
+                    const toastHtml = `<div id="${id}" class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">` +
+                        `<div class="d-flex"><div class="toast-body">${message}</div>` +
+                        `<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div>`;
+                    container.insertAdjacentHTML('beforeend', toastHtml);
+                    const toastEl = document.getElementById(id);
+                    const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: timeout });
+                    bsToast.show();
+                }
+
+
+
+                // CSRF fallback: try meta, then cookie names commonly used by frameworks
+                function getCsrfToken() {
+                    const meta = document.querySelector('meta[name="_csrf"]');
+                    const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+                    if (meta) return { token: meta.getAttribute('content'), header: headerMeta ? headerMeta.getAttribute('content') : 'X-CSRF-TOKEN' };
+                    // fallback cookie names
+                    function getCookie(name) {
+                        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                        return match ? decodeURIComponent(match[2]) : null;
+                    }
+                    const cookieToken = getCookie('XSRF-TOKEN') || getCookie('CSRF-TOKEN') || getCookie('X-CSRF-TOKEN');
+                    if (cookieToken) return { token: cookieToken, header: 'X-XSRF-TOKEN' };
+                    return { token: null, header: 'X-CSRF-TOKEN' };
+                }
+
+                // Retry/backoff controller
+                let abortController = null;
+                async function doInitSenia(maxAttempts = 3) {
+                    if (!btnSenia) return;
+                    btnSenia.disabled = true;
+                    showSpinner();
+                    if (mpFeedback) mpFeedback.innerHTML = '';
+
+                    // Create cancel button in feedback
+                    const cancelBtnId = 'mp-cancel-btn';
+                    if (mpFeedback) mpFeedback.innerHTML = `<div class="d-flex justify-content-between align-items-center mb-2"><div>Iniciando pago...</div><button id="${cancelBtnId}" class="btn btn-sm btn-outline-secondary">Cancelar</button></div>`;
+                    const cancelBtn = document.getElementById(cancelBtnId);
+
+                    // Recolectar servicios seleccionados
+                    const servicios = {};
+                    document.querySelectorAll('input[name^="servicio_"]').forEach(inp => {
+                        const name = inp.name; // servicio_{indice}_{id}
+                        const parts = name.split('_');
+                        if (parts.length < 3) return;
+                        const indice = parts[1];
+                        const idServicio = parts[2];
+                        let val = 0;
+                        if (inp.type === 'checkbox') val = inp.checked ? 1 : 0;
+                        else val = parseInt(inp.value) || 0;
+                        if (val > 0) {
+                            if (!servicios[indice]) servicios[indice] = {};
+                            servicios[indice][idServicio] = val;
+                        }
+                    });
+
+                    const clienteEmail = /*[[${clienteEmail}]]*/ null;
+
+                    const payload = {
+                        serviciosPorItem: servicios,
+                        clienteEmail: clienteEmail,
+                        referencia: 'reserva_temp'
+                    };
+
+                    const csrf = getCsrfToken();
+
+                    let attempt = 0;
+                    while (attempt < maxAttempts) {
+                        attempt++;
+                        abortController = new AbortController();
+                        if (cancelBtn) {
+                            cancelBtn.onclick = function() {
+                                if (abortController) abortController.abort();
+                                showToast('Operación cancelada por el usuario', 'warning');
+                                btnSenia.disabled = false;
+                                hideSpinner();
+                                if (mpFeedback) mpFeedback.innerHTML = '';
+                            };
+                        }
+
+                        try {
+                            const headers = { 'Content-Type': 'application/json' };
+                            if (csrf.token) headers[csrf.header] = csrf.token;
+
+                            const res = await fetch('/pagos/init-senia', { method: 'POST', headers, body: JSON.stringify(payload), signal: abortController.signal });
+                            if (!res.ok) {
+                                const text = await res.text();
+                                showToast('Error al iniciar pago: ' + (text || res.statusText), 'danger');
+                                // If server returned 5xx, we may retry
+                                if (res.status >= 500 && attempt < maxAttempts) {
+                                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt-1)));
+                                    continue;
+                                }
+                                btnSenia.disabled = false;
+                                hideSpinner();
+                                if (mpFeedback) mpFeedback.innerHTML = '';
+                                return;
+                            }
+
+                            const data = await res.json();
+                            if (data && data.initPoint) {
+
+                                hideSpinner();
+                                showToast('Checkout iniciado en una nueva ventana', 'success');
+                                // mostrar modal informativo para pasos posteriores
+                                const modalEl = document.getElementById('mpInfoModal');
+                                if (modalEl) {
+                                    // Asegurarnos de quitar foco del elemento activo antes de mostrar
+                                    // el modal para evitar advertencias de accesibilidad
+                                    try { if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur(); } catch(e) { /* noop */ }
+                                    const modal = new bootstrap.Modal(modalEl);
+                                    modal.show();
+                                }
+                                window.open(data.initPoint, '_blank');
+                                if (mpFeedback) mpFeedback.innerHTML = '';
+                                btnSenia.disabled = false;
+                                return;
+                            } else {
+                                showToast('No se recibió initPoint desde el servidor.', 'warning');
+                                btnSenia.disabled = false;
+                                hideSpinner();
+                                if (mpFeedback) mpFeedback.innerHTML = '';
+                                return;
+                            }
+                        } catch (err) {
+                            if (err.name === 'AbortError') {
+                                // canceled by user
+                                return;
+                            }
+                            console.error('Error network/init-senia', err);
+                            if (attempt < maxAttempts) {
+                                // exponential backoff
+                                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt-1)));
+                                continue;
+                            }
+                            showToast('Error de red al iniciar pago: ' + (err.message || err), 'danger');
+                            btnSenia.disabled = false;
+                            hideSpinner();
+                            if (mpFeedback) mpFeedback.innerHTML = '';
+                            return;
+                        }
+                    }
+                }
+
+                if (btnSenia) {
+                    btnSenia.addEventListener('click', function() {
+                        if (!confirm('Vas a iniciar el pago de la seña. ¿Deseas continuar?')) return;
+                        if (mpFeedback) mpFeedback.innerHTML = '';
+                        doInitSenia(3);
+                    });
+                }
+
+                // --- Confirmar reserva con pago (después de completar MP) ---
+                const btnConfirmarConPago = document.getElementById('btn-confirmar-con-pago');
+                
+                async function checkPagoStatus(pagoId) {
+                    try {
+                        const res = await fetch('/pagos/check/' + pagoId);
+                        if (!res.ok) return null;
+                        const data = await res.json();
+                        return data.estado;
+                    } catch (err) {
+                        console.error('Error checking pago status', err);
+                        return null;
+                    }
+                }
+
+                async function doConfirmarReservaConPago(pagoId) {
+                    if (!pagoId) {
+                        showToast('No hay pago registrado. Primero debes pagar la seña.', 'warning');
+                        return;
+                    }
+
+                    showSpinner();
+                    
+                    // Verificar estado del pago
+                    const estado = await checkPagoStatus(pagoId);
+                    if (estado !== 'PAGADO') {
+                        hideSpinner();
+                        showToast('El pago aún no está confirmado. Estado actual: ' + (estado || 'DESCONOCIDO'), 'warning');
+                        return;
+                    }
+
+                    // Recolectar servicios
+                    const servicios = {};
+                    document.querySelectorAll('input[name^="servicio_"]').forEach(inp => {
+                        const name = inp.name;
+                        const parts = name.split('_');
+                        if (parts.length < 3) return;
+                        const indice = parts[1];
+                        const idServicio = parts[2];
+                        let val = 0;
+                        if (inp.type === 'checkbox') val = inp.checked ? 1 : 0;
+                        else val = parseInt(inp.value) || 0;
+                        if (val > 0) {
+                            if (!servicios[indice]) servicios[indice] = {};
+                            servicios[indice][idServicio] = val;
+                        }
+                    });
+
+                    const csrf = getCsrfToken();
+                    const payload = {
+                        pagoId: pagoId,
+                        serviciosPorItem: servicios
+                    };
+
+                    try {
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (csrf.token) headers[csrf.header] = csrf.token;
+
+                        const res = await fetch('/pagos/confirmar', { method: 'POST', headers, body: JSON.stringify(payload) });
+                        
+                        if (!res.ok) {
+                            const text = await res.text();
+                            hideSpinner();
+                            showToast('Error al confirmar reserva: ' + (text || res.statusText), 'danger');
+                            return;
+                        }
+
+                        const data = await res.json();
+                        hideSpinner();
+                        
+                        // Redirigir a página de éxito
+                        if (data.reservaId) {
+                            window.location.href = '/reservas/exitosa/' + data.reservaId;
+                        } else {
+                            showToast('Reserva confirmada exitosamente', 'success');
+                        }
+                    } catch (err) {
+                        console.error('Error confirmando reserva', err);
+                        hideSpinner();
+                        showToast('Error al confirmar reserva: ' + (err.message || err), 'danger');
+                    }
+                }
+
+                // Polling para detectar cuando el pago está confirmado y mostrar botón
+                let pollingInterval = null;
+                function startPollingPagoStatus(pagoId) {
+                    if (pollingInterval) clearInterval(pollingInterval);
+                    
+                    pollingInterval = setInterval(async function() {
+                        const estado = await checkPagoStatus(pagoId);
+                        if (estado === 'PAGADO') {
+                            clearInterval(pollingInterval);
+                            if (btnConfirmarConPago) {
+                                btnConfirmarConPago.style.display = 'inline-block';
+                                btnConfirmarConPago.onclick = function() { doConfirmarReservaConPago(pagoId); };
+                            }
+                            if (btnSenia) btnSenia.disabled = true;
+                            showToast('¡Pago confirmado! Ahora puedes confirmar tu reserva.', 'success', 8000);
+                        }
+                    }, 3000); // Check cada 3 segundos
+                }
+
+                // Observar cambios en window.__lastPagoId para iniciar polling
+                let lastCheckedPagoId = null;
+                setInterval(function() {
+                    const currentPagoId = window.__lastPagoId;
+                    if (currentPagoId && currentPagoId !== lastCheckedPagoId) {
+                        lastCheckedPagoId = currentPagoId;
+                        startPollingPagoStatus(currentPagoId);
+                    }
+                }, 1000);
             });
         </script>
     </div>

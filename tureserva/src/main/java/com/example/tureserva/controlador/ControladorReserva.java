@@ -4,6 +4,7 @@ import com.example.tureserva.modelo.*;
 import com.example.tureserva.modelo.enums.EstadoReserva;
 import com.example.tureserva.repositorio.RepositorioCliente;
 import com.example.tureserva.repositorio.RepositorioReserva;
+import com.example.tureserva.repositorio.RepositorioPago;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.servicio.ServicioEspacioReservable;
 import com.example.tureserva.servicio.ServicioDeporte;
@@ -52,6 +53,7 @@ public class ControladorReserva {
     private final ServicioServicioAdicional servicioServicioAdicional;
     private final RepositorioCliente repositorioCliente;
     private final RepositorioReserva repositorioReserva;
+    private final RepositorioPago repositorioPago;
     
     public ControladorReserva(ServicioComplejoDeportivo servicioComplejo,
                               ServicioEspacioReservable servicioEspacio,
@@ -59,7 +61,8 @@ public class ControladorReserva {
                               ServicioReserva servicioReserva,
                               ServicioServicioAdicional servicioServicioAdicional,
                               RepositorioCliente repositorioCliente,
-                              RepositorioReserva repositorioReserva) {
+                              RepositorioReserva repositorioReserva,
+                              RepositorioPago repositorioPago) {
         this.servicioComplejo = servicioComplejo;
         this.servicioEspacio = servicioEspacio;
         this.servicioDeporte = servicioDeporte;
@@ -67,6 +70,7 @@ public class ControladorReserva {
         this.servicioServicioAdicional = servicioServicioAdicional;
         this.repositorioCliente = repositorioCliente;
         this.repositorioReserva = repositorioReserva;
+        this.repositorioPago = repositorioPago;
     }
 
     /**
@@ -278,7 +282,7 @@ public class ControladorReserva {
      * Permite agregar más espacios o confirmar la reserva.
      */
     @GetMapping("/confirmar")
-    public String mostrarConfirmacion(HttpSession session, Model model, RedirectAttributes redirectAttributes) {
+    public String mostrarConfirmacion(HttpSession session, Model model, RedirectAttributes redirectAttributes, Authentication authentication) {
         
         DatosReservaTemp datosReserva = (DatosReservaTemp) session.getAttribute("datosReserva");
         
@@ -343,6 +347,27 @@ public class ControladorReserva {
         model.addAttribute("complejo", complejo);
         model.addAttribute("datosReserva", datosReserva);
         model.addAttribute("requiereSeña", requiereSeña);
+        // Indica si el complejo tiene configurado Mercado Pago en su administrador
+        boolean complejoTieneMp = false;
+        if (complejo.getAdministradorComplejo() != null && complejo.getAdministradorComplejo().getMpAccessToken() != null) {
+            complejoTieneMp = !complejo.getAdministradorComplejo().getMpAccessToken().isBlank();
+        }
+        model.addAttribute("complejoTieneMp", complejoTieneMp);
+        // Añadir el email del usuario autenticado (si existe) para que la vista lo pueda enviar al servidor
+        try {
+            String email = null;
+            if (authentication != null) {
+                if (authentication.getPrincipal() instanceof OAuth2User) {
+                    OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+                    email = oauth2User.getAttribute("email");
+                } else {
+                    email = authentication.getName();
+                }
+            }
+            model.addAttribute("clienteEmail", email);
+        } catch (Exception e) {
+            model.addAttribute("clienteEmail", null);
+        }
         // Cargar servicios adicionales activos del complejo para mostrarlos en la confirmación
         try {
             var serviciosDisponibles = servicioServicioAdicional.obtenerServiciosAdicionalesPorComplejoYActivoTrue(datosReserva.getComplejoId());
@@ -820,6 +845,115 @@ public class ControladorReserva {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/reservas/mis-reservas";
         }
+    }
+
+    /**
+     * Back URL de Mercado Pago cuando el pago es exitoso.
+     * Mercado Pago redirige al usuario aquí tras un pago aprobado.
+     * El webhook ya debería haber creado la reserva automáticamente.
+     */
+    @GetMapping("/pago-exitoso")
+    public String pagoExitoso(
+            @RequestParam(required = false) Long pagoId,
+            @RequestParam(required = false) String collection_id,
+            @RequestParam(required = false) String collection_status,
+            @RequestParam(required = false) String payment_id,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String external_reference,
+            @RequestParam(required = false) String payment_type,
+            @RequestParam(required = false) String merchant_order_id,
+            @RequestParam(required = false) String preference_id,
+            @RequestParam(required = false) String site_id,
+            @RequestParam(required = false) String processing_mode,
+            @RequestParam(required = false) String merchant_account_id,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        
+        logger.info("Back URL pago-exitoso recibida - pagoId: {}, payment_id: {}, external_reference: {}, collection_status: {}", 
+                    pagoId, payment_id, external_reference, collection_status);
+        
+        // Si tenemos pagoId, intentar buscar la reserva asociada
+        if (pagoId != null) {
+            // Buscar el pago y verificar si ya tiene reserva asociada
+            try {
+                // Esperar unos segundos para dar tiempo al webhook a crear la reserva
+                Thread.sleep(2000);
+                
+                Optional<Pago> pagoOpt = repositorioPago.findById(pagoId);
+                if (pagoOpt.isPresent()) {
+                    Pago pago = pagoOpt.get();
+                    if (pago.getReserva() != null) {
+                        // Redirigir a página de reserva exitosa
+                        logger.info("Redirigiendo a reserva exitosa {} desde pago {}", pago.getReserva().getId(), pagoId);
+                        return "redirect:/reservas/exitosa/" + pago.getReserva().getId();
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Error al buscar reserva para pagoId {}: {}", pagoId, e.getMessage());
+            }
+        }
+        
+        // Si no hay reserva todavía (webhook lento), mostrar página de espera
+        model.addAttribute("titulo", "Pago procesado exitosamente");
+        model.addAttribute("mensaje", "Tu pago fue confirmado por Mercado Pago.");
+        model.addAttribute("submensaje", "Estamos creando tu reserva. En unos momentos serás redirigido automáticamente.");
+        model.addAttribute("paymentId", payment_id);
+        model.addAttribute("externalReference", external_reference);
+        model.addAttribute("pagoId", pagoId);
+        model.addAttribute("autoReload", true); // Añadir flag para auto-reload
+        
+        return "reservas/resultado-pago";
+    }
+
+    /**
+     * Back URL de Mercado Pago cuando el pago falla.
+     */
+    @GetMapping("/pago-fallido")
+    public String pagoFallido(
+            @RequestParam(required = false) String collection_id,
+            @RequestParam(required = false) String collection_status,
+            @RequestParam(required = false) String payment_id,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String external_reference,
+            Model model) {
+        
+        logger.warn("Back URL pago-fallido recibida - payment_id: {}, external_reference: {}, status: {}", 
+                    payment_id, external_reference, status);
+        
+        model.addAttribute("titulo", "Pago rechazado");
+        model.addAttribute("mensaje", "Tu pago no pudo ser procesado.");
+        model.addAttribute("submensaje", "Por favor, verifica tus datos e intenta nuevamente o elige otro método de pago.");
+        model.addAttribute("paymentId", payment_id);
+        model.addAttribute("externalReference", external_reference);
+        model.addAttribute("showBackLink", true);
+        model.addAttribute("esError", true);
+        
+        return "reservas/resultado-pago";
+    }
+
+    /**
+     * Back URL de Mercado Pago cuando el pago queda pendiente.
+     */
+    @GetMapping("/pago-pendiente")
+    public String pagoPendiente(
+            @RequestParam(required = false) String collection_id,
+            @RequestParam(required = false) String collection_status,
+            @RequestParam(required = false) String payment_id,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String external_reference,
+            Model model) {
+        
+        logger.info("Back URL pago-pendiente recibida - payment_id: {}, external_reference: {}, status: {}", 
+                    payment_id, external_reference, status);
+        
+        model.addAttribute("titulo", "Pago pendiente");
+        model.addAttribute("mensaje", "Tu pago está pendiente de confirmación.");
+        model.addAttribute("submensaje", "Recibirás una notificación cuando el pago sea confirmado. Puedes verificar el estado en tu panel de reservas.");
+        model.addAttribute("paymentId", payment_id);
+        model.addAttribute("externalReference", external_reference);
+        model.addAttribute("showBackLink", true);
+        
+        return "reservas/resultado-pago";
     }
 
 }

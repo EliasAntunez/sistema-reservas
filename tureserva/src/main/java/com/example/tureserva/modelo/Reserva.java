@@ -238,6 +238,47 @@ public class Reserva {
         return this.estado == EstadoReserva.PENDIENTE;
     }
 
+    /**
+     * Calcula el subtotal de solo los espacios (sin servicios adicionales)
+     */
+    public BigDecimal calcularSubtotalEspacios() {
+        if (detalles == null || detalles.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        
+        return detalles.stream()
+            .map(detalle -> {
+                if (detalle.getPrecioPorHora() == null || detalle.getDuracionHoras() == null) {
+                    return BigDecimal.ZERO;
+                }
+                return detalle.getPrecioPorHora().multiply(detalle.getDuracionHoras());
+            })
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Calcula el subtotal de todos los servicios adicionales
+     */
+    public BigDecimal calcularSubtotalServicios() {
+        if (detalles == null || detalles.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        
+        return detalles.stream()
+            .flatMap(detalle -> detalle.getServiciosAdicionales() != null 
+                ? detalle.getServiciosAdicionales().stream() 
+                : java.util.stream.Stream.empty())
+            .map(servicio -> servicio.getSubtotal() != null ? servicio.getSubtotal() : BigDecimal.ZERO)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Verifica si la reserva requirió seña (tiene montoSenia > 0)
+     */
+    public boolean requirioSenia() {
+        return montoSenia != null && montoSenia.compareTo(BigDecimal.ZERO) > 0;
+    }
+
     // ==================== HOOKS JPA ====================
 
     /**
