@@ -284,6 +284,78 @@ public class ServicioReserva {
     }
 
     /**
+     * Calcula de forma no persistente el monto total estimado de una
+     * reserva a partir de los datos temporales. Se usa para validar
+     * montos antes de crear la reserva definitiva (por ejemplo: comparar
+     * con el monto de la seña pagada).
+     *
+     * Solo considera el precio por hora del espacio y la duración de
+     * cada item. No incluye servicios adicionales cuando no están
+     * provistos en el DTO.
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.math.BigDecimal calcularMontoEstimado(DatosReservaTemp datosReserva) {
+        return calcularMontoEstimado(datosReserva, null);
+    }
+
+    /**
+     * Calcula el monto estimado incluyendo servicios adicionales cuando se
+     * provee el mapa `serviciosPorItem`.
+     *
+     * @param serviciosPorItem mapa: key = índice del item en la lista de `datosReserva.items`, value = mapa (idServicio -> cantidad)
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.math.BigDecimal calcularMontoEstimado(DatosReservaTemp datosReserva, Map<Integer, Map<Long, Integer>> serviciosPorItem) {
+        if (datosReserva == null || !datosReserva.tieneEspacios()) {
+            return java.math.BigDecimal.ZERO;
+        }
+
+        java.math.BigDecimal total = java.math.BigDecimal.ZERO;
+
+        for (int idx = 0; idx < datosReserva.getItems().size(); idx++) {
+            ItemReserva item = datosReserva.getItems().get(idx);
+            if (item == null || item.getEspacioId() == null) continue;
+
+            Optional<EspacioReservable> espacioOpt = repositorioEspacioReservable.findById(item.getEspacioId());
+            if (espacioOpt.isEmpty()) {
+                throw new IllegalArgumentException("Espacio no encontrado: " + item.getEspacioId());
+            }
+
+            EspacioReservable espacio = espacioOpt.get();
+            Double precioPorHora = espacio.getPrecioPorHora();
+            if (precioPorHora == null) precioPorHora = 0.0;
+
+            java.math.BigDecimal precio = java.math.BigDecimal.valueOf(precioPorHora);
+            java.math.BigDecimal duracion = java.math.BigDecimal.valueOf(item.getDuracionHoras());
+            java.math.BigDecimal subtotal = precio.multiply(duracion);
+
+            // Incluir servicios adicionales si se proveen
+            if (serviciosPorItem != null && serviciosPorItem.containsKey(idx)) {
+                Map<Long, Integer> serviciosSeleccionados = serviciosPorItem.get(idx);
+                if (serviciosSeleccionados != null && !serviciosSeleccionados.isEmpty()) {
+                    for (Map.Entry<Long, Integer> e : serviciosSeleccionados.entrySet()) {
+                        Long idServicio = e.getKey();
+                        Integer cantidad = e.getValue() == null ? 0 : e.getValue();
+                        if (cantidad <= 0) continue;
+
+                        var svcOpt = servicioServicioAdicional.obtenerPorId(idServicio);
+                        if (svcOpt.isEmpty()) {
+                            throw new IllegalArgumentException("Servicio adicional no encontrado: " + idServicio);
+                        }
+                        ServicioAdicional svc = svcOpt.get();
+                        java.math.BigDecimal precioSvc = svc.getPrecio() == null ? java.math.BigDecimal.ZERO : svc.getPrecio();
+                        subtotal = subtotal.add(precioSvc.multiply(java.math.BigDecimal.valueOf(cantidad)));
+                    }
+                }
+            }
+
+            total = total.add(subtotal);
+        }
+
+        return total;
+    }
+
+    /**
      * Crea una reserva desde los datos temporales y además procesa las selecciones
      * de servicios por item. El mapa `serviciosPorItem` tiene clave = índice del item
      * en la lista de `DatosReservaTemp.items` y valor = mapa (idServicio -> cantidad).
@@ -516,6 +588,13 @@ public class ServicioReserva {
                 nombreComplejo,
                 reservaGuardada.getMontoTotal()
             );
+
+            // Agregar información de seña y subtotales
+            dto.setSubtotalEspacios(reservaGuardada.calcularSubtotalEspacios());
+            dto.setSubtotalServicios(reservaGuardada.calcularSubtotalServicios());
+            dto.setMontoSenia(reservaGuardada.getMontoSenia());
+            dto.setMontoRestante(reservaGuardada.getMontoRestante());
+            dto.setRequirioSenia(reservaGuardada.requirioSenia());
 
             // Llenar detalles y servicios adicionales
             java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detallesDto = new java.util.ArrayList<>();
@@ -929,5 +1008,36 @@ public class ServicioReserva {
         repositorioReserva.save(reserva);
         
         logger.info("Reserva {} cancelada por administrador. Motivo: {}", reservaId, motivo);
+    }
+    
+    /**
+     * Busca reservas confirmadas que se superpongan con un rango horario específico.
+     * Usado para validar disponibilidad antes de crear un pago de seña.
+     * 
+     * @param espacioId ID del espacio a verificar
+     * @param fecha Fecha de la reserva
+     * @param horaInicio Hora de inicio del rango a verificar
+     * @param horaFin Hora de fin del rango a verificar
+     * @return Lista de detalles de reserva que se superponen con el rango especificado
+     */
+    public List<DetalleReserva> buscarReservasEnRango(Long espacioId, LocalDate fecha, 
+                                                       LocalTime horaInicio, LocalTime horaFin) {
+        // Buscar todas las reservas confirmadas (no canceladas) para este espacio y fecha
+        EspacioReservable espacio = repositorioEspacioReservable.findById(espacioId)
+            .orElseThrow(() -> new EntityNotFoundException("Espacio no encontrado con ID: " + espacioId));
+        
+        List<DetalleReserva> reservasDelDia = repositorioDetalleReserva
+            .findByEspacioReservableAndFechaReservaAndReservaEstadoNot(
+                espacio, fecha, EstadoReserva.CANCELADA);
+        
+        // Filtrar solo las que se superponen con el rango solicitado
+        return reservasDelDia.stream()
+            .filter(detalle -> {
+                // Verificar si hay superposición de horarios
+                // Hay superposición si: horaInicio < detalle.horaFin AND horaFin > detalle.horaInicio
+                return horaInicio.isBefore(detalle.getHoraFin()) && 
+                       horaFin.isAfter(detalle.getHoraInicio());
+            })
+            .collect(Collectors.toList());
     }
 }

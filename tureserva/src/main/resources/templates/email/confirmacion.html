@@ -438,10 +438,63 @@
           </div>
         </div>
 
-        <!-- TOTAL -->
+        <!-- DESGLOSE DE MONTOS -->
+        <div style="margin: 35px 0; padding: 25px; background: #f8f9fa; border-radius: 8px;">
+          
+          <!-- Subtotal Espacios -->
+          <div style="display: table; width: 100%; margin-bottom: 12px; font-size: 14px;">
+            <div style="display: table-cell; color: #666; font-weight: 500;">
+              📍 Total Espacios
+            </div>
+            <div style="display: table-cell; text-align: right; font-weight: 600; color: #333;">
+              <span th:text="${subtotalEspacios}">$1,000.00</span>
+            </div>
+          </div>
+
+          <!-- Subtotal Servicios (solo si > 0) -->
+          <div th:if="${subtotalServicios != null and subtotalServicios > 0}" 
+               style="display: table; width: 100%; margin-bottom: 12px; font-size: 14px;">
+            <div style="display: table-cell; color: #666; font-weight: 500;">
+              ➕ Servicios Adicionales
+            </div>
+            <div style="display: table-cell; text-align: right; font-weight: 600; color: #333;">
+              <span th:text="${subtotalServicios}">$300.00</span>
+            </div>
+          </div>
+
+          <!-- Línea separadora -->
+          <div style="border-top: 2px solid #dee2e6; margin: 18px 0;"></div>
+
+          <!-- Total Reserva -->
+          <div style="display: table; width: 100%; margin-bottom: 18px; font-size: 16px;">
+            <div style="display: table-cell; font-weight: 700; color: #1a1a1a;">
+              Total Reserva
+            </div>
+            <div style="display: table-cell; text-align: right; font-weight: 700; font-size: 18px; color: #0d6efd;">
+              <span th:text="${montoTotal}">$1,300.00</span>
+            </div>
+          </div>
+
+          <!-- Seña Pagada (solo si aplica) -->
+          <div th:if="${requirioSenia}" 
+               style="display: table; width: 100%; margin-bottom: 12px; font-size: 14px; color: #198754;">
+            <div style="display: table-cell; font-weight: 600;">
+              ✓ Seña Pagada <span style="font-size: 11px; color: #6c757d; display: block;">(sobre espacios)</span>
+            </div>
+            <div style="display: table-cell; text-align: right; font-weight: 700;">
+              <span th:text="${montoSenia}">$300.00</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- MONTO A PAGAR AL FINALIZAR -->
         <div class="total-section">
-          <div class="total-label">Monto Total a Pagar</div>
-          <div class="total-amount" th:text="${montoTotal}">$1,500.00</div>
+          <div class="total-label">A Pagar al Finalizar la Reserva</div>
+          <div class="total-amount" th:text="${montoRestante}">$1,000.00</div>
+          <div th:if="${requirioSenia}" style="font-size: 12px; opacity: 0.85; margin-top: 10px;">
+            (Incluye: saldo espacios + servicios)
+          </div>
         </div>
 
         <!-- REMINDERS -->

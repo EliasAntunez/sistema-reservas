@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title th:text="${titulo}">Resultado del Pago</title>
+    <meta th:if="${autoReload}" http-equiv="refresh" content="3">
+    <style>
+        .resultado-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            text-align: center;
+        }
+        .icon-resultado {
+            font-size: 5rem;
+            margin-bottom: 20px;
+        }
+        .icon-exitoso { color: #28a745; }
+        .icon-fallido { color: #dc3545; }
+        .icon-pendiente { color: #ffc107; }
+        .titulo-resultado {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .mensaje-resultado {
+            font-size: 1.2rem;
+            color: #6c757d;
+            margin-bottom: 30px;
+        }
+        .detalles-pago {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .detalle-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .detalle-row:last-child {
+            border-bottom: none;
+        }
+        .detalle-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .detalle-value {
+            color: #212529;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content" class="container main-content">
+        <div class="resultado-container">
+            <!-- Icono según resultado -->
+            <div class="icon-resultado" 
+                 th:classappend="${esError != null and esError} ? 'icon-fallido' : (${titulo} == 'Pago pendiente' ? 'icon-pendiente' : 'icon-exitoso')">
+                <i th:class="${esError != null and esError} ? 'bi bi-x-circle-fill' : (${titulo} == 'Pago pendiente' ? 'bi bi-clock-fill' : 'bi bi-check-circle-fill')"></i>
+            </div>
+
+            <!-- Título -->
+            <h2 class="titulo-resultado" th:text="${titulo}">Resultado del Pago</h2>
+
+            <!-- Mensaje principal -->
+            <p class="mensaje-resultado" th:text="${mensaje}">Mensaje sobre el resultado del pago</p>
+
+            <!-- Submensaje -->
+            <p th:if="${submensaje}" class="text-muted" th:text="${submensaje}">Información adicional</p>
+
+            <!-- Detalles del pago (si existen) -->
+            <div class="detalles-pago" th:if="${paymentId != null or externalReference != null}">
+                <h5 class="mb-3">Detalles del pago</h5>
+                <div class="detalle-row" th:if="${paymentId}">
+                    <span class="detalle-label">ID de Pago (MP):</span>
+                    <span class="detalle-value" th:text="${paymentId}">12345678</span>
+                </div>
+                <div class="detalle-row" th:if="${externalReference}">
+                    <span class="detalle-label">Referencia Externa:</span>
+                    <span class="detalle-value" th:text="${externalReference}">REF-123</span>
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="mt-4">
+                <a th:if="${showBackLink}" href="/reservas/confirmar" class="btn btn-primary btn-lg me-2">
+                    <i class="bi bi-arrow-left"></i> Volver a Confirmar Reserva
+                </a>
+                <a href="/reservas/mis-reservas" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-list-ul"></i> Ver Mis Reservas
+                </a>
+            </div>
+
+            <!-- Nota adicional para pagos exitosos -->
+            <div th:if="${esError == null or !esError}" class="alert alert-info mt-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Importante:</strong> El sistema procesará tu pago automáticamente. 
+                Si completaste el pago con éxito, regresa a la página de confirmación para 
+                finalizar tu reserva.
+            </div>
+
+            <!-- Nota para pagos fallidos -->
+            <div th:if="${esError != null and esError}" class="alert alert-warning mt-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>¿Necesitas ayuda?</strong> Si tienes problemas con tu pago, 
+                verifica que tus datos sean correctos o intenta con otro método de pago.
+                También puedes contactar con el soporte del complejo.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

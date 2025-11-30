@@ -36,12 +36,12 @@ public class Pago {
     private Long id;
 
     /**
-     * Reserva asociada al pago
+     * Reserva asociada al pago. Puede ser null para registros de intento
+     * de pago (seña) previos a la creación de la reserva definitiva.
      */
-    @NotNull(message = "El pago debe estar asociado a una reserva")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reserva_id", 
-                nullable = false,
+    @JoinColumn(name = "reserva_id",
+                nullable = true,
                 foreignKey = @ForeignKey(name = "fk_pago_reserva"))
     private Reserva reserva;
 
@@ -54,11 +54,11 @@ public class Pago {
     private TipoPago tipoPago;
 
     /**
-     * Método de pago utilizado
+     * Método de pago utilizado. Puede ser null mientras el pago esté en
+     * estado pendiente antes de confirmación.
      */
-    @NotNull(message = "El método de pago no puede ser nulo")
     @Enumerated(EnumType.STRING)
-    @Column(name = "metodo_pago", nullable = false, length = 30)
+    @Column(name = "metodo_pago", nullable = true, length = 30)
     private MetodoPago metodoPago;
 
     /**
@@ -70,10 +70,10 @@ public class Pago {
     private BigDecimal monto;
 
     /**
-     * Fecha y hora en que se realizó el pago
+     * Fecha y hora en que se realizó el pago. Puede ser null para pagos
+     * que aún están pendientes de confirmación en el gateway.
      */
-    @NotNull(message = "La fecha del pago no puede ser nula")
-    @Column(name = "fecha_pago", nullable = false)
+    @Column(name = "fecha_pago", nullable = true)
     private LocalDateTime fechaPago;
 
     /**
@@ -83,6 +83,36 @@ public class Pago {
     @Size(max = 255, message = "El ID de transacción no puede superar 255 caracteres")
     @Column(name = "transaccion_id", length = 255)
     private String transaccionId;
+
+    /**
+     * Preference id generada por Mercado Pago al crear la preference
+     */
+    @Column(name = "preference_id", length = 255)
+    private String preferenceId;
+
+    /**
+     * URL de checkout (init_point) devuelta por Mercado Pago
+     */
+    @Column(name = "init_point", length = 1024)
+    private String initPoint;
+
+    /**
+     * Estado del pago en integración externa (PENDIENTE, PAGADO, CANCELADO, ERROR)
+     */
+    @Column(name = "estado_pago", length = 50)
+    private String estadoPago;
+
+    /**
+     * Fecha de expiración de la preferencia
+     */
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    /**
+     * JSON con metadata mínima sobre el intento de pago (cliente, referencia, etc.)
+     */
+    @Column(name = "metadata", length = 2000)
+    private String metadata;
 
     /**
      * Comprobante o número de recibo
@@ -144,10 +174,7 @@ public class Pago {
     @PrePersist
     protected void onCreate() {
         this.fechaCreacion = LocalDateTime.now();
-        
-        // Si no se especificó fecha de pago, usar la actual
-        if (this.fechaPago == null) {
-            this.fechaPago = LocalDateTime.now();
-        }
+        // No asignar fechaPago automáticamente: se pondrá al confirmarse
+        // el pago por el gateway exterior.
     }
 }

@@ -9,6 +9,11 @@ public class EmailReservaDTO {
     private LocalDate fecha;
     private String nombreComplejo;
     private BigDecimal montoTotal;
+    private BigDecimal subtotalEspacios;
+    private BigDecimal subtotalServicios;
+    private BigDecimal montoSenia;
+    private BigDecimal montoRestante;
+    private boolean requirioSenia;
     private java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detalles = new java.util.ArrayList<>();
     private java.util.List<String> recordatorios = new java.util.ArrayList<>();
     private String politicaCancelacionResumen;
@@ -37,6 +42,22 @@ public class EmailReservaDTO {
 
     public BigDecimal getMontoTotal() { return montoTotal; }
     public void setMontoTotal(BigDecimal montoTotal) { this.montoTotal = montoTotal; }
+
+    public BigDecimal getSubtotalEspacios() { return subtotalEspacios; }
+    public void setSubtotalEspacios(BigDecimal subtotalEspacios) { this.subtotalEspacios = subtotalEspacios; }
+
+    public BigDecimal getSubtotalServicios() { return subtotalServicios; }
+    public void setSubtotalServicios(BigDecimal subtotalServicios) { this.subtotalServicios = subtotalServicios; }
+
+    public BigDecimal getMontoSenia() { return montoSenia; }
+    public void setMontoSenia(BigDecimal montoSenia) { this.montoSenia = montoSenia; }
+
+    public BigDecimal getMontoRestante() { return montoRestante; }
+    public void setMontoRestante(BigDecimal montoRestante) { this.montoRestante = montoRestante; }
+
+    public boolean isRequirioSenia() { return requirioSenia; }
+    public void setRequirioSenia(boolean requirioSenia) { this.requirioSenia = requirioSenia; }
+
     public java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> getDetalles() { return detalles; }
     public void setDetalles(java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detalles) { this.detalles = detalles; }
 

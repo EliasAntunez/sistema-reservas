@@ -64,6 +64,12 @@ public class ServicioEmail {
                 ctx.setVariable("fecha", dto.getFecha());
                 ctx.setVariable("nombreComplejo", dto.getNombreComplejo());
                 ctx.setVariable("montoTotal", dto.getMontoTotal());
+                // Pasar subtotales y datos de seña
+                ctx.setVariable("subtotalEspacios", dto.getSubtotalEspacios());
+                ctx.setVariable("subtotalServicios", dto.getSubtotalServicios());
+                ctx.setVariable("montoSenia", dto.getMontoSenia());
+                ctx.setVariable("montoRestante", dto.getMontoRestante());
+                ctx.setVariable("requirioSenia", dto.isRequirioSenia());
                 // Pasar detalles completos y metadata para la plantilla
                 ctx.setVariable("detalles", dto.getDetalles());
                 ctx.setVariable("recordatorios", dto.getRecordatorios());

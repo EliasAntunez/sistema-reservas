@@ -33,6 +33,11 @@ public interface RepositorioPago extends JpaRepository<Pago, Long> {
      * Busca un pago por ID de transacción externa
      */
     Optional<Pago> findByTransaccionId(String transaccionId);
+
+       /**
+        * Buscar pago por preference id (Mercado Pago)
+        */
+       Optional<Pago> findByPreferenceId(String preferenceId);
     
     /**
      * Verifica si existe un pago de seña para una reserva
