@@ -47,24 +47,32 @@
                         </div>
                         
                         <!-- Alerta si requiere seña y NO cumple política -->
-                        <div class="alert alert-warning" th:if="${requiereSenia and !cumplePolitica}">
+                        <div class="alert alert-danger" th:if="${requiereSenia and !cumplePolitica}">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            <strong>Advertencia sobre la seña:</strong>
-                            <p class="mb-0" th:text="${mensajePolitica}">Mensaje de política</p>
+                            <h5 class="alert-heading">⚠️ Advertencia: Pérdida de Seña</h5>
+                            <p th:text="${mensajePolitica}">Mensaje de política</p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Importante:</strong> Al cancelar fuera del plazo permitido, la seña pagada no será reembolsable. 
+                                El complejo retendrá el monto como compensación según su política de cancelación.
+                            </p>
                         </div>
                         
                         <!-- Alerta si requiere seña y SÍ cumple política -->
                         <div class="alert alert-success" th:if="${requiereSenia and cumplePolitica}">
                             <i class="bi bi-check-circle-fill me-2"></i>
-                            <strong>Cancelación sin penalización:</strong>
-                            <p class="mb-0">Cumples con la política de cancelación. Tu seña será reembolsada. Comuníquese con el complejo para más información.</p>
+                            <h5 class="alert-heading">✅ Cancelación sin Penalización</h5>
+                            <p class="mb-0">
+                                Tu cancelación cumple con el plazo de anticipación requerido por la política del complejo. 
+                                La seña pagada será reembolsada. Por favor, comunícate con el complejo para coordinar el reembolso.
+                            </p>
                         </div>
                         
                         <!-- Alerta general si no requiere seña -->
-                        <div class="alert alert-danger" th:if="${!requiereSenia}">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            <strong>Atención:</strong> Esta acción cancelará tu reserva de forma inmediata. 
-                            Consulta las políticas de cancelación del complejo para información sobre reembolsos.
+                        <div class="alert alert-info" th:if="${!requiereSenia}">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Información:</strong> Esta reserva no requirió seña. Al confirmar la cancelación, 
+                            tu reserva será liberada inmediatamente y el horario quedará disponible para otros usuarios.
                         </div>
                         
                         <form th:action="@{/alerta-clima/cancelar/{id}(id=${reserva.id})}" method="post" class="text-center">

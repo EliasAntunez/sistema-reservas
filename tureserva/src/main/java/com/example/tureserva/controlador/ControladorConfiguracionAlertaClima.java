@@ -5,7 +5,9 @@ import com.example.tureserva.modelo.enums.EstadoReserva;
 import com.example.tureserva.repositorio.*;
 import com.example.tureserva.servicio.ServicioEmail;
 import com.example.tureserva.servicio.ServicioOpenMeteo;
+import com.example.tureserva.servicio.clima.UmbralesBuilder;
 import com.example.tureserva.servicio.dto.RespuestaClimaDTO;
+import com.example.tureserva.servicio.dto.TipoPrecipitacion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -241,22 +243,32 @@ public class ControladorConfiguracionAlertaClima {
             
             int umbral = (config != null) ? config.getUmbralProbabilidad() : 50;
             
-            // Buscar TODAS las reservas confirmadas del complejo
+            // Buscar reservas confirmadas del complejo que NO tengan alerta enviada
             List<Reserva> reservasConfirmadas = repositorioReserva.findByComplejoDeportivoIdAndEstado(
                 complejo.getId_complejo(),
                 EstadoReserva.CONFIRMADA
             );
             
-            if (reservasConfirmadas.isEmpty()) {
+            // Filtrar solo las que no tienen alerta enviada
+            List<Reserva> reservasSinAlerta = reservasConfirmadas.stream()
+                .filter(r -> r.getAlertaEnviada() == null || !r.getAlertaEnviada())
+                .collect(java.util.stream.Collectors.toList());
+            
+            if (reservasSinAlerta.isEmpty()) {
                 redirectAttributes.addFlashAttribute("warning", 
-                    "No hay reservas confirmadas para notificar");
+                    "No hay reservas confirmadas sin alerta enviada para notificar. " +
+                    "(Total confirmadas: " + reservasConfirmadas.size() + ", ya notificadas: " + 
+                    (reservasConfirmadas.size() - reservasSinAlerta.size()) + ")");
                 return "redirect:/admin-complejo/alertas-clima/configurar";
             }
             
             int enviados = 0;
             int errores = 0;
             
-            for (Reserva reserva : reservasConfirmadas) {
+            log.info("🎯 Reservas a procesar: {} (de {} confirmadas totales)", 
+                    reservasSinAlerta.size(), reservasConfirmadas.size());
+            
+            for (Reserva reserva : reservasSinAlerta) {
                 try {
                     // Obtener primer detalle para la fecha/hora
                     if (reserva.getDetalles().isEmpty()) {
@@ -278,19 +290,21 @@ public class ControladorConfiguracionAlertaClima {
                         umbral
                     );
 
-                    // Construir umbrales por tipo (usar la misma lógica que el scheduler)
-                    int fallback = (config != null && config.getUmbralProbabilidad() != null) ? config.getUmbralProbabilidad() : 50;
-                    java.util.Map<com.example.tureserva.servicio.dto.TipoPrecipitacion, Integer> umbralesPorTipo = new java.util.HashMap<>();
-                    umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.LLOVIZNA, config != null && config.getUmbralLlovizna() != null ? config.getUmbralLlovizna() : fallback);
-                    umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.LLUVIA, config != null && config.getUmbralLluvia() != null ? config.getUmbralLluvia() : fallback);
-                    umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.CHAPARRON, config != null && config.getUmbralChubascos() != null ? config.getUmbralChubascos() : fallback);
-                    umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.TORMENTA, config != null && config.getUmbralTormenta() != null ? config.getUmbralTormenta() : fallback);
-                    umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.NIEVE, config != null && config.getUmbralNieve() != null ? config.getUmbralNieve() : fallback);
-                    umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO, config != null && config.getUmbralOtro() != null ? config.getUmbralOtro() : fallback);
+                    // Construir umbrales por tipo usando el builder
+                    java.util.Map<TipoPrecipitacion, Integer> umbralesPorTipo = 
+                        UmbralesBuilder.fromConfiguracion(config);
 
                     Integer probabilidad = clima.getProbabilidadPrecipitacion() != null ? clima.getProbabilidadPrecipitacion() : 0;
-                    com.example.tureserva.servicio.dto.TipoPrecipitacion tipo = clima.getTipoPrecipitacion() != null ? clima.getTipoPrecipitacion() : com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO;
-                    int umbralTipo = umbralesPorTipo.getOrDefault(tipo, fallback);
+                    TipoPrecipitacion tipo = clima.getTipoPrecipitacion();
+                    
+                    // Si no hay tipo de precipitación (clima despejado/nublado), omitir
+                    if (tipo == null) {
+                        log.info("⏭️ Se omitió alerta para reserva {}: clima sin precipitación ({})", 
+                                reserva.getId(), clima.getDescripcion());
+                        continue;
+                    }
+                    
+                    int umbralTipo = umbralesPorTipo.get(tipo);
 
                     // Solo enviar si cumple el umbral por tipo
                     if (probabilidad >= umbralTipo) {
@@ -302,8 +316,13 @@ public class ControladorConfiguracionAlertaClima {
                             clima.getTipoPrecipitacion(),
                             clima.getPrecipMmHora()
                         );
+                        
+                        // IMPORTANTE: Marcar alerta como enviada para demostración
+                        reserva.setAlertaEnviada(true);
+                        repositorioReserva.save(reserva);
+                        
                         enviados++;
-                        log.info("✅ Alerta de prueba enviada a reserva {} ({}): tipo={}, prob={}%, umbral={}%", 
+                        log.info("✅ Alerta de prueba enviada a reserva {} ({}): tipo={}, prob={}%, umbral={}%. alerta_enviada=true", 
                                 reserva.getCodigoReserva(), reserva.getCliente().getEmail(), tipo, probabilidad, umbralTipo);
                     } else {
                         log.info("⏭️ Se omitió alerta para reserva {}: probabilidad {}% < umbral {}% (tipo={})", 
@@ -337,15 +356,17 @@ public class ControladorConfiguracionAlertaClima {
     }
     
     /**
-     * ENDPOINT DE PRUEBA: Consulta el clima para los próximos 3 días
+     * ENDPOINT DE PRUEBA: Consulta el clima para los próximos 7 días
      * y muestra las predicciones para encontrar días con alta probabilidad de lluvia.
+     * Filtra horarios pasados y muestra más horarios útiles.
      */
     @Transactional
     @GetMapping("/pronostico-semanal")
     @ResponseBody
     public String consultarPronosticoSemanal(
             Authentication auth,
-            @RequestParam(value = "complejoId", required = false) Long complejoId) {
+            @RequestParam(value = "complejoId", required = false) Long complejoId,
+            @RequestParam(value = "dias", defaultValue = "7") int dias) {
         
         try {
             AdministradorComplejo admin = obtenerAdminAutenticado(auth);
@@ -377,17 +398,24 @@ public class ControladorConfiguracionAlertaClima {
             ConfiguracionAlertaClima config = repositorioConfigAlerta.findByComplejo(complejo).orElse(null);
             int fallback = (config != null && config.getUmbralProbabilidad() != null) ? config.getUmbralProbabilidad() : 50;
             
+            // Validar y limitar días
+            if (dias < 1) dias = 1;
+            if (dias > 7) dias = 7;  // API Open-Meteo permite hasta 7 días
+            
             StringBuilder resultado = new StringBuilder();
-            resultado.append("<html><head><meta charset='UTF-8'><title>Pronóstico 3 Días</title>");
+            resultado.append("<html><head><meta charset='UTF-8'><title>Pronóstico ").append(dias).append(" Días</title>");
             resultado.append("<style>body{font-family:Arial;padding:20px;background:#f4f4f4;} ");
-            resultado.append(".container{max-width:1200px;margin:0 auto;background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);} ");
-            resultado.append("table{border-collapse:collapse;width:100%;margin-top:20px;} ");
-            resultado.append("th,td{border:1px solid #ddd;padding:12px;text-align:left;} th{background-color:#3b82f6;color:white;} ");
-            resultado.append(".alta{background-color:#fef3c7;} .muy-alta{background-color:#fee2e2;font-weight:bold;} ");
+            resultado.append(".container{max-width:1400px;margin:0 auto;background:white;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);} ");
+            resultado.append("table{border-collapse:collapse;width:100%;margin-top:20px;font-size:14px;} ");
+            resultado.append("th,td{border:1px solid #ddd;padding:10px;text-align:left;} th{background-color:#3b82f6;color:white;} ");
+            resultado.append(".alta{background-color:#fef3c7;} .muy-alta{background-color:#fee2e2;font-weight:bold;} .pasado{background-color:#f3f4f6;color:#9ca3af;} ");
             resultado.append(".info{background:#eff6ff;padding:15px;border-left:4px solid #3b82f6;margin:20px 0;border-radius:4px;} ");
-            resultado.append("a{color:#3b82f6;text-decoration:none;font-weight:600;} a:hover{text-decoration:underline;}</style></head><body>");
+            resultado.append(".controles{margin:20px 0;padding:15px;background:#f9fafb;border-radius:4px;} ");
+            resultado.append("a{color:#3b82f6;text-decoration:none;font-weight:600;} a:hover{text-decoration:underline;} ");
+            resultado.append("button{padding:8px 16px;margin:0 5px;background:#3b82f6;color:white;border:none;border-radius:4px;cursor:pointer;} ");
+            resultado.append("button:hover{background:#2563eb;}</style></head><body>");
             resultado.append("<div class='container'>");
-            resultado.append("<h1>🌦️ Pronóstico 3 Días - ").append(complejo.getNombre_complejo()).append("</h1>");
+            resultado.append("<h1>🌦️ Pronóstico ").append(dias).append(" Días - ").append(complejo.getNombre_complejo()).append("</h1>");
             resultado.append("<p>📍 Ubicación: Lat ").append(String.format("%.4f", complejo.getLatitud())).append(", Lon ").append(String.format("%.4f", complejo.getLongitud())).append("</p>");
             resultado.append("<div class='info'><strong>💡 Umbrales configurados:</strong> ");
             if (config != null) {
@@ -399,16 +427,40 @@ public class ControladorConfiguracionAlertaClima {
                 resultado.append("Sin configuración (usando 50% por defecto)");
             }
             resultado.append("</div>");
+            
+            // Controles para cambiar días
+            resultado.append("<div class='controles'>");
+            resultado.append("<strong>Mostrar pronóstico de:</strong> ");
+            for (int d : new int[]{1, 3, 5, 7}) {
+                if (d == dias) {
+                    resultado.append("<button disabled style='background:#1e40af;'>").append(d).append(" día").append(d > 1 ? "s" : "").append("</button>");
+                } else {
+                    resultado.append("<a href='?complejoId=").append(complejo.getId_complejo()).append("&dias=").append(d).append("'>");
+                    resultado.append("<button>").append(d).append(" día").append(d > 1 ? "s" : "").append("</button></a>");
+                }
+            }
+            resultado.append("</div>");
+            
             resultado.append("<table><tr><th>Fecha</th><th>Hora</th><th>Condiciones</th><th>Tipo</th><th>Probabilidad</th><th>¿Alerta?</th><th>Temp (°C)</th></tr>");
             
             LocalDateTime ahora = LocalDateTime.now();
             int consultasExitosas = 0;
             int consultasFallidas = 0;
+            int omitidosPasados = 0;
             
-            // Consultar clima para los próximos 3 días (límite de API gratuita), a las 10:00, 14:00, 18:00 y 20:00
-            for (int dia = 0; dia < 3; dia++) {
-                for (int hora : new int[]{10, 14, 18, 20}) {
-                    LocalDateTime fechaHora = ahora.plusDays(dia).withHour(hora).withMinute(0).withSecond(0);
+            // Horarios extendidos para mejor cobertura (cada 2 horas desde las 8am hasta las 10pm)
+            int[] horarios = {8, 10, 12, 14, 16, 18, 20, 22};
+            
+            // Consultar clima para los próximos N días
+            for (int dia = 0; dia < dias; dia++) {
+                for (int hora : horarios) {
+                    LocalDateTime fechaHora = ahora.plusDays(dia).withHour(hora).withMinute(0).withSecond(0).withNano(0);
+                    
+                    // Saltar horarios que ya pasaron (solo relevante para el día actual)
+                    if (fechaHora.isBefore(ahora)) {
+                        omitidosPasados++;
+                        continue;
+                    }
                     
                     try {
                         RespuestaClimaDTO clima = servicioClima.consultarClima(
@@ -419,30 +471,28 @@ public class ControladorConfiguracionAlertaClima {
                         );
                         
                         Integer prob = clima.getProbabilidadPrecipitacion() != null ? clima.getProbabilidadPrecipitacion() : 0;
-                        com.example.tureserva.servicio.dto.TipoPrecipitacion tipo = clima.getTipoPrecipitacion() != null ? 
-                            clima.getTipoPrecipitacion() : com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO;
+                        com.example.tureserva.servicio.dto.TipoPrecipitacion tipo = clima.getTipoPrecipitacion();
                         
                         // Determinar umbral según tipo
                         int umbralTipo = fallback;
-                        if (config != null) {
+                        if (tipo != null && config != null) {
                             switch (tipo) {
                                 case LLOVIZNA: umbralTipo = config.getUmbralLlovizna() != null ? config.getUmbralLlovizna() : fallback; break;
                                 case LLUVIA: umbralTipo = config.getUmbralLluvia() != null ? config.getUmbralLluvia() : fallback; break;
                                 case CHAPARRON: umbralTipo = config.getUmbralChubascos() != null ? config.getUmbralChubascos() : fallback; break;
                                 case TORMENTA: umbralTipo = config.getUmbralTormenta() != null ? config.getUmbralTormenta() : fallback; break;
                                 case NIEVE: umbralTipo = config.getUmbralNieve() != null ? config.getUmbralNieve() : fallback; break;
-                                default: umbralTipo = config.getUmbralOtro() != null ? config.getUmbralOtro() : fallback;
                             }
                         }
                         
-                        boolean enviariaAlerta = prob >= umbralTipo;
+                        boolean enviariaAlerta = tipo != null && prob >= umbralTipo;
                         String rowClass = enviariaAlerta ? (prob >= 70 ? "muy-alta" : "alta") : "";
                         
                         resultado.append("<tr class='").append(rowClass).append("'>");
                         resultado.append("<td>").append(fechaHora.toLocalDate()).append("</td>");
-                        resultado.append("<td>").append(fechaHora.toLocalTime()).append("</td>");
+                        resultado.append("<td>").append(String.format("%02d:00", fechaHora.getHour())).append("</td>");
                         resultado.append("<td>").append(clima.getDescripcion()).append("</td>");
-                        resultado.append("<td>").append(tipo).append("</td>");
+                        resultado.append("<td>").append(tipo != null ? tipo : "Sin precipitación").append("</td>");
                         resultado.append("<td><strong>").append(prob).append("%</strong> (umbral: ").append(umbralTipo).append("%)</td>");
                         resultado.append("<td>").append(enviariaAlerta ? "✅ SÍ" : "❌ NO").append("</td>");
                         resultado.append("<td>").append(clima.getTemperatura() != null ? String.format("%.1f", clima.getTemperatura()) : "N/A").append("</td>");
@@ -463,10 +513,16 @@ public class ControladorConfiguracionAlertaClima {
             resultado.append("</table>");
             resultado.append("<div class='info' style='margin-top:20px;'>");
             resultado.append("<strong>📊 Resumen:</strong> ").append(consultasExitosas).append(" consultas exitosas, ")
-                     .append(consultasFallidas).append(" fallidas<br>");
+                     .append(consultasFallidas).append(" fallidas");
+            if (omitidosPasados > 0) {
+                resultado.append(", ").append(omitidosPasados).append(" horarios pasados omitidos");
+            }
+            resultado.append("<br>");
+            resultado.append("<strong>🕐 Horarios mostrados:</strong> Cada 2 horas de 08:00 a 22:00 (").append(horarios.length).append(" horarios/día)<br>");
             resultado.append("<strong>💡 Consejo:</strong> Reserva en las fechas/horas marcadas en amarillo o rojo para probar las alertas. ");
             resultado.append("Las filas en <span style='background:#fee2e2;padding:2px 6px;'>rojo</span> tienen probabilidad ≥70% y ");
-            resultado.append("las <span style='background:#fef3c7;padding:2px 6px;'>amarillas</span> superan su umbral configurado.");
+            resultado.append("las <span style='background:#fef3c7;padding:2px 6px;'>amarillas</span> superan su umbral configurado. ");
+            resultado.append("Solo se alertan tipos de precipitación real (lluvia, tormenta, chaparrón, nieve, llovizna).");
             resultado.append("</div>");
             resultado.append("<p style='margin-top:20px;'><a href='/admin-complejo/alertas-clima/configurar?complejoId=")
                      .append(complejo.getId_complejo()).append("'>← Volver a Configuración de Alertas</a></p>");

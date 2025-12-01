@@ -4,9 +4,8 @@ import com.example.tureserva.modelo.*;
 import com.example.tureserva.modelo.enums.EstadoReserva;
 import com.example.tureserva.repositorio.RepositorioConfiguracionAlertaClima;
 import com.example.tureserva.repositorio.RepositorioReserva;
-import com.example.tureserva.servicio.ServicioEmail;
-import com.example.tureserva.servicio.ServicioOpenMeteo;
-import com.example.tureserva.servicio.dto.RespuestaClimaDTO;
+import com.example.tureserva.servicio.ServicioAlertaClimatica;
+import com.example.tureserva.servicio.clima.AlertaClimaConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,18 +28,15 @@ public class AlertaClimaticaScheduler {
     
     private final RepositorioConfiguracionAlertaClima repositorioConfigAlerta;
     private final RepositorioReserva repositorioReserva;
-    private final ServicioOpenMeteo servicioClima;
-    private final ServicioEmail servicioEmail;
+    private final ServicioAlertaClimatica servicioAlerta;
     
     public AlertaClimaticaScheduler(
             RepositorioConfiguracionAlertaClima repositorioConfigAlerta,
             RepositorioReserva repositorioReserva,
-            ServicioOpenMeteo servicioClima,
-            ServicioEmail servicioEmail) {
+            ServicioAlertaClimatica servicioAlerta) {
         this.repositorioConfigAlerta = repositorioConfigAlerta;
         this.repositorioReserva = repositorioReserva;
-        this.servicioClima = servicioClima;
-        this.servicioEmail = servicioEmail;
+        this.servicioAlerta = servicioAlerta;
     }
     
     /**
@@ -49,9 +45,8 @@ public class AlertaClimaticaScheduler {
      * "0 0 * * * *" = Cada hora en el minuto 0
      */
     @Scheduled(cron = "0 0 * * * *")
-    @Transactional
     public void verificarAlertas() {
-        log.info("=== Iniciando verificación de alertas climáticas ===");
+        log.info("🌦️ Iniciando verificación horaria de alertas climáticas");
         
         LocalDateTime ahora = LocalDateTime.now();
         LocalDate hoy = ahora.toLocalDate();
@@ -69,22 +64,30 @@ public class AlertaClimaticaScheduler {
         
         log.info("Procesando {} configuraciones activas", configuraciones.size());
         
+        int totalProcesadas = 0;
+        int totalAlertas = 0;
+        
         for (ConfiguracionAlertaClima config : configuraciones) {
             try {
-                procesarConfiguracion(config, ahora, hoy, horaActual);
+                int[] resultado = procesarConfiguracion(config, ahora, hoy, horaActual);
+                totalProcesadas += resultado[0];
+                totalAlertas += resultado[1];
             } catch (Exception e) {
                 log.error("Error al procesar configuración del complejo {}: {}", 
                          config.getComplejo().getNombre_complejo(), e.getMessage(), e);
             }
         }
         
-        log.info("=== Verificación de alertas climáticas finalizada ===");
+        log.info("✅ Verificación completada: {} configs, {} reservas procesadas, {} alertas enviadas",
+                configuraciones.size(), totalProcesadas, totalAlertas);
     }
     
     /**
      * Procesa una configuración específica buscando reservas que cumplan los criterios.
+     * @return Array [reservasProcesadas, alertasEnviadas]
      */
-    private void procesarConfiguracion(ConfiguracionAlertaClima config, 
+    @Transactional(readOnly = true)
+    protected int[] procesarConfiguracion(ConfiguracionAlertaClima config, 
                                       LocalDateTime ahora, 
                                       LocalDate hoy, 
                                       LocalTime horaActual) {
@@ -96,7 +99,7 @@ public class AlertaClimaticaScheduler {
         if (complejo.getLatitud() == null || complejo.getLongitud() == null) {
             log.warn("Complejo {} no tiene coordenadas configuradas. Saltando alertas.", 
                     complejo.getNombre_complejo());
-            return;
+            return new int[]{0, 0};
         }
         
         List<Reserva> reservasCandidatas;
@@ -112,16 +115,32 @@ public class AlertaClimaticaScheduler {
         } else {
             log.warn("Estrategia desconocida para complejo {}: {}", 
                     complejo.getNombre_complejo(), config.getEstrategia());
-            return;
+            return new int[]{0, 0};
         }
         
         log.debug("Encontradas {} reservas candidatas para complejo {}", 
                  reservasCandidatas.size(), complejo.getNombre_complejo());
         
+        int procesadas = 0;
+        int enviadas = 0;
+        
         // Procesar cada reserva candidata
         for (Reserva reserva : reservasCandidatas) {
-            procesarReserva(reserva, config);
+            try {
+                boolean alertaEnviada = servicioAlerta.verificarYEnviarAlerta(reserva, config);
+                procesadas++;
+                if (alertaEnviada) {
+                    enviadas++;
+                    // Marcar alerta como enviada
+                    reserva.setAlertaEnviada(true);
+                    repositorioReserva.save(reserva);
+                }
+            } catch (Exception e) {
+                log.error("Error procesando reserva {}: {}", reserva.getId(), e.getMessage());
+            }
         }
+        
+        return new int[]{procesadas, enviadas};
     }
     
     /**
@@ -135,8 +154,8 @@ public class AlertaClimaticaScheduler {
         
         LocalDateTime fechaObjetivo = ahora.plusHours(horasAnticipacion);
         LocalDate diaObjetivo = fechaObjetivo.toLocalDate();
-        LocalTime horaInicio = fechaObjetivo.toLocalTime().minusMinutes(30); // Margen de 30 min
-        LocalTime horaFin = fechaObjetivo.toLocalTime().plusMinutes(30);
+        LocalTime horaInicio = fechaObjetivo.toLocalTime().minusMinutes(AlertaClimaConstants.VENTANA_MINUTOS_ANTES);
+        LocalTime horaFin = fechaObjetivo.toLocalTime().plusMinutes(AlertaClimaConstants.VENTANA_MINUTOS_DESPUES);
         
         log.debug("Buscando reservas para {} horas antes: día={}, hora={} a {}", 
                  horasAnticipacion, diaObjetivo, horaInicio, horaFin);
@@ -178,77 +197,4 @@ public class AlertaClimaticaScheduler {
         );
     }
     
-    /**
-     * Procesa una reserva individual: consulta el clima y envía alerta si es necesario.
-     */
-    private void procesarReserva(Reserva reserva, ConfiguracionAlertaClima config) {
-        try {
-            log.debug("Procesando reserva ID={}, Cliente={}", 
-                     reserva.getId(), reserva.getCliente().getEmail());
-            
-            // Obtener primer detalle de la reserva (para fecha/hora)
-            if (reserva.getDetalles().isEmpty()) {
-                log.warn("Reserva {} no tiene detalles. Saltando.", reserva.getId());
-                return;
-            }
-            
-            DetalleReserva primerDetalle = reserva.getDetalles().get(0);
-            ComplejoDeportivo complejo = config.getComplejo();
-            
-            // Construir fecha/hora completa de la reserva
-            LocalDateTime fechaHoraReserva = LocalDateTime.of(
-                reserva.getFechaReserva(),
-                primerDetalle.getHoraInicio()
-            );
-            
-            // Consultar clima (devuelve tipo de precipitación)
-            RespuestaClimaDTO clima = servicioClima.consultarClima(
-                complejo.getLatitud(),
-                complejo.getLongitud(),
-                fechaHoraReserva,
-                config.getUmbralProbabilidad()
-            );
-
-            // Construir umbrales por tipo a partir de la configuración del complejo (fallback al umbral general)
-            int fallback = config.getUmbralProbabilidad() != null ? config.getUmbralProbabilidad() : 50;
-            java.util.Map<com.example.tureserva.servicio.dto.TipoPrecipitacion, Integer> umbralesPorTipo = new java.util.HashMap<>();
-            umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.LLOVIZNA, config.getUmbralLlovizna() != null ? config.getUmbralLlovizna() : fallback);
-            umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.LLUVIA, config.getUmbralLluvia() != null ? config.getUmbralLluvia() : fallback);
-            umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.CHAPARRON, config.getUmbralChubascos() != null ? config.getUmbralChubascos() : fallback);
-            umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.TORMENTA, config.getUmbralTormenta() != null ? config.getUmbralTormenta() : fallback);
-            umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.NIEVE, config.getUmbralNieve() != null ? config.getUmbralNieve() : fallback);
-            umbralesPorTipo.put(com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO, config.getUmbralOtro() != null ? config.getUmbralOtro() : fallback);
-
-            com.example.tureserva.servicio.dto.TipoPrecipitacion tipo = clima.getTipoPrecipitacion() != null ? clima.getTipoPrecipitacion() : com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO;
-
-            int umbralTipo = umbralesPorTipo.getOrDefault(tipo, fallback);
-            Integer prob = clima.getProbabilidadPrecipitacion() != null ? clima.getProbabilidadPrecipitacion() : 0;
-
-            boolean hayMalClimaSegunTipo = prob >= umbralTipo;
-
-            if (hayMalClimaSegunTipo) {
-                log.info("¡Mal clima detectado para reserva {}! Tipo={}, probabilidad={}%, umbral={}. Enviando alerta...", reserva.getId(), tipo, prob, umbralTipo);
-
-                servicioEmail.enviarAlertaClimatica(
-                    reserva,
-                    clima.getDescripcion(),
-                    prob,
-                    clima.getTipoPrecipitacion(),
-                    clima.getPrecipMmHora()
-                );
-
-                // Marcar alerta como enviada
-                reserva.setAlertaEnviada(true);
-                repositorioReserva.save(reserva);
-
-                log.info("Alerta climática enviada exitosamente para reserva {}", reserva.getId());
-            } else {
-                log.debug("No hay mal clima para reserva {}. Tipo={}, Probabilidad={}%, umbral={}", 
-                         reserva.getId(), tipo, prob, umbralTipo);
-            }
-            
-        } catch (Exception e) {
-            log.error("Error al procesar reserva {}: {}", reserva.getId(), e.getMessage(), e);
-        }
-    }
 }

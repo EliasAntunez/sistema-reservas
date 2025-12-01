@@ -29,6 +29,16 @@ public interface RepositorioDetalleReserva extends JpaRepository<DetalleReserva,
             @Param("fecha") LocalDate fecha,
             @Param("estado") EstadoReserva estado);
 
+    /**
+     * Encuentra todos los detalles de reserva para un espacio en una fecha específica
+     * excluyendo aquellos cuya reserva esté en cualquiera de los estados indicados (p.ej. CANCELADA, REPROGRAMADA).
+     */
+    @Query("SELECT d FROM DetalleReserva d WHERE d.espacioReservable = :espacio AND d.fechaReserva = :fecha AND d.reserva.estado NOT IN :estados")
+    List<DetalleReserva> findByEspacioReservableAndFechaReservaAndReservaEstadoNotIn(
+            @Param("espacio") EspacioReservable espacio,
+            @Param("fecha") LocalDate fecha,
+            @Param("estados") List<EstadoReserva> estados);
+
         /**
          * Encuentra detalles futuros o en curso para un espacio que estén en estados activos (p.ej. PENDIENTE, CONFIRMADA).
          * Condición: fecha > hoy OR (fecha = hoy AND hora_fin > horaActual)

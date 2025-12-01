@@ -62,19 +62,19 @@
                             <h2 class="mt-3">Reprogramar Reserva</h2>
                         </div>
                         
-                        <!-- Advertencia sobre política de cancelación -->
+                        <!-- Advertencia sobre política de reprogramación -->
                         <div th:if="${validacion != null and !validacion.cumplePolitica}" 
                              class="alert alert-warning" role="alert">
                             <h5 class="alert-heading">
                                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                <span th:if="${validacion.pierdeSenia}">Advertencia: Pérdida de Seña</span>
-                                <span th:unless="${validacion.pierdeSenia}">Advertencia: Política de Reprogramación</span>
+                                <span th:if="${validacion.pierdeSenia}">⚠️ Advertencia: Pérdida de Seña por Reprogramación Tardía</span>
+                                <span th:unless="${validacion.pierdeSenia}">⚠️ Advertencia: Tiempo de Anticipación</span>
                             </h5>
                             <p th:text="${validacion.mensaje}"></p>
                             <hr>
                             <p class="mb-0" th:if="${validacion.pierdeSenia}">
-                                <strong>Importante:</strong> Una vez confirmada la reprogramación, deberás realizar un nuevo pago de seña 
-                                para asegurar la nueva fecha y horario. El complejo retendrá la seña original como compensación.
+                                <strong>¿Qué significa esto?</strong> Al reprogramar fuera del plazo permitido, la seña original no es reembolsable ni transferible. 
+                                Después de confirmar esta reprogramación, recibirás instrucciones para realizar un nuevo pago de seña y asegurar tu nueva reserva.
                             </p>
                         </div>
                         
@@ -82,8 +82,8 @@
                         <div th:if="${validacion != null and validacion.cumplePolitica and validacion.requiereSenia}" 
                              class="alert alert-success" role="alert">
                             <i class="bi bi-check-circle-fill me-2"></i>
-                            <strong>Reprogramación sin costo adicional:</strong> Tu reprogramación cumple con la política de cancelación.
-                            La seña pagada originalmente se trasladará automáticamente a la nueva reserva.
+                            <strong>✅ Reprogramación sin penalización:</strong> Tu reprogramación cumple con el plazo de anticipación requerido.
+                            La seña pagada originalmente se trasladará automáticamente a la nueva reserva, sin costos adicionales.
                         </div>
                         
                         <div class="info-box">
@@ -130,7 +130,8 @@
                             
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle me-2"></i>
-                                Los horarios mostrados son los disponibles para el mismo espacio que reservaste originalmente.
+                                <strong>Horarios disponibles:</strong> Se muestran únicamente los horarios libres del mismo espacio que reservaste originalmente.
+                                Tu reserva actual será marcada como "reprogramada" una vez que confirmes la nueva fecha y hora.
                             </div>
                             
                             <div class="text-center">

@@ -75,18 +75,8 @@ public class ServicioEmail {
             ctx.setVariable("nombreComplejo", nombreComplejo);
             ctx.setVariable("descripcionClima", descripcionClima);
             ctx.setVariable("probabilidadLluvia", probabilidadLluvia);
-            // Pasar una etiqueta legible para el tipo de precipitación
-            String tipoLabel = null;
-            if (tipoPrecipitacion != null) {
-                switch (tipoPrecipitacion) {
-                    case LLOVIZNA -> tipoLabel = "Llovizna";
-                    case LLUVIA -> tipoLabel = "Lluvia";
-                    case CHAPARRON -> tipoLabel = "Chaparrón";
-                    case TORMENTA -> tipoLabel = "Tormenta";
-                    case NIEVE -> tipoLabel = "Nieve";
-                    default -> tipoLabel = "Otro";
-                }
-            }
+            // Usar el método getEtiqueta() del enum para obtener la etiqueta legible
+            String tipoLabel = tipoPrecipitacion != null ? tipoPrecipitacion.getEtiqueta() : null;
 
             ctx.setVariable("tipoPrecipitacion", tipoPrecipitacion);
             ctx.setVariable("tipoPrecipitacionLabel", tipoLabel);

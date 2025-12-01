@@ -173,9 +173,17 @@ public class ServicioReserva {
                 return intervalos;
             }
             
-                // Obtener reservas existentes (ignorar detalles pertenecientes a reservas CANCELADAS)
+                // Obtener reservas existentes (ignorar detalles pertenecientes a reservas CANCELADAS o REPROGRAMADAS)
+                // REPROGRAMADA no ocupa espacio porque fue movida a otra fecha/hora
                 List<DetalleReserva> reservasExistentes = repositorioDetalleReserva
-                    .findByEspacioReservableAndFechaReservaAndReservaEstadoNot(espacioConectado, fecha, com.example.tureserva.modelo.enums.EstadoReserva.CANCELADA);
+                    .findByEspacioReservableAndFechaReservaAndReservaEstadoNotIn(
+                        espacioConectado, 
+                        fecha, 
+                        java.util.Arrays.asList(
+                            com.example.tureserva.modelo.enums.EstadoReserva.CANCELADA,
+                            com.example.tureserva.modelo.enums.EstadoReserva.REPROGRAMADA
+                        )
+                    );
             
             // Generar intervalos para cada rango horario del día
             for (RangoHorario rango : rangosDelDia) {
@@ -842,6 +850,81 @@ public class ServicioReserva {
     }
     
     /**
+     * Valida si una cancelación cumple con la política del complejo.
+     * Retorna información sobre si se pierde la seña y los mensajes apropiados.
+     */
+    public ResultadoValidacionCancelacion validarCancelacion(Reserva reserva) {
+        ResultadoValidacionCancelacion resultado = new ResultadoValidacionCancelacion();
+        resultado.setPuedeCancelar(true);
+        resultado.setCumplePolitica(true);
+        resultado.setRequiereSenia(reserva.requirioSenia());
+        resultado.setPierdeSenia(false);
+        
+        if (reserva.getDetalles().isEmpty()) {
+            resultado.setPuedeCancelar(false);
+            resultado.setMensaje("La reserva no tiene detalles");
+            return resultado;
+        }
+        
+        DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+        LocalDateTime fechaHoraReserva = LocalDateTime.of(
+            primerDetalle.getFechaReserva(),
+            primerDetalle.getHoraInicio()
+        );
+        
+        // Validar que la reserva no haya empezado
+        LocalDateTime ahora = LocalDateTime.now();
+        if (fechaHoraReserva.isBefore(ahora) || fechaHoraReserva.equals(ahora)) {
+            resultado.setPuedeCancelar(false);
+            resultado.setMensaje("No puedes cancelar una reserva que ya comenzó");
+            return resultado;
+        }
+        
+        // Obtener política de cancelación del espacio
+        EspacioReservable espacio = primerDetalle.getEspacioReservable();
+        com.example.tureserva.modelo.PoliticaCancelacion politica = espacio.getPoliticaCancelacion();
+        
+        // Si NO hay política, usar regla por defecto (1 hora antes)
+        if (politica == null) {
+            LocalDateTime limiteDefault = fechaHoraReserva.minusHours(1);
+            if (ahora.isAfter(limiteDefault)) {
+                resultado.setCumplePolitica(false);
+                if (reserva.requirioSenia()) {
+                    resultado.setPierdeSenia(true);
+                    resultado.setMensaje("Cancelar con menos de 1 hora de anticipación implica perder la seña pagada. El complejo retendrá el monto como compensación.");
+                } else {
+                    resultado.setMensaje("No puedes cancelar con menos de 1 hora de anticipación");
+                }
+            }
+            return resultado;
+        }
+        
+        // Si hay política, validar las horas de anticipación mínima
+        int horasAnticipacion = politica.getHorasAnticipacionMinima();
+        LocalDateTime tiempoLimite = fechaHoraReserva.minusHours(horasAnticipacion);
+        resultado.setPoliticaNombre(politica.getNombre());
+        resultado.setHorasAnticipacionRequeridas(horasAnticipacion);
+        
+        if (ahora.isAfter(tiempoLimite)) {
+            resultado.setCumplePolitica(false);
+            if (reserva.requirioSenia()) {
+                resultado.setPierdeSenia(true);
+                resultado.setMensaje(String.format(
+                    "Cancelar con menos de %d hora(s) de anticipación implica perder la seña pagada. El complejo retendrá el monto según su política '%s'.",
+                    horasAnticipacion, politica.getNombre()
+                ));
+            } else {
+                resultado.setMensaje(String.format(
+                    "No puedes cancelar con menos de %d hora(s) de anticipación (política: %s)",
+                    horasAnticipacion, politica.getNombre()
+                ));
+            }
+        }
+        
+        return resultado;
+    }
+    
+    /**
      * Valida si una reprogramación cumple con la política de cancelación.
      * Similar a cancelación pero adaptado para reprogramaciones.
      */
@@ -883,9 +966,9 @@ public class ServicioReserva {
                 resultado.setCumplePolitica(false);
                 if (reserva.requirioSenia()) {
                     resultado.setPierdeSenia(true);
-                    resultado.setMensaje("Reprogramar con menos de 1 hora de anticipación implica que el complejo se quedará con la seña pagada. Deberás pagar una nueva seña para confirmar la reprogramación.");
+                    resultado.setMensaje("Reprogramar con menos de 1 hora de anticipación implica perder la seña pagada. El complejo retendrá la seña original y deberás pagar una nueva seña para asegurar la nueva fecha y horario.");
                 } else {
-                    resultado.setMensaje("Se requiere al menos 1 hora de anticipación para reprogramar");
+                    resultado.setMensaje("Se requiere al menos 1 hora de anticipación para reprogramar sin costo adicional");
                 }
             }
             return resultado;
@@ -902,18 +985,53 @@ public class ServicioReserva {
             if (reserva.requirioSenia()) {
                 resultado.setPierdeSenia(true);
                 resultado.setMensaje(String.format(
-                    "Cancelar con menos de %d hora(s) de anticipación implica que el complejo se quedará con la seña pagada (política: %s).",
+                    "Reprogramar con menos de %d hora(s) de anticipación implica perder la seña pagada. El complejo retendrá la seña original según su política '%s' y deberás pagar una nueva seña para asegurar la nueva fecha y horario.",
                     horasAnticipacion, politica.getNombre()
                 ));
             } else {
                 resultado.setMensaje(String.format(
-                    "Se requieren al menos %d hora(s) de anticipación para reprogramar (política: %s)",
+                    "Se requieren al menos %d hora(s) de anticipación para reprogramar sin costo adicional (política: %s)",
                     horasAnticipacion, politica.getNombre()
                 ));
             }
         }
         
         return resultado;
+    }
+    
+    /**
+     * Clase interna para representar el resultado de una validación de cancelación.
+     */
+    public static class ResultadoValidacionCancelacion {
+        private boolean puedeCancelar;
+        private boolean cumplePolitica;
+        private boolean requiereSenia;
+        private boolean pierdeSenia;
+        private String mensaje;
+        private String politicaNombre;
+        private Integer horasAnticipacionRequeridas;
+        
+        // Getters y setters
+        public boolean isPuedeCancelar() { return puedeCancelar; }
+        public void setPuedeCancelar(boolean puedeCancelar) { this.puedeCancelar = puedeCancelar; }
+        
+        public boolean isCumplePolitica() { return cumplePolitica; }
+        public void setCumplePolitica(boolean cumplePolitica) { this.cumplePolitica = cumplePolitica; }
+        
+        public boolean isRequiereSenia() { return requiereSenia; }
+        public void setRequiereSenia(boolean requiereSenia) { this.requiereSenia = requiereSenia; }
+        
+        public boolean isPierdeSenia() { return pierdeSenia; }
+        public void setPierdeSenia(boolean pierdeSenia) { this.pierdeSenia = pierdeSenia; }
+        
+        public String getMensaje() { return mensaje; }
+        public void setMensaje(String mensaje) { this.mensaje = mensaje; }
+        
+        public String getPoliticaNombre() { return politicaNombre; }
+        public void setPoliticaNombre(String politicaNombre) { this.politicaNombre = politicaNombre; }
+        
+        public Integer getHorasAnticipacionRequeridas() { return horasAnticipacionRequeridas; }
+        public void setHorasAnticipacionRequeridas(Integer horasAnticipacionRequeridas) { this.horasAnticipacionRequeridas = horasAnticipacionRequeridas; }
     }
     
     /**
@@ -1288,6 +1406,26 @@ public class ServicioReserva {
         
         // Guardar la nueva reserva
         Reserva reservaGuardada = repositorioReserva.save(nuevaReserva);
+        
+        // CRÍTICO: Reasignar todos los pagos de la reserva original a la nueva
+        // Esto mantiene el historial de pagos (seña, pago completo) asociados correctamente
+        List<Pago> pagosOriginales = repositorioPago.findByReservaOrderByFechaPagoAsc(reservaCargada);
+        if (!pagosOriginales.isEmpty()) {
+            logger.info("Reasignando {} pago(s) de reserva {} a reserva {}", 
+                    pagosOriginales.size(), 
+                    reservaCargada.getCodigoReserva(), 
+                    reservaGuardada.getCodigoReserva());
+            
+            for (Pago pago : pagosOriginales) {
+                pago.setReserva(reservaGuardada);
+                repositorioPago.save(pago);
+                logger.debug("Pago {} ({}) reasignado: {} → {}", 
+                        pago.getId(), 
+                        pago.getTipoPago(), 
+                        reservaCargada.getCodigoReserva(), 
+                        reservaGuardada.getCodigoReserva());
+            }
+        }
         
         logger.info("Reserva reprogramada: original {} → nueva {} (fecha: {} → {}, hora: {} → {})",
                 reservaOriginal.getCodigoReserva(),

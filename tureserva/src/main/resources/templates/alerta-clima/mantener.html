@@ -46,10 +46,18 @@
                             <p class="mb-0"><strong>Complejo:</strong> <span th:text="${reserva.detalles[0].espacioReservable.complejoDeportivo.nombre_complejo}"></span></p>
                         </div>
                         
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            <strong>Recuerda:</strong> Aunque decidas mantener tu reserva, te recomendamos verificar 
-                            las condiciones climáticas antes de asistir.
+                        <div class="alert alert-info">
+                            <i class="bi bi-cloud-sun me-2"></i>
+                            <h5 class="alert-heading">☁️ Condiciones Climáticas Adversas</h5>
+                            <p>
+                                Has recibido esta alerta porque se pronostican condiciones climáticas que podrían afectar tu experiencia. 
+                                Al mantener tu reserva, confirmas que asistirás independientemente del clima.
+                            </p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Recomendación:</strong> Te sugerimos verificar el pronóstico actualizado antes de tu llegada. 
+                                Si las condiciones empeoran, recuerda que puedes reprogramar o cancelar según las políticas del complejo.
+                            </p>
                         </div>
                         
                         <form th:action="@{/alerta-clima/mantener/{id}(id=${reserva.id})}" method="post" class="text-center">

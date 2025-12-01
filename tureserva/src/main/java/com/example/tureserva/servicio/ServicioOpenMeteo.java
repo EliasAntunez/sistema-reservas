@@ -1,12 +1,17 @@
 package com.example.tureserva.servicio;
 
 import com.example.tureserva.servicio.dto.RespuestaClimaDTO;
+import com.example.tureserva.servicio.dto.TipoPrecipitacion;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,13 +22,13 @@ import java.util.List;
 /**
  * Servicio para consultar la API de Open-Meteo y obtener pronósticos del clima.
  * Documentación: https://open-meteo.com/en/docs
+ * Incluye validaciones robustas y manejo de errores mejorado.
  */
 @Service
 public class ServicioOpenMeteo {
     
     private static final Logger log = LoggerFactory.getLogger(ServicioOpenMeteo.class);
-    
-    private static final String OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
+    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
     
     /**
      * Códigos WMO que indican condiciones climáticas adversas (lluvia, tormenta, nieve).
@@ -44,9 +49,18 @@ public class ServicioOpenMeteo {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     
-    public ServicioOpenMeteo() {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
+    @Value("${clima.api.base-url:https://api.open-meteo.com/v1}")
+    private String apiBaseUrl;
+    
+    /**
+     * Constructor con inyección de dependencias.
+     * Usa RestTemplate configurado con timeouts para evitar bloqueos.
+     */
+    public ServicioOpenMeteo(
+            @Qualifier("openMeteoRestTemplate") RestTemplate restTemplate,
+            ObjectMapper objectMapper) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
     }
     
     /**
@@ -61,19 +75,24 @@ public class ServicioOpenMeteo {
     public RespuestaClimaDTO consultarClima(BigDecimal latitud, BigDecimal longitud, 
                                             LocalDateTime fechaHora, Integer umbralProbabilidad) {
         try {
+            // Validar parámetros de entrada
+            validarParametros(latitud, longitud, fechaHora);
+            
             // Formatear fecha para la API (ISO 8601: yyyy-MM-dd)
             String fecha = fechaHora.toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE);
             String fechaFin = fechaHora.toLocalDate().plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE);
             
-            // Construir URL de la API
-            String url = String.format(
-                "%s?latitude=%s&longitude=%s&start_date=%s&end_date=%s&hourly=temperature_2m,precipitation_probability,weathercode&timezone=auto",
-                OPEN_METEO_URL,
-                latitud.toString(),
-                longitud.toString(),
-                fecha,
-                fechaFin
-            );
+            // Construir URL de la API de forma segura
+            String url = UriComponentsBuilder
+                .fromHttpUrl(apiBaseUrl + "/forecast")
+                .queryParam("latitude", latitud)
+                .queryParam("longitude", longitud)
+                .queryParam("start_date", fecha)
+                .queryParam("end_date", fechaFin)
+                .queryParam("hourly", "temperature_2m,precipitation_probability,weathercode,precipitation")
+                .queryParam("timezone", "auto")
+                .build()
+                .toUriString();
             
             log.debug("Consultando clima en Open-Meteo: {}", url);
             
@@ -114,7 +133,7 @@ public class ServicioOpenMeteo {
             Double temperatura = tempNode.get(indice).asDouble();
             
             // Mapear código WMO a tipo de precipitación
-            com.example.tureserva.servicio.dto.TipoPrecipitacion tipo = mapCodigoATipo(codigoClima);
+            TipoPrecipitacion tipo = mapCodigoATipo(codigoClima);
 
             // Determinar si hay mal clima con el umbral proporcionado (compatibilidad)
             boolean hayMalClima = probabilidadLluvia >= (umbralProbabilidad != null ? umbralProbabilidad : 0);
@@ -134,9 +153,36 @@ public class ServicioOpenMeteo {
                 temperatura
             );
             
+        } catch (IllegalArgumentException e) {
+            log.error("Parámetros inválidos: {}", e.getMessage());
+            return crearRespuestaError("Parámetros inválidos: " + e.getMessage());
+        } catch (RestClientException e) {
+            log.error("Error de conectividad con Open-Meteo: {}", e.getMessage());
+            return crearRespuestaError("Error de conectividad: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Error al consultar API de Open-Meteo: {}", e.getMessage(), e);
-            return crearRespuestaError();
+            log.error("Error inesperado consultando clima: {}", e.getMessage(), e);
+            return crearRespuestaError("Error inesperado: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Valida que los parámetros de entrada sean correctos.
+     */
+    private void validarParametros(BigDecimal latitud, BigDecimal longitud, LocalDateTime fechaHora) {
+        if (latitud == null || longitud == null) {
+            throw new IllegalArgumentException("Latitud y longitud son obligatorios");
+        }
+        if (latitud.compareTo(new BigDecimal("-90")) < 0 || latitud.compareTo(new BigDecimal("90")) > 0) {
+            throw new IllegalArgumentException("Latitud debe estar entre -90 y 90");
+        }
+        if (longitud.compareTo(new BigDecimal("-180")) < 0 || longitud.compareTo(new BigDecimal("180")) > 0) {
+            throw new IllegalArgumentException("Longitud debe estar entre -180 y 180");
+        }
+        if (fechaHora == null) {
+            throw new IllegalArgumentException("Fecha y hora son obligatorios");
+        }
+        if (fechaHora.isBefore(LocalDateTime.now().minusDays(1))) {
+            throw new IllegalArgumentException("No se puede consultar clima del pasado");
         }
     }
     
@@ -187,29 +233,41 @@ public class ServicioOpenMeteo {
     
     /**
      * Crea una respuesta de error por defecto.
+     * hayMalClima = false para no generar alertas en caso de error.
      */
     private RespuestaClimaDTO crearRespuestaError() {
+        return crearRespuestaError("Error al consultar el clima");
+    }
+    
+    /**
+     * Crea una respuesta de error con mensaje personalizado.
+     */
+    private RespuestaClimaDTO crearRespuestaError(String mensaje) {
         return new RespuestaClimaDTO(
             false,  // Asumir no hay mal clima en caso de error (evitar alertas falsas)
             0,
             null,
-            "Error al consultar el clima",
-            com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO,
+            "Error: " + mensaje,
+            null,  // Sin tipo de precipitación en error
             null,
             null
         );
     }
 
-    private com.example.tureserva.servicio.dto.TipoPrecipitacion mapCodigoATipo(Integer codigo) {
-        if (codigo == null) return com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO;
+    /**
+     * Mapea código WMO a tipo de precipitación.
+     * Retorna null si el código no corresponde a precipitación (despejado, nublado, niebla).
+     */
+    private TipoPrecipitacion mapCodigoATipo(Integer codigo) {
+        if (codigo == null) return null;
 
         return switch (codigo) {
-            case 51, 53, 55, 56, 57 -> com.example.tureserva.servicio.dto.TipoPrecipitacion.LLOVIZNA;
-            case 61, 63, 65, 66, 67 -> com.example.tureserva.servicio.dto.TipoPrecipitacion.LLUVIA;
-            case 80, 81, 82, 85, 86 -> com.example.tureserva.servicio.dto.TipoPrecipitacion.CHAPARRON;
-            case 95, 96, 99 -> com.example.tureserva.servicio.dto.TipoPrecipitacion.TORMENTA;
-            case 71, 73, 75 -> com.example.tureserva.servicio.dto.TipoPrecipitacion.NIEVE;
-            default -> com.example.tureserva.servicio.dto.TipoPrecipitacion.OTRO;
+            case 51, 53, 55, 56, 57 -> TipoPrecipitacion.LLOVIZNA;
+            case 61, 63, 65, 66, 67 -> TipoPrecipitacion.LLUVIA;
+            case 80, 81, 82, 85, 86 -> TipoPrecipitacion.CHAPARRON;
+            case 95, 96, 99 -> TipoPrecipitacion.TORMENTA;
+            case 71, 73, 75 -> TipoPrecipitacion.NIEVE;
+            default -> null;  // No es precipitación (despejado, nublado, niebla, etc)
         };
     }
 }

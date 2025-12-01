@@ -244,26 +244,19 @@ public class ControladorAlertaClima {
                 return "alerta-clima/error";
             }
             
-            // Verificar si el espacio requiere seña
-            DetalleReserva primerDetalle = reserva.getDetalles().get(0);
-            EspacioReservable espacio = primerDetalle.getEspacioReservable();
-            boolean requiereSenia = espacio.getPoliticaSenia() != null;
+            // Validar política de cancelación
+            ServicioReserva.ResultadoValidacionCancelacion validacion = 
+                servicioReserva.validarCancelacion(reserva);
             
-            boolean cumplePolitica = true;
-            String mensajePolitica = null;
-            
-            if (requiereSenia) {
-                // Validar política de cancelación (similar a la de reprogramación)
-                ServicioReserva.ResultadoValidacionReprogramacion validacion = 
-                    servicioReserva.validarReprogramacion(reserva);
-                cumplePolitica = validacion.isCumplePolitica();
-                mensajePolitica = validacion.getMensaje();
+            if (!validacion.isPuedeCancelar()) {
+                model.addAttribute("error", validacion.getMensaje());
+                return "alerta-clima/error";
             }
             
             model.addAttribute("reserva", reserva);
-            model.addAttribute("requiereSenia", requiereSenia);
-            model.addAttribute("cumplePolitica", cumplePolitica);
-            model.addAttribute("mensajePolitica", mensajePolitica);
+            model.addAttribute("requiereSenia", validacion.isRequiereSenia());
+            model.addAttribute("cumplePolitica", validacion.isCumplePolitica());
+            model.addAttribute("mensajePolitica", validacion.getMensaje());
             
             return "alerta-clima/cancelar";
             
