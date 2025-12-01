@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Configuración de Alertas Climáticas</title>
+    <style>
+        .config-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .config-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .config-icon {
+            font-size: 40px;
+        }
+        
+        .config-title h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #1f2937;
+        }
+        
+        .config-title p {
+            margin: 5px 0 0 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        
+        .form-section {
+            margin-bottom: 25px;
+        }
+        
+        .form-section h3 {
+            font-size: 18px;
+            color: #374151;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .form-help {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .estrategia-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .estrategia-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .estrategia-card:hover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        
+        .estrategia-card.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        
+        .estrategia-card input[type="radio"] {
+            margin-right: 10px;
+        }
+        
+        .estrategia-card h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            color: #1f2937;
+        }
+        
+        .estrategia-card p {
+            margin: 0;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        .dynamic-fields {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 26px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #10b981;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .info-box {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h4 {
+            margin: 0 0 8px 0;
+            color: #1e40af;
+            font-size: 15px;
+        }
+        
+        .info-box p {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .warning-box {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .warning-box h4 {
+            margin: 0 0 8px 0;
+            color: #92400e;
+            font-size: 15px;
+        }
+        
+        .warning-box p {
+            margin: 0;
+            color: #78350f;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        
+        .btn-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background-color: #d97706;
+        }
+        
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        
+        .test-section {
+            background-color: #fef3c7;
+            border: 2px dashed #f59e0b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .test-section h3 {
+            margin: 0 0 10px 0;
+            color: #92400e;
+            font-size: 18px;
+        }
+        
+        .test-section p {
+            color: #78350f;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .estrategia-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="container mt-4">
+        <div class="config-card">
+            <div class="config-header">
+                <div class="config-icon">🌦️</div>
+                <div class="config-title">
+                    <h2>Configuración de Alertas Climáticas</h2>
+                    <p>Configura cuándo y cómo recibir alertas sobre condiciones climáticas adversas</p>
+                </div>
+            </div>
+            
+            <!-- Alertas de feedback -->
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                <strong>✅ Éxito:</strong> <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                <strong>❌ Error:</strong> <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            
+            <div th:if="${warning}" class="alert alert-warning alert-dismissible fade show">
+                <strong>⚠️ Advertencia:</strong> <span th:text="${warning}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            
+            <!-- Info del complejo -->
+            <div class="info-box">
+                <h4>📍 Complejo: <span th:text="${complejo.nombre_complejo}"></span></h4>
+                <p>
+                    Ubicación: Lat <span th:text="${#numbers.formatDecimal(complejo.latitud, 1, 6)}"></span>, 
+                    Lon <span th:text="${#numbers.formatDecimal(complejo.longitud, 1, 6)}"></span>
+                </p>
+            </div>
+            
+            <!-- Formulario -->
+            <form th:action="@{/admin-complejo/alertas-clima/guardar}" method="post" id="formConfiguracion">
+                <input type="hidden" name="complejoId" th:value="${complejo.id_complejo}">
+                
+                <!-- Sección 1: Estrategia de Alerta -->
+                <div class="form-section">
+                    <h3>1️⃣ Estrategia de Alerta</h3>
+                    
+                    <div class="estrategia-options">
+                        <label class="estrategia-card" id="cardHorasAntes">
+                            <input type="radio" name="estrategia" value="HORAS_ANTES" 
+                                   th:checked="${configuracion != null && configuracion.estrategia.name() == 'HORAS_ANTES'}"
+                                   required>
+                            <h4>⏰ Horas Antes</h4>
+                            <p>Alerta X horas antes de cada reserva</p>
+                        </label>
+                        
+                        <label class="estrategia-card" id="cardHorarioFijo">
+                            <input type="radio" name="estrategia" value="HORARIO_FIJO"
+                                   th:checked="${configuracion != null && configuracion.estrategia.name() == 'HORARIO_FIJO'}">
+                            <h4>🕐 Horario Fijo</h4>
+                            <p>Alerta a la misma hora todos los días</p>
+                        </label>
+                    </div>
+                    
+                    <!-- Campos dinámicos según estrategia -->
+                    <div id="camposHorasAntes" class="dynamic-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="horasAnticipacion">Horas de Anticipación</label>
+                            <input type="number" id="horasAnticipacion" name="horasAnticipacion" 
+                                   min="1" max="168" 
+                                   th:value="${configuracion != null ? configuracion.horasAnticipacion : 24}">
+                            <div class="form-help">
+                                Ejemplo: 24 = alertar 24 horas antes de cada reserva
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="camposHorarioFijo" class="dynamic-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="horarioFijo">Horario de Notificación</label>
+                            <input type="time" id="horarioFijo" name="horarioFijo"
+                                   th:value="${configuracion != null && configuracion.horarioFijo != null ? 
+                                            #temporals.format(configuracion.horarioFijo, 'HH:mm') : '06:00'}">
+                            <div class="form-help">
+                                Se enviará una alerta a esta hora para todas las reservas del día
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección 2: Umbral de Probabilidad -->
+                <div class="form-section">
+                    <h3>2️⃣ Sensibilidad de Alerta</h3>
+                    
+                    <div class="form-group">
+                        <label for="umbralProbabilidad">
+                            Umbral de Probabilidad de Lluvia (%)
+                        </label>
+                        <input type="range" id="umbralProbabilidad" name="umbralProbabilidad" 
+                               min="0" max="100" step="5"
+                               th:value="${configuracion != null ? configuracion.umbralProbabilidad : 50}"
+                               oninput="document.getElementById('umbralValor').textContent = this.value">
+                        <div style="text-align: center; font-size: 24px; font-weight: bold; color: #3b82f6; margin-top: 10px;">
+                            <span id="umbralValor" th:text="${configuracion != null ? configuracion.umbralProbabilidad : 50}">50</span>%
+                        </div>
+                        <div class="form-help">
+                            Se enviará alerta cuando la probabilidad de lluvia sea igual o mayor a este valor
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" style="margin-top:20px;">
+                        <label>Umbrales por Tipo de Precipitación (opcionales)</label>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:10px;">
+                            <div>
+                                <label for="umbralLlovizna">Llovizna (%)</label>
+                                <input type="number" id="umbralLlovizna" name="umbralLlovizna" min="0" max="100"
+                                       th:value="${configuracion != null && configuracion.umbralLlovizna != null ? configuracion.umbralLlovizna : ''}">
+                            </div>
+                            <div>
+                                <label for="umbralLluvia">Lluvia (%)</label>
+                                <input type="number" id="umbralLluvia" name="umbralLluvia" min="0" max="100"
+                                       th:value="${configuracion != null && configuracion.umbralLluvia != null ? configuracion.umbralLluvia : ''}">
+                            </div>
+                            <div>
+                                <label for="umbralChubascos">Chaparrón (%)</label>
+                                <input type="number" id="umbralChubascos" name="umbralChubascos" min="0" max="100"
+                                       th:value="${configuracion != null && configuracion.umbralChubascos != null ? configuracion.umbralChubascos : ''}">
+                            </div>
+                            <div>
+                                <label for="umbralTormenta">Tormenta (%)</label>
+                                <input type="number" id="umbralTormenta" name="umbralTormenta" min="0" max="100"
+                                       th:value="${configuracion != null && configuracion.umbralTormenta != null ? configuracion.umbralTormenta : ''}">
+                            </div>
+                            <div>
+                                <label for="umbralNieve">Nieve (%)</label>
+                                <input type="number" id="umbralNieve" name="umbralNieve" min="0" max="100"
+                                       th:value="${configuracion != null && configuracion.umbralNieve != null ? configuracion.umbralNieve : ''}">
+                            </div>
+                            <div>
+                                <label for="umbralOtro">Otro (%)</label>
+                                <input type="number" id="umbralOtro" name="umbralOtro" min="0" max="100"
+                                       th:value="${configuracion != null && configuracion.umbralOtro != null ? configuracion.umbralOtro : ''}">
+                            </div>
+                        </div>
+                        <div class="form-help">
+                            Si dejas estos campos vacíos, se usará el umbral general configurado arriba.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sección 3: Activar/Desactivar -->
+                <div class="form-section">
+                    <h3>3️⃣ Estado del Sistema</h3>
+                    
+                    <div class="form-group">
+                        <div class="switch-container">
+                            <label class="switch">
+                                <input type="checkbox" id="activo" name="activo" 
+                                       th:checked="${configuracion != null && configuracion.activo}">
+                                <span class="slider"></span>
+                            </label>
+                            <label for="activo" style="cursor: pointer; font-weight: 600; color: #374151;">
+                                Alertas Climáticas Activas
+                            </label>
+                        </div>
+                        <div class="form-help">
+                            Desactiva esta opción si no deseas recibir alertas temporalmente
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botones -->
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">
+                        💾 Guardar Configuración
+                    </button>
+                    <a th:href="@{/admin-complejo/dashboard}" class="btn btn-secondary">
+                        ← Volver al Dashboard
+                    </a>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Sección de Prueba -->
+        <div class="config-card test-section">
+            <h3>🧪 Modo de Prueba</h3>
+            <p>
+                Envía alertas climáticas inmediatamente a <strong>todas</strong> las reservas confirmadas 
+                de tu complejo, sin importar la fecha. Útil para probar el sistema antes de la demostración.
+            </p>
+            
+            <div class="warning-box" style="margin-bottom: 15px;">
+                <h4>⚠️ Advertencia</h4>
+                <p>
+                    Esta acción enviará emails reales a todos los clientes con reservas confirmadas. 
+                    Úsala solo para demostración con el profesor.
+                </p>
+            </div>
+            
+            <form th:action="@{/admin-complejo/alertas-clima/avisar-ahora}" method="post" 
+                  onsubmit="return confirm('⚠️ ¿Seguro que deseas enviar alertas a TODAS las reservas confirmadas? Se enviarán emails reales a los clientes.');">
+                <input type="hidden" name="complejoId" th:value="${complejo.id_complejo}">
+                <button type="submit" class="btn btn-warning">
+                    📢 Avisar Ahora a Todas las Reservas
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // Manejo de cambio de estrategia
+        document.querySelectorAll('input[name="estrategia"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Ocultar todos los campos dinámicos
+                document.getElementById('camposHorasAntes').style.display = 'none';
+                document.getElementById('camposHorarioFijo').style.display = 'none';
+                
+                // Remover selección visual
+                document.querySelectorAll('.estrategia-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // Mostrar campos correspondientes
+                if (this.value === 'HORAS_ANTES') {
+                    document.getElementById('camposHorasAntes').style.display = 'block';
+                    document.getElementById('cardHorasAntes').classList.add('selected');
+                } else if (this.value === 'HORARIO_FIJO') {
+                    document.getElementById('camposHorarioFijo').style.display = 'block';
+                    document.getElementById('cardHorarioFijo').classList.add('selected');
+                }
+            });
+        });
+        
+        // Inicializar vista al cargar
+        window.addEventListener('DOMContentLoaded', function() {
+            const estrategiaSeleccionada = document.querySelector('input[name="estrategia"]:checked');
+            if (estrategiaSeleccionada) {
+                estrategiaSeleccionada.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        // Click en la card selecciona el radio
+        document.querySelectorAll('.estrategia-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'INPUT') {
+                    const radio = this.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    </script>
+</div>
+</body>
+</html>

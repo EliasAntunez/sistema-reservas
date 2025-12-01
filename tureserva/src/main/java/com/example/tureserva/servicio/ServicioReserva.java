@@ -842,6 +842,116 @@ public class ServicioReserva {
     }
     
     /**
+     * Valida si una reprogramación cumple con la política de cancelación.
+     * Similar a cancelación pero adaptado para reprogramaciones.
+     */
+    public ResultadoValidacionReprogramacion validarReprogramacion(Reserva reserva) {
+        ResultadoValidacionReprogramacion resultado = new ResultadoValidacionReprogramacion();
+        resultado.setPuedeReprogramar(true);
+        resultado.setCumplePolitica(true);
+        resultado.setRequiereSenia(reserva.requirioSenia());
+        resultado.setPierdeSenia(false);
+        
+        if (reserva.getDetalles().isEmpty()) {
+            resultado.setPuedeReprogramar(false);
+            resultado.setMensaje("La reserva no tiene detalles");
+            return resultado;
+        }
+        
+        DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+        LocalDateTime fechaHoraReserva = LocalDateTime.of(
+            primerDetalle.getFechaReserva(),
+            primerDetalle.getHoraInicio()
+        );
+        
+        // Validar que la reserva no haya empezado
+        LocalDateTime ahora = LocalDateTime.now();
+        if (fechaHoraReserva.isBefore(ahora) || fechaHoraReserva.equals(ahora)) {
+            resultado.setPuedeReprogramar(false);
+            resultado.setMensaje("No puedes reprogramar una reserva que ya comenzó");
+            return resultado;
+        }
+        
+        // Obtener política de cancelación del espacio
+        EspacioReservable espacio = primerDetalle.getEspacioReservable();
+        com.example.tureserva.modelo.PoliticaCancelacion politica = espacio.getPoliticaCancelacion();
+        
+        // Si NO hay política, usar regla por defecto (1 hora antes)
+        if (politica == null) {
+            LocalDateTime limiteDefault = fechaHoraReserva.minusHours(1);
+            if (ahora.isAfter(limiteDefault)) {
+                resultado.setCumplePolitica(false);
+                if (reserva.requirioSenia()) {
+                    resultado.setPierdeSenia(true);
+                    resultado.setMensaje("Reprogramar con menos de 1 hora de anticipación implica que el complejo se quedará con la seña pagada. Deberás pagar una nueva seña para confirmar la reprogramación.");
+                } else {
+                    resultado.setMensaje("Se requiere al menos 1 hora de anticipación para reprogramar");
+                }
+            }
+            return resultado;
+        }
+        
+        // Si hay política, validar las horas de anticipación mínima
+        int horasAnticipacion = politica.getHorasAnticipacionMinima();
+        LocalDateTime tiempoLimite = fechaHoraReserva.minusHours(horasAnticipacion);
+        resultado.setPoliticaNombre(politica.getNombre());
+        resultado.setHorasAnticipacionRequeridas(horasAnticipacion);
+        
+        if (ahora.isAfter(tiempoLimite)) {
+            resultado.setCumplePolitica(false);
+            if (reserva.requirioSenia()) {
+                resultado.setPierdeSenia(true);
+                resultado.setMensaje(String.format(
+                    "Cancelar con menos de %d hora(s) de anticipación implica que el complejo se quedará con la seña pagada (política: %s).",
+                    horasAnticipacion, politica.getNombre()
+                ));
+            } else {
+                resultado.setMensaje(String.format(
+                    "Se requieren al menos %d hora(s) de anticipación para reprogramar (política: %s)",
+                    horasAnticipacion, politica.getNombre()
+                ));
+            }
+        }
+        
+        return resultado;
+    }
+    
+    /**
+     * Clase interna para representar el resultado de una validación de reprogramación.
+     */
+    public static class ResultadoValidacionReprogramacion {
+        private boolean puedeReprogramar;
+        private boolean cumplePolitica;
+        private boolean requiereSenia;
+        private boolean pierdeSenia;
+        private String mensaje;
+        private String politicaNombre;
+        private Integer horasAnticipacionRequeridas;
+        
+        // Getters y setters
+        public boolean isPuedeReprogramar() { return puedeReprogramar; }
+        public void setPuedeReprogramar(boolean puedeReprogramar) { this.puedeReprogramar = puedeReprogramar; }
+        
+        public boolean isCumplePolitica() { return cumplePolitica; }
+        public void setCumplePolitica(boolean cumplePolitica) { this.cumplePolitica = cumplePolitica; }
+        
+        public boolean isRequiereSenia() { return requiereSenia; }
+        public void setRequiereSenia(boolean requiereSenia) { this.requiereSenia = requiereSenia; }
+        
+        public boolean isPierdeSenia() { return pierdeSenia; }
+        public void setPierdeSenia(boolean pierdeSenia) { this.pierdeSenia = pierdeSenia; }
+        
+        public String getMensaje() { return mensaje; }
+        public void setMensaje(String mensaje) { this.mensaje = mensaje; }
+        
+        public String getPoliticaNombre() { return politicaNombre; }
+        public void setPoliticaNombre(String politicaNombre) { this.politicaNombre = politicaNombre; }
+        
+        public Integer getHorasAnticipacionRequeridas() { return horasAnticipacionRequeridas; }
+        public void setHorasAnticipacionRequeridas(Integer horasAnticipacionRequeridas) { this.horasAnticipacionRequeridas = horasAnticipacionRequeridas; }
+    }
+    
+    /**
      * Clase interna para representar el resultado de una cancelación.
      */
     public static class ResultadoCancelacion {
@@ -1039,5 +1149,154 @@ public class ServicioReserva {
                        horaFin.isAfter(detalle.getHoraInicio());
             })
             .collect(Collectors.toList());
+    }
+    
+    /**
+     * Obtiene los horarios de inicio disponibles para un espacio en una fecha específica.
+     * Útil para reprogramación de reservas por alertas climáticas.
+     * 
+     * @param espacioId ID del espacio
+     * @param fecha Fecha para la que se buscan horarios
+     * @return Lista de horarios de inicio disponibles (LocalTime)
+     */
+    public List<LocalTime> obtenerHorariosDisponibles(Long espacioId, LocalDate fecha) {
+        EspacioReservable espacio = repositorioEspacioReservable.findById(espacioId)
+            .orElseThrow(() -> new EntityNotFoundException("Espacio no encontrado con ID: " + espacioId));
+        
+        List<IntervaloDisponible> intervalos = generarIntervalosDisponibles(espacio, fecha);
+        
+        return intervalos.stream()
+            .map(intervalo -> intervalo.horaInicio())
+            .sorted()
+            .distinct()
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Crea una nueva reserva por reprogramación de una reserva existente.
+     * Mantiene todos los datos de la reserva original (cliente, espacio, monto, pagos)
+     * pero con nueva fecha y hora.
+     * 
+     * @param reservaOriginal Reserva original que se está reprogramando
+     * @param nuevaFecha Nueva fecha para la reserva
+     * @param nuevaHora Nueva hora de inicio
+     * @return Nueva reserva creada y guardada con estado CONFIRMADA
+     */
+    @Transactional
+    public Reserva crearReservaPorReprogramacion(Reserva reservaOriginal, 
+                                                  LocalDate nuevaFecha, 
+                                                  LocalTime nuevaHora) {
+        logger.info("Creando nueva reserva por reprogramación de reserva {}", reservaOriginal.getId());
+        
+        // Cargar la reserva original con sus detalles y servicios adicionales en sesión
+        Reserva reservaCargada = repositorioReserva.findByIdWithDetalles(reservaOriginal.getId())
+            .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada: " + reservaOriginal.getId()));
+        
+        // Cargar servicios adicionales
+        List<com.example.tureserva.modelo.DetalleServicioAdicional> servicios = 
+            repositorioDetalleServicioAdicional.findByReservaIdWithServicioAdicional(reservaCargada.getId());
+        
+        // Agrupar servicios por detalle
+        Map<Long, List<com.example.tureserva.modelo.DetalleServicioAdicional>> serviciosPorDetalle = 
+            servicios.stream().collect(java.util.stream.Collectors.groupingBy(s -> s.getDetalleReserva().getId()));
+        
+        // Asociar servicios a cada detalle
+        for (DetalleReserva det : reservaCargada.getDetalles()) {
+            List<com.example.tureserva.modelo.DetalleServicioAdicional> lista = serviciosPorDetalle.get(det.getId());
+            det.getServiciosAdicionales().clear();
+            if (lista != null) {
+                det.getServiciosAdicionales().addAll(lista);
+            }
+        }
+        
+        // Crear nueva reserva con datos de la original
+        Reserva nuevaReserva = new Reserva();
+        nuevaReserva.setCliente(reservaCargada.getCliente());
+        nuevaReserva.setFechaReserva(nuevaFecha);
+        nuevaReserva.setFechaCreacion(LocalDateTime.now());
+        nuevaReserva.setEstado(EstadoReserva.CONFIRMADA);
+        nuevaReserva.setMontoTotal(reservaCargada.getMontoTotal());
+        nuevaReserva.setMontoSenia(reservaCargada.getMontoSenia());
+        nuevaReserva.setMontoRestante(reservaCargada.getMontoRestante());
+        nuevaReserva.setReservaOrigenId(reservaCargada.getId());
+        nuevaReserva.setAlertaEnviada(false);
+        
+        // Generar nuevo código de reserva único
+        String codigo;
+        int intentos = 0;
+        int maxIntentos = 10;
+        
+        do {
+            if (intentos > 0) {
+                logger.warn("Colisión de código de reserva en reprogramación. Reintentando... (Intento {})", intentos);
+            }
+            
+            codigo = "RES-" + UUID.randomUUID().toString()
+                                    .substring(0, 6)
+                                    .toUpperCase();
+            
+            intentos++;
+            
+            if (intentos > maxIntentos) {
+                throw new RuntimeException("No se pudo generar un código de reserva único después de " + maxIntentos + " intentos.");
+            }
+            
+        } while (repositorioReserva.existsByCodigoReserva(codigo));
+        
+        nuevaReserva.setCodigoReserva(codigo);
+        
+        // Copiar detalles con nueva fecha/hora
+        for (DetalleReserva detalleOriginal : reservaCargada.getDetalles()) {
+            DetalleReserva nuevoDetalle = new DetalleReserva();
+            nuevoDetalle.setReserva(nuevaReserva);
+            nuevoDetalle.setEspacioReservable(detalleOriginal.getEspacioReservable());
+            nuevoDetalle.setFechaReserva(nuevaFecha);
+            nuevoDetalle.setHoraInicio(nuevaHora);
+            
+            // Calcular duración original y aplicarla
+            long duracionHoras = java.time.Duration.between(
+                detalleOriginal.getHoraInicio(), 
+                detalleOriginal.getHoraFin()
+            ).toHours();
+            nuevoDetalle.setHoraFin(nuevaHora.plusHours(duracionHoras));
+            
+            nuevoDetalle.setPrecioPorHora(detalleOriginal.getPrecioPorHora());
+            nuevoDetalle.setSubtotal(detalleOriginal.getSubtotal());
+            
+            nuevaReserva.getDetalles().add(nuevoDetalle);
+        }
+        
+        // Copiar servicios adicionales si los había
+        for (DetalleReserva detalleOriginal : reservaCargada.getDetalles()) {
+            DetalleReserva nuevoDetalle = nuevaReserva.getDetalles().get(
+                reservaCargada.getDetalles().indexOf(detalleOriginal)
+            );
+            
+            for (com.example.tureserva.modelo.DetalleServicioAdicional servicioOriginal : 
+                 detalleOriginal.getServiciosAdicionales()) {
+                com.example.tureserva.modelo.DetalleServicioAdicional nuevoServicio = 
+                    new com.example.tureserva.modelo.DetalleServicioAdicional();
+                nuevoServicio.setDetalleReserva(nuevoDetalle);
+                nuevoServicio.setServicioAdicional(servicioOriginal.getServicioAdicional());
+                nuevoServicio.setCantidad(servicioOriginal.getCantidad());
+                nuevoServicio.setPrecioUnitario(servicioOriginal.getPrecioUnitario());
+                nuevoServicio.setSubtotal(servicioOriginal.getSubtotal());
+                
+                nuevoDetalle.getServiciosAdicionales().add(nuevoServicio);
+            }
+        }
+        
+        // Guardar la nueva reserva
+        Reserva reservaGuardada = repositorioReserva.save(nuevaReserva);
+        
+        logger.info("Reserva reprogramada: original {} → nueva {} (fecha: {} → {}, hora: {} → {})",
+                reservaOriginal.getCodigoReserva(),
+                reservaGuardada.getCodigoReserva(),
+                reservaOriginal.getFechaReserva(),
+                nuevaFecha,
+                reservaOriginal.getDetalles().get(0).getHoraInicio(),
+                nuevaHora);
+        
+        return reservaGuardada;
     }
 }

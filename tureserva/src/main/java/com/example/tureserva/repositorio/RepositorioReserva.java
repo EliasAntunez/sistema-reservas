@@ -16,6 +16,20 @@ import java.util.Optional;
 
 @Repository
 public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
+    /**
+     * Encuentra reservas CONFIRMADA cuyo horario ya pasó y no tienen pago completo registrado.
+     * Se asume que el pago completo se registra con TipoPago.PAGO_COMPLETO.
+     * Este método debe ser ajustado si la lógica de pagos cambia.
+     */
+    @Query("SELECT DISTINCT r FROM Reserva r " +
+           "LEFT JOIN FETCH r.detalles d " +
+           "WHERE r.estado = :estado " +
+           "AND (SELECT MAX(d2.horaFin) FROM DetalleReserva d2 WHERE d2.reserva = r) IS NOT NULL " +
+           "AND (r.fechaReserva < :fechaActual OR (r.fechaReserva = :fechaActual AND (SELECT MAX(d2.horaFin) FROM DetalleReserva d2 WHERE d2.reserva = r) < :horaActual)) " +
+           "AND NOT EXISTS (SELECT 1 FROM Pago p WHERE p.reserva = r AND p.tipoPago = 'PAGO_COMPLETO')")
+    List<Reserva> findReservasVencidasSinPago(@Param("fechaActual") java.time.LocalDate fechaActual,
+                                              @Param("horaActual") java.time.LocalTime horaActual,
+                                              @Param("estado") EstadoReserva estado);
     
     /**
      * Encuentra todas las reservas de un cliente
@@ -295,6 +309,54 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
        Page<Long> findIdsByClienteAndEstado(@Param("cliente") Cliente cliente, @Param("estado") EstadoReserva estado, Pageable pageable);
 
        Boolean existsByCodigoReserva(String codigoReserva);
+
+       // ==================== CONSULTAS PARA ALERTAS CLIMÁTICAS ====================
+       
+       /**
+        * Busca reservas para estrategia HORAS_ANTES.
+        * Encuentra reservas confirmadas de un complejo en una fecha y rango horario específicos
+        * que aún no tienen alerta enviada.
+        */
+       @Query("SELECT DISTINCT r FROM Reserva r " +
+              "LEFT JOIN FETCH r.cliente " +
+              "LEFT JOIN FETCH r.detalles d " +
+              "LEFT JOIN FETCH d.espacioReservable e " +
+              "LEFT JOIN FETCH e.complejoDeportivo c " +
+              "WHERE c.id = :complejoId " +
+              "AND r.fechaReserva = :fecha " +
+              "AND d.horaInicio >= :horaInicio " +
+              "AND d.horaInicio <= :horaFin " +
+              "AND r.estado = :estado " +
+              "AND r.alertaEnviada = :alertaEnviada")
+       List<Reserva> findReservasParaAlerta(
+           @Param("complejoId") Long complejoId,
+           @Param("fecha") LocalDate fecha,
+           @Param("horaInicio") java.time.LocalTime horaInicio,
+           @Param("horaFin") java.time.LocalTime horaFin,
+           @Param("estado") EstadoReserva estado,
+           @Param("alertaEnviada") Boolean alertaEnviada
+       );
+       
+       /**
+        * Busca reservas para estrategia HORARIO_FIJO.
+        * Encuentra todas las reservas confirmadas de un complejo en una fecha específica
+        * que aún no tienen alerta enviada.
+        */
+       @Query("SELECT DISTINCT r FROM Reserva r " +
+              "LEFT JOIN FETCH r.cliente " +
+              "LEFT JOIN FETCH r.detalles d " +
+              "LEFT JOIN FETCH d.espacioReservable e " +
+              "LEFT JOIN FETCH e.complejoDeportivo c " +
+              "WHERE c.id = :complejoId " +
+              "AND r.fechaReserva = :fecha " +
+              "AND r.estado = :estado " +
+              "AND r.alertaEnviada = :alertaEnviada")
+       List<Reserva> findReservasPorComplejoFechaEstadoYAlerta(
+           @Param("complejoId") Long complejoId,
+           @Param("fecha") LocalDate fecha,
+           @Param("estado") EstadoReserva estado,
+           @Param("alertaEnviada") Boolean alertaEnviada
+       );
 
        /**
         * Consulta nativa para obtener la ocupación horaria (cantidad de detalles de reserva)

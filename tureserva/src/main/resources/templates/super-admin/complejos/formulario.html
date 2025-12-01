@@ -4,6 +4,7 @@
       layout:decorate="~{layouts/base}">
 <head>
     <title>Nuevo Complejo Deportivo</title>
+    <link rel="stylesheet" th:href="@{/css/buscador-direcciones.css}">
 </head>
 <body>
     <div layout:fragment="content" class="container py-4">
@@ -63,10 +64,33 @@
                                     <div class="form-text">Responsable del complejo</div>
                                 </div>
 
-                                <!-- Dirección -->
+                                <!-- Buscador de Dirección con Autocompletado -->
+                                <div class="col-12 mb-3">
+                                    <label for="direccionBuscador" class="form-label">
+                                        Buscar Dirección <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="position-relative">
+                                        <input type="text" 
+                                               id="direccionBuscador" 
+                                               class="form-control" 
+                                               placeholder="Ej: Av. Costanera 1234, Posadas, Misiones"
+                                               autocomplete="off">
+                                        <ul id="sugerenciasDireccion" 
+                                            class="list-group position-absolute w-100 shadow-sm" 
+                                            style="max-height: 300px; overflow-y: auto; z-index: 1050; display: none;">
+                                        </ul>
+                                    </div>
+                                    <small class="text-muted">Escribe para buscar la dirección y selecciona una sugerencia</small>
+                                </div>
+
+                                <!-- Campos hidden para latitud y longitud -->
+                                <input type="hidden" name="latitud" id="latitud">
+                                <input type="hidden" name="longitud" id="longitud">
+
+                                <!-- Campo de dirección completa (readonly, se llena automáticamente) -->
                                 <div class="col-12 mb-3">
                                     <label for="direccionComplejo" class="form-label">
-                                        Dirección <span class="text-danger">*</span>
+                                        Dirección Seleccionada <span class="text-danger">*</span>
                                     </label>
                                     <input type="text" 
                                            class="form-control" 
@@ -74,32 +98,10 @@
                                            name="direccionComplejo" 
                                            required="required"
                                            minlength="5"
-                                           maxlength="200"
-                                           placeholder="Ej: Av. Principal 123" />
-                                    <div class="form-text">Dirección física del complejo</div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-12 mb-3">
-                                    <h6 class="fw-bold text-primary">Ubicación</h6>
-                                    <small class="text-muted">Seleccione la localidad</small>
-                                </div>
-                                
-                                <!-- Localidad -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="localidadId" class="form-label">
-                                        Localidad <span class="text-danger">*</span>
-                                    </label>
-                                    <select class="form-select" 
-                                            id="localidadId" 
-                                            name="localidadId" 
-                                            required="required">
-                                        <option value="">Seleccione una localidad</option>
-                                        <option th:each="localidad : ${localidades}" 
-                                                th:value="${localidad.id}" 
-                                                th:text="${localidad.nombre}"></option>
-                                    </select>
+                                           maxlength="255"
+                                           readonly
+                                           placeholder="Se llenará al seleccionar una dirección del buscador" />
+                                    <div class="form-text">Dirección física del complejo (se completa automáticamente)</div>
                                 </div>
                             </div>
 
@@ -125,22 +127,187 @@
     </div>
 
     <script layout:fragment="scripts">
-        // Validación del formulario simplificada
+        // ==================== BUSCADOR DE DIRECCIONES CON NOMINATIM ====================
+        (function() {
+            'use strict';
+
+            const buscadorInput = document.getElementById('direccionBuscador');
+            const sugerenciasUl = document.getElementById('sugerenciasDireccion');
+            const latitudInput = document.getElementById('latitud');
+            const longitudInput = document.getElementById('longitud');
+            const direccionInput = document.getElementById('direccionComplejo');
+
+            let debounceTimer;
+            const DEBOUNCE_DELAY = 500; // 500ms
+
+            if (!buscadorInput || !sugerenciasUl) {
+                console.warn('Elementos del buscador de direcciones no encontrados');
+                return;
+            }
+
+            // Event listener para el input con debounce
+            buscadorInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim();
+
+                // Limpiar timer anterior
+                clearTimeout(debounceTimer);
+
+                // Si el input está vacío, limpiar sugerencias
+                if (query.length === 0) {
+                    limpiarSugerencias();
+                    return;
+                }
+
+                // Si tiene menos de 3 caracteres, no buscar aún
+                if (query.length < 3) {
+                    return;
+                }
+
+                // Establecer nuevo timer para debounce
+                debounceTimer = setTimeout(function() {
+                    buscarDirecciones(query);
+                }, DEBOUNCE_DELAY);
+            });
+
+            // Función para buscar direcciones en Nominatim
+            function buscarDirecciones(query) {
+                // Mostrar indicador de carga
+                sugerenciasUl.innerHTML = '<li class="list-group-item text-muted"><i>Buscando...</i></li>';
+                sugerenciasUl.style.display = 'block';
+
+                // Construir URL con parámetros
+                const params = new URLSearchParams({
+                    q: query,
+                    format: 'json',
+                    addressdetails: '1',
+                    limit: '5',
+                    countrycodes: 'ar' // Limitar a Argentina
+                });
+
+                const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+
+                fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta de Nominatim');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    mostrarSugerencias(data);
+                })
+                .catch(error => {
+                    console.error('Error al buscar direcciones:', error);
+                    sugerenciasUl.innerHTML = '<li class="list-group-item text-danger">Error al buscar. Intenta nuevamente.</li>';
+                });
+            }
+
+            // Función para mostrar las sugerencias
+            function mostrarSugerencias(resultados) {
+                sugerenciasUl.innerHTML = '';
+
+                if (resultados.length === 0) {
+                    sugerenciasUl.innerHTML = '<li class="list-group-item text-muted">No se encontraron resultados</li>';
+                    sugerenciasUl.style.display = 'block';
+                    return;
+                }
+
+                resultados.forEach(function(resultado) {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item list-group-item-action';
+                    li.style.cursor = 'pointer';
+                    li.textContent = resultado.display_name;
+
+                    // Almacenar datos en el elemento
+                    li.dataset.lat = resultado.lat;
+                    li.dataset.lon = resultado.lon;
+                    li.dataset.displayName = resultado.display_name;
+
+                    // Event listener para selección
+                    li.addEventListener('click', function() {
+                        seleccionarDireccion(this);
+                    });
+
+                    sugerenciasUl.appendChild(li);
+                });
+
+                sugerenciasUl.style.display = 'block';
+            }
+
+            // Función para seleccionar una dirección
+            function seleccionarDireccion(elemento) {
+                const lat = elemento.dataset.lat;
+                const lon = elemento.dataset.lon;
+                const displayName = elemento.dataset.displayName;
+
+                // Rellenar campos
+                buscadorInput.value = displayName;
+                direccionInput.value = displayName;
+                latitudInput.value = lat;
+                longitudInput.value = lon;
+
+                // Limpiar sugerencias
+                limpiarSugerencias();
+
+                console.log('Dirección seleccionada:', {
+                    direccion: displayName,
+                    lat: lat,
+                    lon: lon
+                });
+            }
+
+            // Función para limpiar sugerencias
+            function limpiarSugerencias() {
+                sugerenciasUl.innerHTML = '';
+                sugerenciasUl.style.display = 'none';
+            }
+
+            // Cerrar sugerencias al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (e.target !== buscadorInput && e.target !== sugerenciasUl && !sugerenciasUl.contains(e.target)) {
+                    limpiarSugerencias();
+                }
+            });
+
+            // Prevenir que el formulario se envíe al presionar Enter en el buscador
+            buscadorInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
+
+        })();
+
+        // ==================== VALIDACIÓN DEL FORMULARIO ====================
         document.getElementById('formComplejo').addEventListener('submit', function(e) {
             const nombreComplejo = document.getElementById('nombreComplejo').value.trim();
             const direccionComplejo = document.getElementById('direccionComplejo').value.trim();
-            const localidadId = document.getElementById('localidadId').value;
+            const latitud = document.getElementById('latitud').value;
+            const longitud = document.getElementById('longitud').value;
             const administradorId = document.getElementById('administradorId').value;
 
-            if (!nombreComplejo || !direccionComplejo || !localidadId || !administradorId) {
+            // Validar campos obligatorios básicos
+            if (!nombreComplejo || !administradorId) {
                 e.preventDefault();
-                alert('Todos los campos marcados con (*) son obligatorios.');
+                alert('El nombre del complejo y el administrador son obligatorios.');
                 return false;
             }
 
             if (nombreComplejo.length < 3) {
                 e.preventDefault();
                 alert('El nombre del complejo debe tener al menos 3 caracteres.');
+                return false;
+            }
+
+            // Validar que se haya usado el buscador de direcciones
+            if (!direccionComplejo || !latitud || !longitud) {
+                e.preventDefault();
+                alert('Debes buscar y seleccionar una dirección usando el buscador para obtener las coordenadas geográficas.');
                 return false;
             }
 

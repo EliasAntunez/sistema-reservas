@@ -110,6 +110,20 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-cloud-rain fa-3x text-primary mb-3"></i>
+                                    <h5 class="card-title">Configurar Alertas Climáticas</h5>
+                                    <p class="card-text text-muted">
+                                        Configura alertas automáticas de clima adverso para las reservas
+                                    </p>
+                                    <a th:href="@{/admin-complejo/alertas-clima/configurar(complejoId=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-cloud-rain me-2 text-white"></i>Configurar Alertas
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

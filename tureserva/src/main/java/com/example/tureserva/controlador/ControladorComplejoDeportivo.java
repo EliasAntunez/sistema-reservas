@@ -94,11 +94,23 @@ public class ControladorComplejoDeportivo {
     @PostMapping("/crear")
     public String crearComplejo(@RequestParam String nombreComplejo,
                               @RequestParam String direccionComplejo,
-                              @RequestParam Long localidadId,
+                              @RequestParam(required = false) Long localidadId,
                               @RequestParam Long administradorId,
+                              @RequestParam(required = false) String latitud,
+                              @RequestParam(required = false) String longitud,
                               RedirectAttributes redirectAttributes) {
         try {
-            servicioComplejo.crearComplejoSimple(nombreComplejo, direccionComplejo, localidadId, administradorId);
+            // Validar que se proporcionen coordenadas (obligatorias desde el buscador)
+            if (latitud == null || latitud.isEmpty() || longitud == null || longitud.isEmpty()) {
+                redirectAttributes.addFlashAttribute("mensajeError", "Debe usar el buscador de direcciones para obtener las coordenadas.");
+                return "redirect:/super-admin/complejos/nuevo";
+            }
+            
+            // Convertir String a BigDecimal
+            java.math.BigDecimal latitudBD = new java.math.BigDecimal(latitud);
+            java.math.BigDecimal longitudBD = new java.math.BigDecimal(longitud);
+            
+            servicioComplejo.crearComplejoSimple(nombreComplejo, direccionComplejo, localidadId, administradorId, latitudBD, longitudBD);
             redirectAttributes.addFlashAttribute("mensajeExito", "Complejo deportivo creado exitosamente");
             return "redirect:/super-admin/complejos/listar";
         } catch (Exception e) {

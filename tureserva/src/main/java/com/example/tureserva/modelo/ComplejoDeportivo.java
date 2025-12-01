@@ -26,6 +26,22 @@ public class ComplejoDeportivo {
     @Column(nullable = false)
     private String direccion_complejo;
 
+    /**
+     * Latitud de la ubicación del complejo (coordenadas geográficas).
+     * Obtenida desde la API de OpenStreetMap Nominatim.
+     * Rango: -90 a +90
+     */
+    @Column(precision = 10, scale = 8)
+    private java.math.BigDecimal latitud;
+
+    /**
+     * Longitud de la ubicación del complejo (coordenadas geográficas).
+     * Obtenida desde la API de OpenStreetMap Nominatim.
+     * Rango: -180 a +180
+     */
+    @Column(precision = 11, scale = 8)
+    private java.math.BigDecimal longitud;
+
     @ManyToOne
     @JoinColumn(name = "administrador_id", foreignKey = @ForeignKey(name = "fk_complejo_administrador"))
     private AdministradorComplejo administradorComplejo;

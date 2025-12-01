@@ -57,6 +57,8 @@ public class ConfiguracionSeguridad {
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 // Deshabilitar CSRF para webhooks de Mercado Pago (MP no envía tokens CSRF)
                 .ignoringRequestMatchers("/webhook/**")
+                // Deshabilitar CSRF para alertas climáticas (acceso desde emails)
+                .ignoringRequestMatchers("/alerta-clima/**")
             )
             .build();
     }
@@ -73,6 +75,8 @@ public class ConfiguracionSeguridad {
             .requestMatchers("/reservas/pago-exitoso", "/reservas/pago-fallido", "/reservas/pago-pendiente").permitAll()
             // Endpoints de pago (init-senia requiere sesión pero permitimos acceso autenticado)
             .requestMatchers("/pagos/**").permitAll()
+            // Endpoints de alertas climáticas (acceso desde emails sin autenticación)
+            .requestMatchers("/alerta-clima/**").permitAll()
             // Rutas OAuth2 - NO ES NECESARIO YA, todos los Google OAuth2 obtienen ROLE_CLIENTE directamente
             // .requestMatchers("/completar-datos").hasAnyAuthority("ROLE_OAUTH2_USER", "OIDC_USER")
             // Rutas de cliente (solo clientes pueden acceder a los flujos de reserva)
