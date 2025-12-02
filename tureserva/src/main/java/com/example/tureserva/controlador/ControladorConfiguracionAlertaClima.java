@@ -264,6 +264,9 @@ public class ControladorConfiguracionAlertaClima {
             
             int enviados = 0;
             int errores = 0;
+            int sinPrecipitacion = 0;
+            int bajoProbabilidad = 0;
+            StringBuilder detalleReservas = new StringBuilder();
             
             log.info("🎯 Reservas a procesar: {} (de {} confirmadas totales)", 
                     reservasSinAlerta.size(), reservasConfirmadas.size());
@@ -299,8 +302,13 @@ public class ControladorConfiguracionAlertaClima {
                     
                     // Si no hay tipo de precipitación (clima despejado/nublado), omitir
                     if (tipo == null) {
+                        sinPrecipitacion++;
                         log.info("⏭️ Se omitió alerta para reserva {}: clima sin precipitación ({})", 
                                 reserva.getId(), clima.getDescripcion());
+                        detalleReservas.append(String.format("• Reserva %s (%s): Sin precipitación (%s)<br>", 
+                            reserva.getCodigoReserva(), 
+                            fechaHoraReserva.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm")),
+                            clima.getDescripcion()));
                         continue;
                     }
                     
@@ -324,25 +332,57 @@ public class ControladorConfiguracionAlertaClima {
                         enviados++;
                         log.info("✅ Alerta de prueba enviada a reserva {} ({}): tipo={}, prob={}%, umbral={}%. alerta_enviada=true", 
                                 reserva.getCodigoReserva(), reserva.getCliente().getEmail(), tipo, probabilidad, umbralTipo);
+                        detalleReservas.append(String.format("• Reserva %s (%s): ✅ Alerta enviada - %s %d%% (umbral: %d%%)<br>", 
+                            reserva.getCodigoReserva(),
+                            fechaHoraReserva.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm")),
+                            tipo, probabilidad, umbralTipo));
                     } else {
+                        bajoProbabilidad++;
                         log.info("⏭️ Se omitió alerta para reserva {}: probabilidad {}% < umbral {}% (tipo={})", 
                                 reserva.getId(), probabilidad, umbralTipo, tipo);
+                        detalleReservas.append(String.format("• Reserva %s (%s): Probabilidad insuficiente - %s %d%% < %d%% (umbral)<br>", 
+                            reserva.getCodigoReserva(),
+                            fechaHoraReserva.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm")),
+                            tipo, probabilidad, umbralTipo));
                     }
                     
                 } catch (Exception e) {
                     errores++;
                     log.error("Error enviando alerta a reserva {}: {}", 
                             reserva.getId(), e.getMessage());
+                    detalleReservas.append(String.format("• Reserva %s: ❌ Error - %s<br>", 
+                        reserva.getCodigoReserva(), e.getMessage()));
                 }
             }
             
-            String mensaje = String.format(
-                "✅ Proceso completado: %d alertas enviadas, %d errores. " +
-                "Revisa los emails de los clientes con reservas confirmadas.",
-                enviados, errores
-            );
+            // Construir mensaje descriptivo
+            StringBuilder mensaje = new StringBuilder();
+            if (enviados > 0) {
+                mensaje.append(String.format("✅ <strong>Se enviaron %d alerta(s)</strong>. ", enviados));
+            } else {
+                mensaje.append("ℹ️ <strong>No se enviaron alertas</strong>. ");
+            }
             
-            redirectAttributes.addFlashAttribute("success", mensaje);
+            if (sinPrecipitacion > 0 || bajoProbabilidad > 0) {
+                mensaje.append("Motivos: ");
+                if (sinPrecipitacion > 0) {
+                    mensaje.append(String.format("%d reserva(s) sin precipitación detectada", sinPrecipitacion));
+                }
+                if (bajoProbabilidad > 0) {
+                    if (sinPrecipitacion > 0) mensaje.append(", ");
+                    mensaje.append(String.format("%d reserva(s) con probabilidad menor al umbral configurado", bajoProbabilidad));
+                }
+                mensaje.append(". ");
+            }
+            
+            if (errores > 0) {
+                mensaje.append(String.format("⚠️ %d error(es) detectado(s). ", errores));
+            }
+            
+            mensaje.append("<br><br><strong>Detalle de reservas procesadas:</strong><br>");
+            mensaje.append(detalleReservas.toString());
+            
+            redirectAttributes.addFlashAttribute("success", mensaje.toString());
             
             log.info("🧪 MODO PRUEBA: Finalizado - {} enviados, {} errores", enviados, errores);
             

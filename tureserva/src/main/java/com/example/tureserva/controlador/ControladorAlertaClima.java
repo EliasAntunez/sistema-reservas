@@ -48,6 +48,11 @@ public class ControladorAlertaClima {
             Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
+            
             if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
                 model.addAttribute("error", "Esta reserva no se puede mantener en su estado actual");
                 return "alerta-clima/error";
@@ -71,6 +76,11 @@ public class ControladorAlertaClima {
         try {
             Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
             
             if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
                 model.addAttribute("error", "Esta reserva no se puede mantener");
@@ -159,23 +169,49 @@ public class ControladorAlertaClima {
             @RequestParam String fecha) {
         
         try {
+            // Validar parámetros
+            if (fecha == null || fecha.trim().isEmpty()) {
+                log.error("Fecha vacía o nula para obtener horarios de reserva {}", reservaId);
+                return List.of();
+            }
+            
             Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                log.error("Reserva {} no tiene detalles para obtener horarios", reservaId);
+                return List.of();
+            }
+            
             DetalleReserva primerDetalle = reserva.getDetalles().get(0);
             EspacioReservable espacio = primerDetalle.getEspacioReservable();
+            
+            if (espacio == null || espacio.getId() == null) {
+                log.error("Espacio no válido en reserva {} para obtener horarios", reservaId);
+                return List.of();
+            }
+            
             LocalDate fechaSolicitada = LocalDate.parse(fecha);
             
             // Obtener horarios disponibles usando el servicio
             List<LocalTime> horariosDisponibles = servicioReserva
                 .obtenerHorariosDisponibles(espacio.getId(), fechaSolicitada);
             
+            if (horariosDisponibles == null) {
+                log.warn("El servicio retornó null para horarios de espacio {} en fecha {}", 
+                        espacio.getId(), fechaSolicitada);
+                return List.of();
+            }
+            
             return horariosDisponibles.stream()
                 .map(LocalTime::toString)
                 .collect(Collectors.toList());
                 
+        } catch (java.time.format.DateTimeParseException e) {
+            log.error("Formato de fecha inválido para reserva {}: {}", reservaId, fecha, e);
+            return List.of();
         } catch (Exception e) {
-            log.error("Error al obtener horarios: {}", e.getMessage(), e);
+            log.error("Error inesperado al obtener horarios para reserva {}: {}", reservaId, e.getMessage(), e);
             return List.of();
         }
     }
@@ -183,6 +219,10 @@ public class ControladorAlertaClima {
     /**
      * Procesa la reprogramación de la reserva.
      * Marca la reserva original como REPROGRAMADA y crea una nueva reserva CONFIRMADA.
+     * 
+     * NOTA: Este método NO debe ser @Transactional porque necesita que los cambios
+     * persistan incluso si falla la renderización de la vista. El servicio ya maneja
+     * la transaccionalidad correctamente.
      */
     @PostMapping("/reprogramar/{reservaId}")
     public String procesarReprogramacion(
@@ -192,6 +232,16 @@ public class ControladorAlertaClima {
             Model model) {
         
         try {
+            // Validar parámetros
+            if (nuevaFecha == null || nuevaFecha.trim().isEmpty()) {
+                model.addAttribute("error", "La nueva fecha es obligatoria");
+                return "alerta-clima/error";
+            }
+            if (nuevaHora == null || nuevaHora.trim().isEmpty()) {
+                model.addAttribute("error", "La nueva hora es obligatoria");
+                return "alerta-clima/error";
+            }
+            
             Reserva reservaOriginal = repositorioReserva.findByIdWithDetalles(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             if (reservaOriginal.getEstado() != EstadoReserva.CONFIRMADA) {
@@ -239,6 +289,12 @@ public class ControladorAlertaClima {
             Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                log.error("Reserva {} no tiene detalles asociados", reservaId);
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
+            
             if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
                 model.addAttribute("error", "Esta reserva no se puede cancelar en su estado actual");
                 return "alerta-clima/error";
@@ -275,6 +331,12 @@ public class ControladorAlertaClima {
         try {
             Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                log.error("Reserva {} no tiene detalles asociados", reservaId);
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
             
             if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
                 model.addAttribute("error", "Esta reserva no se puede cancelar");

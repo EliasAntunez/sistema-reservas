@@ -18,11 +18,14 @@ public class ControladorComplejoDeportivo {
 
     private final ServicioComplejoDeportivo servicioComplejo;
     private final ServicioAdministradorComplejo servicioAdministradorComplejo;
+    private final com.example.tureserva.servicio.ServicioValidacionLocalidad servicioValidacionLocalidad;
 
     public ControladorComplejoDeportivo(ServicioComplejoDeportivo servicioComplejo,
-                                       ServicioAdministradorComplejo servicioAdministradorComplejo) {
+                                       ServicioAdministradorComplejo servicioAdministradorComplejo,
+                                       com.example.tureserva.servicio.ServicioValidacionLocalidad servicioValidacionLocalidad) {
         this.servicioComplejo = servicioComplejo;
         this.servicioAdministradorComplejo = servicioAdministradorComplejo;
+        this.servicioValidacionLocalidad = servicioValidacionLocalidad;
     }
 
     /**
@@ -110,7 +113,17 @@ public class ControladorComplejoDeportivo {
             java.math.BigDecimal latitudBD = new java.math.BigDecimal(latitud);
             java.math.BigDecimal longitudBD = new java.math.BigDecimal(longitud);
             
-            servicioComplejo.crearComplejoSimple(nombreComplejo, direccionComplejo, localidadId, administradorId, latitudBD, longitudBD);
+            // VALIDACIÓN CRÍTICA: Verificar que la ubicación esté en nuestra área de cobertura
+            var validacion = servicioValidacionLocalidad.validarCobertura(latitudBD, longitudBD);
+            if (!validacion.isValido()) {
+                redirectAttributes.addFlashAttribute("mensajeError", validacion.getMensaje());
+                return "redirect:/super-admin/complejos/nuevo";
+            }
+            
+            // Si no se proporcionó localidadId, usar el de la validación
+            Long localidadFinal = (localidadId != null) ? localidadId : validacion.getLocalidadId();
+            
+            servicioComplejo.crearComplejoSimple(nombreComplejo, direccionComplejo, localidadFinal, administradorId, latitudBD, longitudBD);
             redirectAttributes.addFlashAttribute("mensajeExito", "Complejo deportivo creado exitosamente");
             return "redirect:/super-admin/complejos/listar";
         } catch (Exception e) {

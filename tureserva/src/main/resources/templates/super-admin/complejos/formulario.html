@@ -64,6 +64,27 @@
                                     <div class="form-text">Responsable del complejo</div>
                                 </div>
 
+                                <!-- Localidad (se auto-completa según ubicación) -->
+                                <div class="col-md-6 mb-3">
+                                    <label for="localidadId" class="form-label">
+                                        Localidad <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" 
+                                            id="localidadSelect" 
+                                            name="localidadId" 
+                                            required="required"
+                                            disabled>
+                                        <option value="">Seleccione una dirección primero</option>
+                                        <option th:each="localidad : ${localidades}" 
+                                                th:value="${localidad.id}" 
+                                                th:text="${localidad.nombre}"></option>
+                                    </select>
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle"></i> 
+                                        Se selecciona automáticamente según la dirección ingresada
+                                    </div>
+                                </div>
+
                                 <!-- Buscador de Dirección con Autocompletado -->
                                 <div class="col-12 mb-3">
                                     <label for="direccionBuscador" class="form-label">
@@ -103,6 +124,19 @@
                                            placeholder="Se llenará al seleccionar una dirección del buscador" />
                                     <div class="form-text">Dirección física del complejo (se completa automáticamente)</div>
                                 </div>
+
+                                <!-- Mensaje de validación de cobertura -->
+                                <div class="col-12 mb-3">
+                                    <div id="mensajeCobertura" class="alert d-none" role="alert">
+                                        <strong id="coberturaTexto"></strong>
+                                    </div>
+                                </div>
+
+                                <!-- Campo hidden para localidadId (se llena automáticamente) -->
+                                <input type="hidden" name="localidadId" id="localidadId">
+                                
+                                <!-- Token CSRF para peticiones AJAX -->
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             </div>
 
                             <!-- Botones -->
@@ -258,6 +292,92 @@
                     direccion: displayName,
                     lat: lat,
                     lon: lon
+                });
+
+                // Validar cobertura geográfica automáticamente
+                validarCoberturaLocalidad(lat, lon);
+            }
+
+            // Función para validar si la ubicación está en nuestra área de cobertura
+            function validarCoberturaLocalidad(lat, lon) {
+                const mensajeDiv = document.getElementById('mensajeCobertura');
+                const textoSpan = document.getElementById('coberturaTexto');
+                const localidadInput = document.getElementById('localidadId');
+
+                // Mostrar mensaje de validación en progreso
+                mensajeDiv.className = 'alert alert-info';
+                mensajeDiv.classList.remove('d-none');
+                textoSpan.textContent = 'Validando ubicación...';
+
+                // Llamar al endpoint de validación (CSRF deshabilitado para este endpoint)
+                fetch('/api/validacion-localidad/validar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        latitud: lat,
+                        longitud: lon
+                    })
+                })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            throw new Error('Error de permisos (403). Por favor, recargue la página e intente nuevamente.');
+                        }
+                        throw new Error('Error en el servidor: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Datos recibidos:', data);
+                    
+                    if (data.valido) {
+                        // Ubicación válida - mostrar mensaje de éxito
+                        mensajeDiv.className = 'alert alert-success';
+                        textoSpan.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + data.mensaje;
+                        
+                        // Asignar localidadId automáticamente (campo hidden)
+                        localidadInput.value = data.localidadId;
+                        
+                        // Pre-seleccionar en el select visual y habilitarlo
+                        const localidadSelect = document.getElementById('localidadSelect');
+                        localidadSelect.value = data.localidadId;
+                        localidadSelect.disabled = false;
+                        localidadSelect.classList.remove('text-muted');
+                        
+                        console.log('Cobertura válida. LocalidadId asignado:', data.localidadId, 'Localidad:', data.nombreLocalidad);
+                    } else {
+                        // Ubicación fuera de cobertura - mostrar error y limpiar campos
+                        mensajeDiv.className = 'alert alert-danger';
+                        textoSpan.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>' + data.mensaje;
+                        
+                        // Limpiar campos porque no podemos crear el complejo aquí
+                        direccionInput.value = '';
+                        latitudInput.value = '';
+                        longitudInput.value = '';
+                        localidadInput.value = '';
+                        
+                        // Deshabilitar y limpiar select de localidad
+                        const localidadSelect = document.getElementById('localidadSelect');
+                        localidadSelect.value = '';
+                        localidadSelect.disabled = true;
+                        localidadSelect.classList.add('text-muted');
+                        
+                        console.warn('Ubicación fuera de cobertura:', data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al validar cobertura:', error);
+                    mensajeDiv.className = 'alert alert-danger';
+                    textoSpan.innerHTML = '<i class="bi bi-exclamation-circle-fill me-2"></i>' + error.message;
+                    
+                    // Limpiar campos por seguridad
+                    direccionInput.value = '';
+                    latitudInput.value = '';
+                    longitudInput.value = '';
+                    localidadInput.value = '';
                 });
             }
 

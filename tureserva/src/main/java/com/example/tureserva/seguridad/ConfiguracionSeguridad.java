@@ -59,6 +59,8 @@ public class ConfiguracionSeguridad {
                 .ignoringRequestMatchers("/webhook/**")
                 // Deshabilitar CSRF para alertas climáticas (acceso desde emails)
                 .ignoringRequestMatchers("/alerta-clima/**")
+                // Deshabilitar CSRF para API de validación de localidad (usada desde formularios con sesión activa)
+                .ignoringRequestMatchers("/api/validacion-localidad/**")
             )
             .build();
     }
@@ -94,6 +96,8 @@ public class ConfiguracionSeguridad {
             // Rutas de administración
             .requestMatchers("/super-admin/**").hasRole("SUPER_ADMIN")
             .requestMatchers("/admin-complejo/**").hasRole("ADMIN_COMPLEJO")
+            // API REST para validación de localidades (solo super admin)
+            .requestMatchers("/api/validacion-localidad/**").hasRole("SUPER_ADMIN")
             // Rutas de perfil (solo clientes) y dashboard autenticado
             .requestMatchers("/perfil/**").hasRole("CLIENTE")
             .requestMatchers("/dashboard").authenticated()

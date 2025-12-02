@@ -324,7 +324,7 @@
             
             <!-- Alertas de feedback -->
             <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
-                <strong>✅ Éxito:</strong> <span th:text="${success}"></span>
+                <span th:utext="${success}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             
@@ -334,7 +334,7 @@
             </div>
             
             <div th:if="${warning}" class="alert alert-warning alert-dismissible fade show">
-                <strong>⚠️ Advertencia:</strong> <span th:text="${warning}"></span>
+                <strong>⚠️ Advertencia:</strong> <span th:utext="${warning}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             
@@ -404,7 +404,7 @@
                     
                     <div class="form-group">
                         <label for="umbralProbabilidad">
-                            Umbral de Probabilidad de Lluvia (%)
+                            Umbral de Probabilidad de Mal Clima en General (%)
                         </label>
                         <input type="range" id="umbralProbabilidad" name="umbralProbabilidad" 
                                min="0" max="100" step="5"
@@ -441,16 +441,6 @@
                                 <input type="number" id="umbralTormenta" name="umbralTormenta" min="0" max="100"
                                        th:value="${configuracion != null && configuracion.umbralTormenta != null ? configuracion.umbralTormenta : ''}">
                             </div>
-                            <div>
-                                <label for="umbralNieve">Nieve (%)</label>
-                                <input type="number" id="umbralNieve" name="umbralNieve" min="0" max="100"
-                                       th:value="${configuracion != null && configuracion.umbralNieve != null ? configuracion.umbralNieve : ''}">
-                            </div>
-                            <div>
-                                <label for="umbralOtro">Otro (%)</label>
-                                <input type="number" id="umbralOtro" name="umbralOtro" min="0" max="100"
-                                       th:value="${configuracion != null && configuracion.umbralOtro != null ? configuracion.umbralOtro : ''}">
-                            </div>
                         </div>
                         <div class="form-help">
                             Si dejas estos campos vacíos, se usará el umbral general configurado arriba.
@@ -460,7 +450,7 @@
                 
                 <!-- Sección 3: Activar/Desactivar -->
                 <div class="form-section">
-                    <h3>3️⃣ Estado del Sistema</h3>
+                    <h3>3️⃣ Estado de la Configuracion de Alertas Climáticas</h3>
                     
                     <div class="form-group">
                         <div class="switch-container">
@@ -474,7 +464,7 @@
                             </label>
                         </div>
                         <div class="form-help">
-                            Desactiva esta opción si no deseas recibir alertas temporalmente
+                            Desactiva esta opción si no deseas enviar alertas temporalmente
                         </div>
                     </div>
                 </div>
@@ -493,25 +483,17 @@
         
         <!-- Sección de Prueba -->
         <div class="config-card test-section">
-            <h3>🧪 Modo de Prueba</h3>
+            <h3>Prueba</h3>
             <p>
-                Envía alertas climáticas inmediatamente a <strong>todas</strong> las reservas confirmadas 
-                de tu complejo, sin importar la fecha. Útil para probar el sistema antes de la demostración.
+                Envía alertas climáticas inmediatamente a todas las reservas confirmadas 
+                de tu complejo, sin importar la fecha.
             </p>
-            
-            <div class="warning-box" style="margin-bottom: 15px;">
-                <h4>⚠️ Advertencia</h4>
-                <p>
-                    Esta acción enviará emails reales a todos los clientes con reservas confirmadas. 
-                    Úsala solo para demostración con el profesor.
-                </p>
-            </div>
             
             <form th:action="@{/admin-complejo/alertas-clima/avisar-ahora}" method="post" 
                   onsubmit="return confirm('⚠️ ¿Seguro que deseas enviar alertas a TODAS las reservas confirmadas? Se enviarán emails reales a los clientes.');">
                 <input type="hidden" name="complejoId" th:value="${complejo.id_complejo}">
                 <button type="submit" class="btn btn-warning">
-                    📢 Avisar Ahora a Todas las Reservas
+                    Avisar Ahora a Todas las Reservas
                 </button>
             </form>
         </div>

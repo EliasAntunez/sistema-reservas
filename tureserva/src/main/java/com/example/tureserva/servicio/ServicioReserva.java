@@ -1306,9 +1306,19 @@ public class ServicioReserva {
                                                   LocalTime nuevaHora) {
         logger.info("Creando nueva reserva por reprogramación de reserva {}", reservaOriginal.getId());
         
+        // Validaciones iniciales
+        if (nuevaFecha == null || nuevaHora == null) {
+            throw new IllegalArgumentException("La fecha y hora son obligatorias para reprogramar");
+        }
+        
         // Cargar la reserva original con sus detalles y servicios adicionales en sesión
         Reserva reservaCargada = repositorioReserva.findByIdWithDetalles(reservaOriginal.getId())
             .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada: " + reservaOriginal.getId()));
+        
+        // CRÍTICO: Validar que la reserva tenga detalles
+        if (reservaCargada.getDetalles() == null || reservaCargada.getDetalles().isEmpty()) {
+            throw new IllegalStateException("La reserva no tiene detalles para reprogramar");
+        }
         
         // Cargar servicios adicionales
         List<com.example.tureserva.modelo.DetalleServicioAdicional> servicios = 
@@ -1410,20 +1420,22 @@ public class ServicioReserva {
         // CRÍTICO: Reasignar todos los pagos de la reserva original a la nueva
         // Esto mantiene el historial de pagos (seña, pago completo) asociados correctamente
         List<Pago> pagosOriginales = repositorioPago.findByReservaOrderByFechaPagoAsc(reservaCargada);
-        if (!pagosOriginales.isEmpty()) {
+        if (pagosOriginales != null && !pagosOriginales.isEmpty()) {
             logger.info("Reasignando {} pago(s) de reserva {} a reserva {}", 
                     pagosOriginales.size(), 
                     reservaCargada.getCodigoReserva(), 
                     reservaGuardada.getCodigoReserva());
             
             for (Pago pago : pagosOriginales) {
-                pago.setReserva(reservaGuardada);
-                repositorioPago.save(pago);
-                logger.debug("Pago {} ({}) reasignado: {} → {}", 
-                        pago.getId(), 
-                        pago.getTipoPago(), 
-                        reservaCargada.getCodigoReserva(), 
-                        reservaGuardada.getCodigoReserva());
+                if (pago != null) {
+                    pago.setReserva(reservaGuardada);
+                    repositorioPago.save(pago);
+                    logger.debug("Pago {} ({}) reasignado: {} → {}", 
+                            pago.getId(), 
+                            pago.getTipoPago(), 
+                            reservaCargada.getCodigoReserva(), 
+                            reservaGuardada.getCodigoReserva());
+                }
             }
         }
         
