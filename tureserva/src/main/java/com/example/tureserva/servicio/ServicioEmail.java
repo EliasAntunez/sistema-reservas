@@ -23,10 +23,97 @@ public class ServicioEmail {
 
     @Value("${spring.mail.username:no-reply@tureserva.example}")
     private String mailFrom;
+    
+    @Value("${app.base-url:http://localhost:8080}")
+    private String baseUrl;
 
     public ServicioEmail(JavaMailSender mailSender, SpringTemplateEngine templateEngine) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
+    }
+
+    /**
+     * Envía una alerta climática al cliente sobre su reserva.
+     * Incluye 3 botones de acción: Mantener, Reprogramar, Cancelar.
+     * 
+        * @param reserva La reserva afectada
+        * @param descripcionClima Descripción del clima pronosticado
+        * @param probabilidadLluvia Probabilidad de precipitación (%)
+        * @param tipoPrecipitacion Tipo de precipitación (puede ser null)
+        * @param precipMmHora Precipitación estimada en mm/h (puede ser null)
+     */
+    @Async
+        public void enviarAlertaClimatica(com.example.tureserva.modelo.Reserva reserva, 
+                                  String descripcionClima, 
+                                  Integer probabilidadLluvia,
+                                  com.example.tureserva.servicio.dto.TipoPrecipitacion tipoPrecipitacion,
+                                  Double precipMmHora) {
+        try {
+            String destinatario = reserva.getCliente().getEmail();
+            
+            if (destinatario == null || destinatario.isBlank()) {
+                logger.warn("No se envía alerta climática: email vacío para reserva {}", reserva.getCodigoReserva());
+                return;
+            }
+            
+            // Obtener primer detalle para información del espacio
+            com.example.tureserva.modelo.DetalleReserva primerDetalle = 
+                !reserva.getDetalles().isEmpty() ? reserva.getDetalles().get(0) : null;
+                
+            String nombreEspacio = primerDetalle != null ? 
+                primerDetalle.getEspacioReservable().getNombre() : "Espacio reservado";
+            String nombreComplejo = primerDetalle != null ? 
+                primerDetalle.getEspacioReservable().getComplejoDeportivo().getNombre_complejo() : "";
+            
+            Context ctx = new Context();
+            String nombreCompleto = reserva.getCliente().getNombre() + " " + reserva.getCliente().getApellido();
+            ctx.setVariable("nombreCliente", nombreCompleto);
+            ctx.setVariable("codigoReserva", reserva.getCodigoReserva());
+            ctx.setVariable("fecha", reserva.getFechaReserva());
+            ctx.setVariable("hora", primerDetalle != null ? primerDetalle.getHoraInicio() : null);
+            ctx.setVariable("nombreEspacio", nombreEspacio);
+            ctx.setVariable("nombreComplejo", nombreComplejo);
+            ctx.setVariable("descripcionClima", descripcionClima);
+            ctx.setVariable("probabilidadLluvia", probabilidadLluvia);
+            // Usar el método getEtiqueta() del enum para obtener la etiqueta legible
+            String tipoLabel = tipoPrecipitacion != null ? tipoPrecipitacion.getEtiqueta() : null;
+
+            ctx.setVariable("tipoPrecipitacion", tipoPrecipitacion);
+            ctx.setVariable("tipoPrecipitacionLabel", tipoLabel);
+            ctx.setVariable("precipMmHora", precipMmHora);
+            ctx.setVariable("reservaId", reserva.getId());
+            ctx.setVariable("baseUrl", baseUrl);
+            
+            String html = templateEngine.process("email/alerta-clima", ctx);
+            
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, 
+                MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, 
+                StandardCharsets.UTF_8.name());
+                
+            helper.setTo(destinatario);
+            helper.setFrom(mailFrom);
+            helper.setSubject("⚠️ Alerta Climática - Reserva " + reserva.getCodigoReserva());
+            helper.setText(html, true);
+            
+            mailSender.send(message);
+            logger.info("Alerta climática enviada a {} para reserva {}", destinatario, reserva.getCodigoReserva());
+            
+        } catch (MessagingException ex) {
+            logger.error("Error enviando alerta climática para reserva {}: {}", 
+                reserva.getCodigoReserva(), ex.getMessage(), ex);
+        } catch (Exception ex) {
+            logger.error("Error inesperado al enviar alerta climática para reserva {}: {}", 
+                reserva.getCodigoReserva(), ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Versión compat: delega a la nueva firma sin tipo/precip.
+     */
+    @Async
+    public void enviarAlertaClimatica(com.example.tureserva.modelo.Reserva reserva, String descripcionClima, Integer probabilidadLluvia) {
+        enviarAlertaClimatica(reserva, descripcionClima, probabilidadLluvia, null, null);
     }
 
     /**

@@ -34,21 +34,27 @@ public class ServicioComplejoDeportivo {
      * Crear un nuevo complejo deportivo (simplificado)
      */
     public ComplejoDeportivo crearComplejoSimple(String nombreComplejo, String direccion, 
-                                               Long localidadId, Long administradorId) {
+                                               Long localidadId, Long administradorId,
+                                               java.math.BigDecimal latitud, java.math.BigDecimal longitud) {
         
-        // Validar que existan las entidades relacionadas
-        Localidad localidad = repositorioLocalidad.findById(localidadId)
-            .orElseThrow(() -> new RuntimeException("Localidad no encontrada"));
-        
+        // Validar administrador (obligatorio)
         AdministradorComplejo administrador = repositorioAdministradorComplejo.findById(administradorId)
             .orElseThrow(() -> new RuntimeException("Administrador no encontrado"));
 
-        // Crear el complejo usando los datos de la localidad
+        // Validar localidad (opcional - solo si se proporciona)
+        Localidad localidad = null;
+        if (localidadId != null) {
+            localidad = repositorioLocalidad.findById(localidadId)
+                .orElseThrow(() -> new RuntimeException("Localidad no encontrada"));
+        }
+
+        // Crear el complejo
         ComplejoDeportivo complejo = new ComplejoDeportivo();
         complejo.setNombre_complejo(nombreComplejo);
         complejo.setDireccion_complejo(direccion);
-    // Ya no se asignan pais ni provincia, solo localidad
-        complejo.setLocalidad(localidad);
+        complejo.setLatitud(latitud);
+        complejo.setLongitud(longitud);
+        complejo.setLocalidad(localidad); // Puede ser null
         complejo.setAdministradorComplejo(administrador);
         complejo.setActivo(true);
 
@@ -118,13 +124,15 @@ public class ServicioComplejoDeportivo {
      * Actualizar complejo
      */
     public ComplejoDeportivo actualizar(Long id, String nombreComplejo, String direccion,
-                                      Long localidadId) {
+                                      Long localidadId, java.math.BigDecimal latitud, java.math.BigDecimal longitud) {
         ComplejoDeportivo complejo = repositorioComplejoDeportivo.findById(id)
             .orElseThrow(() -> new RuntimeException("Complejo no encontrado"));
 
         // Actualizar datos básicos
         complejo.setNombre_complejo(nombreComplejo);
         complejo.setDireccion_complejo(direccion);
+        complejo.setLatitud(latitud);
+        complejo.setLongitud(longitud);
 
         // Actualizar ubicación si cambió
         if (!complejo.getLocalidad().getId().equals(localidadId)) {

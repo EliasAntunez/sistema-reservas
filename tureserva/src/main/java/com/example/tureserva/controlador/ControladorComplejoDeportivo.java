@@ -18,11 +18,14 @@ public class ControladorComplejoDeportivo {
 
     private final ServicioComplejoDeportivo servicioComplejo;
     private final ServicioAdministradorComplejo servicioAdministradorComplejo;
+    private final com.example.tureserva.servicio.ServicioValidacionLocalidad servicioValidacionLocalidad;
 
     public ControladorComplejoDeportivo(ServicioComplejoDeportivo servicioComplejo,
-                                       ServicioAdministradorComplejo servicioAdministradorComplejo) {
+                                       ServicioAdministradorComplejo servicioAdministradorComplejo,
+                                       com.example.tureserva.servicio.ServicioValidacionLocalidad servicioValidacionLocalidad) {
         this.servicioComplejo = servicioComplejo;
         this.servicioAdministradorComplejo = servicioAdministradorComplejo;
+        this.servicioValidacionLocalidad = servicioValidacionLocalidad;
     }
 
     /**
@@ -94,11 +97,33 @@ public class ControladorComplejoDeportivo {
     @PostMapping("/crear")
     public String crearComplejo(@RequestParam String nombreComplejo,
                               @RequestParam String direccionComplejo,
-                              @RequestParam Long localidadId,
+                              @RequestParam(required = false) Long localidadId,
                               @RequestParam Long administradorId,
+                              @RequestParam(required = false) String latitud,
+                              @RequestParam(required = false) String longitud,
                               RedirectAttributes redirectAttributes) {
         try {
-            servicioComplejo.crearComplejoSimple(nombreComplejo, direccionComplejo, localidadId, administradorId);
+            // Validar que se proporcionen coordenadas (obligatorias desde el buscador)
+            if (latitud == null || latitud.isEmpty() || longitud == null || longitud.isEmpty()) {
+                redirectAttributes.addFlashAttribute("mensajeError", "Debe usar el buscador de direcciones para obtener las coordenadas.");
+                return "redirect:/super-admin/complejos/nuevo";
+            }
+            
+            // Convertir String a BigDecimal
+            java.math.BigDecimal latitudBD = new java.math.BigDecimal(latitud);
+            java.math.BigDecimal longitudBD = new java.math.BigDecimal(longitud);
+            
+            // VALIDACIÓN CRÍTICA: Verificar que la ubicación esté en nuestra área de cobertura
+            var validacion = servicioValidacionLocalidad.validarCobertura(latitudBD, longitudBD);
+            if (!validacion.isValido()) {
+                redirectAttributes.addFlashAttribute("mensajeError", validacion.getMensaje());
+                return "redirect:/super-admin/complejos/nuevo";
+            }
+            
+            // Si no se proporcionó localidadId, usar el de la validación
+            Long localidadFinal = (localidadId != null) ? localidadId : validacion.getLocalidadId();
+            
+            servicioComplejo.crearComplejoSimple(nombreComplejo, direccionComplejo, localidadFinal, administradorId, latitudBD, longitudBD);
             redirectAttributes.addFlashAttribute("mensajeExito", "Complejo deportivo creado exitosamente");
             return "redirect:/super-admin/complejos/listar";
         } catch (Exception e) {

@@ -52,4 +52,33 @@ public interface RepositorioPago extends JpaRepository<Pago, Long> {
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Pago p " +
            "WHERE p.reserva = :reserva AND p.tipoPago = 'PAGO_COMPLETO'")
     boolean existePagoCompletoParaReserva(@Param("reserva") Reserva reserva);
+    
+    /**
+     * Obtiene reporte financiero basado en pagos reales (no en estado de reserva).
+     * Agrupa por espacio y suma los montos de todos los pagos realizados.
+     * Solo considera pagos con fechaPago not null (pagos confirmados).
+     */
+    @Query("SELECT new com.example.tureserva.servicio.dto.ReporteFinancieroDTO(" +
+           "e.nombre, " +
+           "CASE WHEN TYPE(e) = com.example.tureserva.modelo.Cancha THEN 'CANCHA' " +
+           "     WHEN TYPE(e) = com.example.tureserva.modelo.Salon THEN 'SALON' " +
+           "     ELSE 'N/A' END, " +
+           "COUNT(DISTINCT p.id), " +
+           "COALESCE(SUM(p.monto), 0)) " +
+           "FROM Pago p " +
+           "JOIN p.reserva r " +
+           "JOIN r.detalles d " +
+           "JOIN d.espacioReservable e " +
+           "JOIN e.complejoDeportivo c " +
+           "WHERE CAST(p.fechaPago AS date) BETWEEN :inicio AND :fin " +
+           "AND p.fechaPago IS NOT NULL " +
+           "AND (:complejoId IS NULL OR c.id = :complejoId) " +
+           "GROUP BY e.nombre, CASE WHEN TYPE(e) = com.example.tureserva.modelo.Cancha THEN 'CANCHA' " +
+           "                         WHEN TYPE(e) = com.example.tureserva.modelo.Salon THEN 'SALON' " +
+           "                         ELSE 'N/A' END " +
+           "ORDER BY SUM(p.monto) DESC")
+    List<com.example.tureserva.servicio.dto.ReporteFinancieroDTO> obtenerReporteFinancieroPorPagos(
+        @Param("inicio") java.time.LocalDate inicio,
+        @Param("fin") java.time.LocalDate fin,
+        @Param("complejoId") Long complejoId);
 }

@@ -26,22 +26,23 @@ import java.util.List;
 @RequestMapping("/reportes/financiero")
 public class ControladorReporte {
 
-    private final RepositorioReserva repositorioReserva;
     private final ServicioReportePdf servicioReportePdf;
     private final ServicioComplejoDeportivo servicioComplejoDeportivo;
     private final ServicioAdministradorComplejo servicioAdministradorComplejo;
     private final ServicioUsuarioUnificado servicioUsuarioUnificado;
+    private final com.example.tureserva.repositorio.RepositorioPago repositorioPago;
 
     public ControladorReporte(RepositorioReserva repositorioReserva,
                              ServicioReportePdf servicioReportePdf,
                              ServicioComplejoDeportivo servicioComplejoDeportivo,
                              ServicioAdministradorComplejo servicioAdministradorComplejo,
-                             ServicioUsuarioUnificado servicioUsuarioUnificado) {
-        this.repositorioReserva = repositorioReserva;
+                             ServicioUsuarioUnificado servicioUsuarioUnificado,
+                             com.example.tureserva.repositorio.RepositorioPago repositorioPago) {
         this.servicioReportePdf = servicioReportePdf;
         this.servicioComplejoDeportivo = servicioComplejoDeportivo;
         this.servicioAdministradorComplejo = servicioAdministradorComplejo;
         this.servicioUsuarioUnificado = servicioUsuarioUnificado;
+        this.repositorioPago = repositorioPago;
     }
 
     private final Logger logger = LoggerFactory.getLogger(ControladorReporte.class);
@@ -83,7 +84,8 @@ public class ControladorReporte {
         }
 
         try {
-            List<ReporteFinancieroDTO> datos = repositorioReserva.obtenerReporteFinanciero(inicio, fin, complejoId);
+            // Obtener datos del reporte basado en PAGOS reales (no en estado de reserva)
+            List<ReporteFinancieroDTO> datos = repositorioPago.obtenerReporteFinancieroPorPagos(inicio, fin, complejoId);
             model.addAttribute("datos", datos);
         } catch (Exception ex) {
             logger.error("Error obteniendo reporte financiero para inicio={} fin={} complejoId={}: {}",
@@ -129,7 +131,8 @@ public class ControladorReporte {
         }
 
         try {
-            List<ReporteFinancieroDTO> datos = repositorioReserva.obtenerReporteFinanciero(inicio, fin, complejoId);
+            // Obtener datos del reporte basado en PAGOS reales (no en estado de reserva)
+            List<ReporteFinancieroDTO> datos = repositorioPago.obtenerReporteFinancieroPorPagos(inicio, fin, complejoId);
 
             // Determinar nombre del complejo para el encabezado
             String nombreComplejo = "Todos";

@@ -117,6 +117,25 @@
                                 </div>
                             </div>
                             
+                            <!-- Campo Confirmar Contraseña -->
+                            <div class="mb-3">
+                                <div class="position-relative">
+                                    <input type="password" 
+                                           class="form-control" 
+                                           id="confirmarContrasena"
+                                           placeholder="Confirmar contraseña"
+                                           style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; padding-right: 44px; font-size: 14px; color: #262626;"
+                                           minlength="6"
+                                           required>
+                                    <button class="btn position-absolute" type="button" id="toggleConfirmPassword" aria-label="Mostrar contraseña"
+                                            style="right: 10px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: #6c757d; padding: 0;">
+                                        <i class="bi bi-eye" style="font-size: 1.05rem;"></i>
+                                    </button>
+                                </div>
+                                <!-- Mensaje de validación -->
+                                <div id="passwordMatch" class="mt-2" style="font-size: 12px; display: none;"></div>
+                            </div>
+                            
                             <!-- Campo Teléfono (opcional) si no es vacío validar formato -->
                             <div class="mb-4">
                                 <input type="tel" 
@@ -148,18 +167,128 @@
                     <th:block layout:fragment="scripts">
                         <script th:inline="javascript">
                             document.addEventListener('DOMContentLoaded', function() {
+                                // Toggle para mostrar/ocultar contraseña
                                 const toggle = document.getElementById('togglePasswordRegistro');
                                 const input = document.getElementById('contrasena');
-                                if (!toggle || !input) return;
-                                toggle.addEventListener('click', function() {
-                                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-                                    input.setAttribute('type', type);
-                                    const icon = this.querySelector('i');
-                                    if (icon) {
-                                        icon.classList.toggle('bi-eye');
-                                        icon.classList.toggle('bi-eye-slash');
+                                if (toggle && input) {
+                                    toggle.addEventListener('click', function() {
+                                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                                        input.setAttribute('type', type);
+                                        const icon = this.querySelector('i');
+                                        if (icon) {
+                                            icon.classList.toggle('bi-eye');
+                                            icon.classList.toggle('bi-eye-slash');
+                                        }
+                                    });
+                                }
+
+                                // Toggle para confirmar contraseña
+                                const toggleConfirm = document.getElementById('toggleConfirmPassword');
+                                const inputConfirm = document.getElementById('confirmarContrasena');
+                                if (toggleConfirm && inputConfirm) {
+                                    toggleConfirm.addEventListener('click', function() {
+                                        const type = inputConfirm.getAttribute('type') === 'password' ? 'text' : 'password';
+                                        inputConfirm.setAttribute('type', type);
+                                        const icon = this.querySelector('i');
+                                        if (icon) {
+                                            icon.classList.toggle('bi-eye');
+                                            icon.classList.toggle('bi-eye-slash');
+                                        }
+                                    });
+                                }
+
+                                // Validación en tiempo real de coincidencia de contraseñas
+                                const password = document.getElementById('contrasena');
+                                const confirmPassword = document.getElementById('confirmarContrasena');
+                                const matchMessage = document.getElementById('passwordMatch');
+                                const submitButton = document.querySelector('button[type="submit"]');
+
+                                function validatePasswords() {
+                                    if (!password || !confirmPassword || !matchMessage) return;
+
+                                    const passwordValue = password.value;
+                                    const confirmValue = confirmPassword.value;
+
+                                    // Si el campo de confirmar está vacío, no mostrar nada
+                                    if (confirmValue === '') {
+                                        matchMessage.style.display = 'none';
+                                        confirmPassword.style.borderColor = '#dbdbdb';
+                                        if (submitButton) submitButton.disabled = false;
+                                        return;
                                     }
-                                });
+
+                                    // Validar longitud mínima
+                                    if (passwordValue.length < 6) {
+                                        matchMessage.style.display = 'block';
+                                        matchMessage.style.color = '#ed4956';
+                                        matchMessage.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>La contraseña debe tener al menos 6 caracteres';
+                                        confirmPassword.style.borderColor = '#ed4956';
+                                        if (submitButton) submitButton.disabled = true;
+                                        return;
+                                    }
+
+                                    // Validar coincidencia
+                                    if (passwordValue === confirmValue) {
+                                        matchMessage.style.display = 'block';
+                                        matchMessage.style.color = '#00c853';
+                                        matchMessage.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Las contraseñas coinciden';
+                                        confirmPassword.style.borderColor = '#00c853';
+                                        if (submitButton) submitButton.disabled = false;
+                                    } else {
+                                        matchMessage.style.display = 'block';
+                                        matchMessage.style.color = '#ed4956';
+                                        matchMessage.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Las contraseñas no coinciden';
+                                        confirmPassword.style.borderColor = '#ed4956';
+                                        if (submitButton) submitButton.disabled = true;
+                                    }
+                                }
+
+                                // Escuchar cambios en ambos campos
+                                if (password) {
+                                    password.addEventListener('input', validatePasswords);
+                                    password.addEventListener('keyup', validatePasswords);
+                                }
+                                if (confirmPassword) {
+                                    confirmPassword.addEventListener('input', validatePasswords);
+                                    confirmPassword.addEventListener('keyup', validatePasswords);
+                                }
+
+                                // Validar al enviar el formulario
+                                const form = document.querySelector('form');
+                                if (form) {
+                                    form.addEventListener('submit', function(e) {
+                                        const passwordValue = password ? password.value : '';
+                                        const confirmValue = confirmPassword ? confirmPassword.value : '';
+                                        
+                                        if (passwordValue !== confirmValue) {
+                                            e.preventDefault();
+                                            if (matchMessage) {
+                                                matchMessage.style.display = 'block';
+                                                matchMessage.style.color = '#ed4956';
+                                                matchMessage.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Las contraseñas no coinciden';
+                                            }
+                                            if (confirmPassword) {
+                                                confirmPassword.style.borderColor = '#ed4956';
+                                                confirmPassword.focus();
+                                            }
+                                            return false;
+                                        }
+                                        
+                                        if (passwordValue.length < 6) {
+                                            e.preventDefault();
+                                            if (matchMessage) {
+                                                matchMessage.style.display = 'block';
+                                                matchMessage.style.color = '#ed4956';
+                                                matchMessage.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>La contraseña debe tener al menos 6 caracteres';
+                                            }
+                                            if (password) {
+                                                password.style.borderColor = '#ed4956';
+                                                password.focus();
+                                            }
+                                            return false;
+                                        }
+                                    });
+                                }
                             });
                         </script>
                     </th:block>

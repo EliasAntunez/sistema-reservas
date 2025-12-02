@@ -140,6 +140,20 @@ public class Reserva {
                fetch = FetchType.LAZY)
     private List<Pago> pagos = new ArrayList<>();
 
+    /**
+     * Indica si ya se envió una alerta climática para esta reserva.
+     * Evita enviar múltiples alertas para la misma reserva.
+     */
+    @Column(name = "alerta_enviada", nullable = true)
+    private Boolean alertaEnviada = false;
+    
+    /**
+     * ID de la reserva original cuando esta es una reprogramación.
+     * Se usa para mantener trazabilidad en caso de reprogramaciones por alertas climáticas.
+     */
+    @Column(name = "reserva_origen_id")
+    private Long reservaOrigenId;
+
     // ==================== MÉTODOS DE UTILIDAD ====================
 
     /**

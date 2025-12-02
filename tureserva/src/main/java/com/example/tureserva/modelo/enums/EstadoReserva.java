@@ -25,6 +25,11 @@ public enum EstadoReserva {
      * Reserva cancelada (por el cliente o por el administrador)
      */
     CANCELADA("Cancelada", "danger"),
+    
+    /**
+     * Reserva reprogramada (fecha/hora cambiada por alerta climática)
+     */
+    REPROGRAMADA("Reprogramada", "info"),
 
     /**
      * Reserva finalizada

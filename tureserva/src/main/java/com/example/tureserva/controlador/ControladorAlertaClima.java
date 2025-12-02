@@ -1,0 +1,361 @@
+package com.example.tureserva.controlador;
+
+import com.example.tureserva.modelo.DetalleReserva;
+import com.example.tureserva.modelo.EspacioReservable;
+import com.example.tureserva.modelo.Reserva;
+import com.example.tureserva.modelo.enums.EstadoReserva;
+import com.example.tureserva.repositorio.RepositorioReserva;
+import com.example.tureserva.servicio.ServicioReserva;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Controlador para manejar las acciones de las alertas climáticas.
+ * Procesa los clicks en los botones del email de alerta.
+ */
+@Controller
+@RequestMapping("/alerta-clima")
+public class ControladorAlertaClima {
+    
+    private static final Logger log = LoggerFactory.getLogger(ControladorAlertaClima.class);
+    
+    private final RepositorioReserva repositorioReserva;
+    private final ServicioReserva servicioReserva;
+    
+    public ControladorAlertaClima(RepositorioReserva repositorioReserva,
+                                 ServicioReserva servicioReserva) {
+        this.repositorioReserva = repositorioReserva;
+        this.servicioReserva = servicioReserva;
+    }
+    
+    /**
+     * El cliente decide mantener su reserva a pesar del mal clima.
+     * Muestra página de confirmación.
+     */
+    @GetMapping("/mantener/{reservaId}")
+    public String mostrarMantener(@PathVariable Long reservaId, Model model) {
+        try {
+            Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
+            
+            if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+                model.addAttribute("error", "Esta reserva no se puede mantener en su estado actual");
+                return "alerta-clima/error";
+            }
+            
+            model.addAttribute("reserva", reserva);
+            return "alerta-clima/mantener";
+            
+        } catch (Exception e) {
+            log.error("Error al mostrar mantener reserva {}: {}", reservaId, e.getMessage(), e);
+            model.addAttribute("error", "Reserva no encontrada");
+            return "alerta-clima/error";
+        }
+    }
+    
+    /**
+     * Procesa la confirmación de mantener la reserva.
+     */
+    @PostMapping("/mantener/{reservaId}")
+    public String confirmarMantener(@PathVariable Long reservaId, Model model) {
+        try {
+            Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
+            
+            if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+                model.addAttribute("error", "Esta reserva no se puede mantener");
+                return "alerta-clima/error";
+            }
+            
+            log.info("Cliente {} confirmó mantener reserva {} a pesar del mal clima", 
+                    reserva.getCliente().getEmail(), reserva.getCodigoReserva());
+            
+            model.addAttribute("reserva", reserva);
+            model.addAttribute("mensaje", "Tu reserva se mantiene confirmada");
+            return "alerta-clima/exito";
+            
+        } catch (Exception e) {
+            log.error("Error al confirmar mantener reserva {}: {}", reservaId, e.getMessage(), e);
+            model.addAttribute("error", "Ocurrió un error al procesar tu solicitud");
+            return "alerta-clima/error";
+        }
+    }
+    
+    /**
+     * El cliente decide reprogramar su reserva.
+     * Muestra calendario y horarios disponibles.
+     */
+    @GetMapping("/reprogramar/{reservaId}")
+    public String mostrarReprogramar(@PathVariable Long reservaId, Model model) {
+        try {
+            Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+
+            // Bloquear si la reserva está FINALIZADA
+            if (reserva.getEstado() == EstadoReserva.FINALIZADA) {
+                model.addAttribute("error", "No puedes reprogramar una reserva que ya está finalizada.");
+                return "alerta-clima/error";
+            }
+
+            // Bloquear si el horario ya pasó
+            if (!reserva.getDetalles().isEmpty()) {
+                DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+                LocalDateTime fechaHoraReserva = LocalDateTime.of(
+                    primerDetalle.getFechaReserva(),
+                    primerDetalle.getHoraInicio()
+                );
+                LocalDateTime ahora = LocalDateTime.now();
+                if (fechaHoraReserva.isBefore(ahora) || fechaHoraReserva.equals(ahora)) {
+                    model.addAttribute("error", "No puedes reprogramar una reserva cuyo horario ya pasó.");
+                    return "alerta-clima/error";
+                }
+            }
+
+            if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+                model.addAttribute("error", "Esta reserva no se puede reprogramar en su estado actual");
+                return "alerta-clima/error";
+            }
+
+            // Validar política de cancelación para reprogramación
+            ServicioReserva.ResultadoValidacionReprogramacion validacion = servicioReserva.validarReprogramacion(reserva);
+            if (!validacion.isCumplePolitica()) {
+                model.addAttribute("error", validacion.getMensaje());
+                return "alerta-clima/error";
+            }
+            // ...existing code...
+            DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+            EspacioReservable espacio = primerDetalle.getEspacioReservable();
+            model.addAttribute("reserva", reserva);
+            model.addAttribute("espacio", espacio);
+            model.addAttribute("fechaActual", reserva.getFechaReserva());
+            model.addAttribute("horaActual", primerDetalle.getHoraInicio());
+            model.addAttribute("validacion", validacion);
+            return "alerta-clima/reprogramar";
+
+        } catch (Exception e) {
+            log.error("Error al mostrar reprogramar reserva {}: {}", reservaId, e.getMessage(), e);
+            model.addAttribute("error", "Reserva no encontrada");
+            return "alerta-clima/error";
+        }
+    }
+    
+    /**
+     * Obtiene horarios disponibles para una fecha específica.
+     */
+    @GetMapping("/reprogramar/{reservaId}/horarios")
+    @ResponseBody
+    public List<String> obtenerHorariosDisponibles(
+            @PathVariable Long reservaId,
+            @RequestParam String fecha) {
+        
+        try {
+            // Validar parámetros
+            if (fecha == null || fecha.trim().isEmpty()) {
+                log.error("Fecha vacía o nula para obtener horarios de reserva {}", reservaId);
+                return List.of();
+            }
+            
+            Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                log.error("Reserva {} no tiene detalles para obtener horarios", reservaId);
+                return List.of();
+            }
+            
+            DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+            EspacioReservable espacio = primerDetalle.getEspacioReservable();
+            
+            if (espacio == null || espacio.getId() == null) {
+                log.error("Espacio no válido en reserva {} para obtener horarios", reservaId);
+                return List.of();
+            }
+            
+            LocalDate fechaSolicitada = LocalDate.parse(fecha);
+            
+            // Obtener horarios disponibles usando el servicio
+            List<LocalTime> horariosDisponibles = servicioReserva
+                .obtenerHorariosDisponibles(espacio.getId(), fechaSolicitada);
+            
+            if (horariosDisponibles == null) {
+                log.warn("El servicio retornó null para horarios de espacio {} en fecha {}", 
+                        espacio.getId(), fechaSolicitada);
+                return List.of();
+            }
+            
+            return horariosDisponibles.stream()
+                .map(LocalTime::toString)
+                .collect(Collectors.toList());
+                
+        } catch (java.time.format.DateTimeParseException e) {
+            log.error("Formato de fecha inválido para reserva {}: {}", reservaId, fecha, e);
+            return List.of();
+        } catch (Exception e) {
+            log.error("Error inesperado al obtener horarios para reserva {}: {}", reservaId, e.getMessage(), e);
+            return List.of();
+        }
+    }
+    
+    /**
+     * Procesa la reprogramación de la reserva.
+     * Marca la reserva original como REPROGRAMADA y crea una nueva reserva CONFIRMADA.
+     * 
+     * NOTA: Este método NO debe ser @Transactional porque necesita que los cambios
+     * persistan incluso si falla la renderización de la vista. El servicio ya maneja
+     * la transaccionalidad correctamente.
+     */
+    @PostMapping("/reprogramar/{reservaId}")
+    public String procesarReprogramacion(
+            @PathVariable Long reservaId,
+            @RequestParam String nuevaFecha,
+            @RequestParam String nuevaHora,
+            Model model) {
+        
+        try {
+            // Validar parámetros
+            if (nuevaFecha == null || nuevaFecha.trim().isEmpty()) {
+                model.addAttribute("error", "La nueva fecha es obligatoria");
+                return "alerta-clima/error";
+            }
+            if (nuevaHora == null || nuevaHora.trim().isEmpty()) {
+                model.addAttribute("error", "La nueva hora es obligatoria");
+                return "alerta-clima/error";
+            }
+            
+            Reserva reservaOriginal = repositorioReserva.findByIdWithDetalles(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            if (reservaOriginal.getEstado() != EstadoReserva.CONFIRMADA) {
+                model.addAttribute("error", "Esta reserva no se puede reprogramar");
+                return "alerta-clima/error";
+            }
+            ServicioReserva.ResultadoValidacionReprogramacion validacion = servicioReserva.validarReprogramacion(reservaOriginal);
+            if (!validacion.isCumplePolitica()) {
+                model.addAttribute("error", validacion.getMensaje());
+                return "alerta-clima/error";
+            }
+            LocalDate fecha = LocalDate.parse(nuevaFecha);
+            LocalTime hora = LocalTime.parse(nuevaHora);
+            LocalDate fechaOriginal = reservaOriginal.getFechaReserva();
+            LocalTime horaOriginal = reservaOriginal.getDetalles().get(0).getHoraInicio();
+            reservaOriginal.setEstado(EstadoReserva.REPROGRAMADA);
+            repositorioReserva.save(reservaOriginal);
+            Reserva nuevaReserva = servicioReserva.crearReservaPorReprogramacion(
+                reservaOriginal, fecha, hora);
+            log.info("Reserva {} reprogramada: original {} {} → nueva {} {} {} por alerta climática", 
+                    reservaOriginal.getCodigoReserva(), 
+                    fechaOriginal, horaOriginal,
+                    nuevaReserva.getCodigoReserva(), fecha, hora);
+            model.addAttribute("reserva", nuevaReserva);
+            model.addAttribute("reservaOriginal", reservaOriginal);
+            model.addAttribute("mensaje", "Tu reserva ha sido reprogramada exitosamente");
+            model.addAttribute("nuevaFecha", fecha);
+            model.addAttribute("nuevaHora", hora);
+            return "alerta-clima/exito";
+        } catch (Exception e) {
+            log.error("Error al reprogramar reserva {}: {}", reservaId, e.getMessage(), e);
+            model.addAttribute("error", "Ocurrió un error al reprogramar tu reserva: " + e.getMessage());
+            return "alerta-clima/error";
+        }
+    }
+    
+    /**
+     * El cliente decide cancelar su reserva debido al mal clima.
+     * Muestra página de confirmación.
+     * Verifica si hay seña y política de cancelación.
+     */
+    @GetMapping("/cancelar/{reservaId}")
+    public String mostrarCancelar(@PathVariable Long reservaId, Model model) {
+        try {
+            Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                log.error("Reserva {} no tiene detalles asociados", reservaId);
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
+            
+            if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+                model.addAttribute("error", "Esta reserva no se puede cancelar en su estado actual");
+                return "alerta-clima/error";
+            }
+            
+            // Validar política de cancelación
+            ServicioReserva.ResultadoValidacionCancelacion validacion = 
+                servicioReserva.validarCancelacion(reserva);
+            
+            if (!validacion.isPuedeCancelar()) {
+                model.addAttribute("error", validacion.getMensaje());
+                return "alerta-clima/error";
+            }
+            
+            model.addAttribute("reserva", reserva);
+            model.addAttribute("requiereSenia", validacion.isRequiereSenia());
+            model.addAttribute("cumplePolitica", validacion.isCumplePolitica());
+            model.addAttribute("mensajePolitica", validacion.getMensaje());
+            
+            return "alerta-clima/cancelar";
+            
+        } catch (Exception e) {
+            log.error("Error al mostrar cancelar reserva {}: {}", reservaId, e.getMessage(), e);
+            model.addAttribute("error", "Reserva no encontrada");
+            return "alerta-clima/error";
+        }
+    }
+    
+    /**
+     * Procesa la cancelación de la reserva.
+     */
+    @PostMapping("/cancelar/{reservaId}")
+    public String procesarCancelacion(@PathVariable Long reservaId, Model model) {
+        try {
+            Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            if (reserva.getDetalles() == null || reserva.getDetalles().isEmpty()) {
+                log.error("Reserva {} no tiene detalles asociados", reservaId);
+                model.addAttribute("error", "La reserva no tiene detalles asociados");
+                return "alerta-clima/error";
+            }
+            
+            if (reserva.getEstado() != EstadoReserva.CONFIRMADA) {
+                model.addAttribute("error", "Esta reserva no se puede cancelar");
+                return "alerta-clima/error";
+            }
+            
+            reserva.setEstado(EstadoReserva.CANCELADA);
+            repositorioReserva.save(reserva);
+            
+            log.info("Reserva {} cancelada por alerta climática", reserva.getCodigoReserva());
+            
+            model.addAttribute("reserva", reserva);
+            model.addAttribute("mensaje", "Tu reserva ha sido cancelada");
+            return "alerta-clima/exito";
+            
+        } catch (Exception e) {
+            log.error("Error al cancelar reserva {}: {}", reservaId, e.getMessage(), e);
+            model.addAttribute("error", "Ocurrió un error al cancelar tu reserva");
+            return "alerta-clima/error";
+        }
+    }
+}
