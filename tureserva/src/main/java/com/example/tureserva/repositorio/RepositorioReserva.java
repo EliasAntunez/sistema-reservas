@@ -358,6 +358,34 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
            @Param("alertaEnviada") Boolean alertaEnviada
        );
 
+       // ==================== CONSULTAS PARA RECUPERO DE SEÑAS ====================
+       
+       /**
+        * Encuentra reservas CONFIRMADA cuyo plazo de cancelación gratuita ha vencido
+        * pero aún no se les ha enviado el aviso de recupero mediante Oferta Flash.
+        * 
+        * Lógica: busca reservas donde:
+        * 1. Estado = CONFIRMADA
+        * 2. No se ha enviado aviso de recupero (avisoRecuperoEnviado = false o null)
+        * 3. El tiempo restante hasta el inicio es <= horasAnticipacionMinima de la política
+        * 4. Aún no ha comenzado la reserva (hora_inicio > hora actual)
+        */
+       @Query("SELECT DISTINCT r FROM Reserva r " +
+              "LEFT JOIN FETCH r.cliente " +
+              "LEFT JOIN FETCH r.detalles d " +
+              "LEFT JOIN FETCH d.espacioReservable e " +
+              "LEFT JOIN FETCH e.politicaCancelacion pc " +
+              "LEFT JOIN FETCH e.complejoDeportivo " +
+              "WHERE r.estado = 'CONFIRMADA' " +
+              "AND (r.avisoRecuperoEnviado = false OR r.avisoRecuperoEnviado IS NULL) " +
+              "AND pc IS NOT NULL " +
+              "AND (" +
+              "  (r.fechaReserva = CURRENT_DATE AND d.horaInicio > CURRENT_TIME) OR " +
+              "  r.fechaReserva > CURRENT_DATE" +
+              ") " +
+              "ORDER BY r.fechaReserva ASC, d.horaInicio ASC")
+       List<Reserva> findReservasParaAvisoRecupero();
+
        /**
         * Consulta nativa para obtener la ocupación horaria (cantidad de detalles de reserva)
         * agrupada por día ISO (1=Lunes .. 7=Domingo) y hora (0..23).

@@ -211,21 +211,41 @@
                     <p class="mb-0">
                         <strong th:text="${horasRestantes}">24</strong> hora(s) restantes hasta el inicio de tu reserva.
                     </p>
+                    <p class="mb-0" style="font-size: 0.9rem; color: #666; margin-top: 8px;" th:if="${politica != null}">
+                        Política de cancelación requiere <strong th:text="${politica.horasAnticipacionMinima}">24</strong> hora(s) de anticipación.
+                    </p>
                 </div>
 
                 <!-- Advertencia de Política de Cancelación -->
-                <div class="warning-message" th:if="${politica != null}">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
+                <div class="warning-message" th:if="${politica != null && horasRestantes != null && horasRestantes > politica.horasAnticipacionMinima}">
+                    <i class="bi bi-check-circle-fill" style="color: #28a745;"></i>
+                    <p style="color: #155724;">
+                        <strong>✅ Cancelación sin cargos:</strong>
+                        Estás dentro del plazo. Se devolverá el <strong>100%</strong> de tu seña.
+                    </p>
+                </div>
+
+                <div class="warning-message" style="background: #ffe5e5; border-color: #dc3545;" 
+                     th:if="${politica != null && horasRestantes != null && horasRestantes < politica.horasAnticipacionMinima && reserva.montoSenia != null && reserva.montoSenia > 0}">
+                    <i class="bi bi-exclamation-triangle-fill" style="color: #dc3545;"></i>
+                    <p style="color: #721c24;">
+                        <strong>⚠️ ¡Atención! Ya no podés recuperar el 100% de tu seña</strong><br>
+                        <span style="font-size: 0.95rem; margin-top: 10px; display: block;">
+                            El plazo de cancelación gratuita ya venció. <strong>Pero no todo está perdido:</strong><br>
+                            🎯 Generaremos una <strong>Oferta Flash</strong> que estará disponible por 24 horas.<br>
+                            💰 Si alguien la reclama, <strong>recuperarás el 50% de tu seña</strong> (
+                            <span th:text="'$' + ${#numbers.formatDecimal(reserva.montoSenia / 2, 1, 2)}">$500</span>
+                            ).<br>
+                            ⏰ Si nadie la reclama en 24 horas, perderás la seña completa.
+                        </span>
+                    </p>
+                </div>
+                
+                <div class="warning-message" th:if="${politica != null && horasRestantes != null && horasRestantes < politica.horasAnticipacionMinima && (reserva.montoSenia == null || reserva.montoSenia == 0)}">
+                    <i class="bi bi-info-circle-fill"></i>
                     <p>
                         <strong>Política de Cancelación:</strong>
-                        <span th:text="${politica.nombre}">Política estándar</span> - 
-                        Se requieren al menos <strong th:text="${politica.horasAnticipacionMinima}">24</strong> hora(s) de anticipación.
-                        <span th:if="${politica.porcentajeDevolucion < 100}">
-                            Se devolverá el <strong th:text="${politica.porcentajeDevolucion}">50</strong>% del monto pagado.
-                        </span>
-                        <span th:if="${politica.porcentajeDevolucion == 100}">
-                            Se devolverá el <strong>100%</strong> del monto pagado.
-                        </span>
+                        Ya pasó el plazo de cancelación gratuita. Se aplicarán los términos según la política del complejo.
                     </p>
                 </div>
 

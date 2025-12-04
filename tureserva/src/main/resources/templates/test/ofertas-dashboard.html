@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>🧪 Panel de Pruebas - Ofertas Flash</title>
+    <style>
+        .test-panel {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 30px;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .test-action {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .test-action-info {
+            flex: 1;
+        }
+        
+        .test-action-info h3 {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        
+        .test-action-info p {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .btn-test {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+        
+        .ofertas-count {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .ofertas-count h1 {
+            margin: 0;
+            font-size: 3em;
+            font-weight: 700;
+        }
+        
+        .ofertas-count p {
+            margin: 10px 0 0 0;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .oferta-card {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .oferta-card h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .oferta-card .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .instrucciones {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+        
+        .instrucciones h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .instrucciones ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        
+        .instrucciones li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+<div layout:fragment="content">
+    <div class="test-panel">
+        <!-- Advertencia -->
+        <div class="alert-warning">
+            <strong>⚠️ Panel de Pruebas - Solo para Desarrollo</strong>
+            <p style="margin: 10px 0 0 0;">Este panel permite ejecutar manualmente los procesos programados del módulo de Ofertas Flash. No usar en producción.</p>
+        </div>
+
+        <!-- Contador de Ofertas Activas -->
+        <div class="ofertas-count">
+            <h1 th:text="${cantidadOfertas}">0</h1>
+            <p>Ofertas Flash Activas</p>
+        </div>
+
+        <!-- Alertas -->
+        <div th:if="${success}" class="alert alert-success" role="alert">
+            <strong>✅ Éxito:</strong> <span th:text="${success}"></span>
+        </div>
+        
+        <div th:if="${error}" class="alert alert-danger" role="alert">
+            <strong>❌ Error:</strong> <span th:text="${error}"></span>
+        </div>
+        
+        <div th:if="${info}" class="alert alert-info" role="alert">
+            <strong>ℹ️ Info:</strong> <span th:text="${info}"></span>
+        </div>
+
+        <!-- Sección: Procesos Programados -->
+        <div class="test-section">
+            <h2>🔄 Procesos Programados</h2>
+            
+            <div class="test-action">
+                <div class="test-action-info">
+                    <h3>📧 Enviar Avisos de Recupero</h3>
+                    <p>Busca reservas próximas a perder su seña y envía emails proactivos a los clientes.</p>
+                    <p><strong>Normalmente ejecuta:</strong> Cada hora (cron: 0 0 * * * *)</p>
+                </div>
+                <form method="post" th:action="@{/test/ofertas/avisos}">
+                    <button type="submit" class="btn-test btn-primary">
+                        Ejecutar Ahora
+                    </button>
+                </form>
+            </div>
+            
+            <div class="test-action">
+                <div class="test-action-info">
+                    <h3>⏰ Procesar Ofertas Expiradas</h3>
+                    <p>Marca como EXPIRADA las ofertas que ya pasaron su fecha de vencimiento (24 horas).</p>
+                    <p><strong>Normalmente ejecuta:</strong> Como parte del proceso de avisos</p>
+                </div>
+                <form method="post" th:action="@{/test/ofertas/expirar}">
+                    <button type="submit" class="btn-test btn-success">
+                        Procesar Ahora
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sección: Ofertas Activas -->
+        <div class="test-section" th:if="${cantidadOfertas > 0}">
+            <h2>💰 Ofertas Flash Disponibles</h2>
+            
+            <div th:each="oferta : ${ofertasActivas}" class="oferta-card">
+                <h4>
+                    <span class="badge badge-success" th:text="${oferta.estado}">DISPONIBLE</span>
+                    Oferta #<span th:text="${oferta.id}">1</span>
+                </h4>
+                <p>
+                    <strong>Cliente Original:</strong> <span th:text="${oferta.clienteOriginal.nombre}">Juan Pérez</span><br>
+                    <strong>Monto Recupero:</strong> $<span th:text="${oferta.montoRecuperoCliente}">500</span><br>
+                    <strong>Descuento Oferta:</strong> $<span th:text="${oferta.montoDescuentoOferta}">1000</span><br>
+                    <strong>Expira:</strong> <span th:text="${#temporals.format(oferta.fechaExpiracion, 'dd/MM/yyyy HH:mm')}">02/12/2025 18:00</span>
+                </p>
+                <a th:href="@{/ofertas/{token}(token=${oferta.token})}" 
+                   class="btn-test btn-primary" 
+                   style="font-size: 0.9em; padding: 8px 20px;">
+                    Ver Oferta
+                </a>
+            </div>
+        </div>
+
+        <!-- Instrucciones -->
+        <div class="instrucciones">
+            <h3>📋 Cómo Probar el Flujo Completo</h3>
+            <ol>
+                <li><strong>Crear una reserva</strong> con seña y política de cancelación (ej: 48 horas de anticipación)</li>
+                <li><strong>Modificar temporalmente</strong> la fecha de la reserva en la BD para que esté dentro del plazo de cancelación tardía</li>
+                <li><strong>Ejecutar "Enviar Avisos"</strong> desde este panel para enviar el email proactivo</li>
+                <li><strong>Cancelar la reserva</strong> desde el panel de usuario → Se generará automáticamente una Oferta Flash</li>
+                <li><strong>Ver la oferta</strong> usando el token desde la sección "Ofertas Flash Disponibles"</li>
+                <li><strong>Reclamar la oferta</strong> con otro usuario → Se crea nueva reserva y se acredita 50% al cliente original</li>
+                <li><strong>Verificar emails</strong> enviados (confirmación al cliente original y nuevo cliente)</li>
+                <li><strong>Verificar cuenta corriente</strong> del cliente original (debe tener crédito de 50%)</li>
+            </ol>
+        </div>
+    </div>
+</div>
+</body>
+</html>

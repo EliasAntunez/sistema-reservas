@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Oferta Confirmada - TuReserva</title>
+    <style>
+        .confirmacion-container {
+            max-width: 600px;
+            margin: 3rem auto;
+            text-align: center;
+            padding: 2rem;
+        }
+        .success-icon {
+            font-size: 5rem;
+            color: #38a169;
+            margin-bottom: 1rem;
+        }
+        .confirmacion-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        .confirmacion-card h2 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+        .confirmacion-card p {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            text-align: left;
+        }
+        .info-box h4 {
+            color: #2c5282;
+            margin-bottom: 0.5rem;
+        }
+        .info-box ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="confirmacion-container">
+            <div class="success-icon">✅</div>
+            
+            <div class="confirmacion-card">
+                <h2>¡Felicitaciones! Oferta Reclamada</h2>
+                
+                <p>Tu reserva ha sido confirmada exitosamente.</p>
+                
+                <p class="descuento-destacado" style="font-size: 1.25rem; color: #38a169; font-weight: 600; margin: 1.5rem 0;">
+                    🎉 Has recibido un descuento de <span th:text="${'$' + #numbers.formatDecimal(montoDescuento, 1, 2)}">$0.00</span>
+                </p>
+                
+                <p>Recibirás un correo electrónico con todos los detalles de tu reserva en los próximos minutos.</p>
+                
+                <div class="info-box">
+                    <h4>Próximos pasos:</h4>
+                    <ul>
+                        <li>Revisa tu correo para confirmar los detalles</li>
+                        <li>Guarda el comprobante de tu reserva</li>
+                        <li>Presenta tu confirmación al llegar al complejo</li>
+                        <li>Revisa la política de cancelación en caso de necesitarla</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box" style="background: #f0fff4; border-left-color: #38a169; margin-top: 1rem;">
+                    <h4>¡Gracias por tu reserva!</h4>
+                    <p style="margin: 0;">
+                        Al reclamar esta oferta, ayudaste a otro usuario a recuperar parte de su seña.
+                        ¡Todos ganan con las Ofertas Flash!
+                    </p>
+                </div>
+                
+                <div class="btn-group">
+                    <a th:href="@{/reservas/mis-reservas}" class="btn btn-primary">
+                        Ver Mis Reservas
+                    </a>
+                    <a th:href="@{/reservas/listar-complejos}" class="btn btn-secondary">
+                        Explorar Complejos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

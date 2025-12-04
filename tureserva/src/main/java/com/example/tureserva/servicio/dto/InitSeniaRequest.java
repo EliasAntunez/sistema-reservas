@@ -6,6 +6,7 @@ public class InitSeniaRequest {
     private Long complejoId;
     private String clienteEmail;
     private String referencia;
+    private Boolean aplicarCredito;
 
     // estructura: { indiceItem : { idServicio : cantidad } }
     private Map<Integer, Map<Long, Integer>> serviciosPorItem;
@@ -21,4 +22,7 @@ public class InitSeniaRequest {
 
     public String getReferencia() { return referencia; }
     public void setReferencia(String referencia) { this.referencia = referencia; }
+
+    public Boolean getAplicarCredito() { return aplicarCredito; }
+    public void setAplicarCredito(Boolean aplicarCredito) { this.aplicarCredito = aplicarCredito; }
 }

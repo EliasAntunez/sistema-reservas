@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva Confirmada - Oferta Flash</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .discount-badge {
+            background: #38a169;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .success-box {
+            background: #f0fff4;
+            border-left: 4px solid #38a169;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .alert-box {
+            background: #fef5e7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .reserva-details {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .detail-value {
+            color: #2d3748;
+        }
+        .espacios-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        .espacios-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .espacios-list li:last-child {
+            border-bottom: none;
+        }
+        .precio-original {
+            text-decoration: line-through;
+            color: #a0aec0;
+        }
+        .precio-final {
+            color: #38a169;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .ahorro-box {
+            background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .ahorro-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: #38a169;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .qr-placeholder {
+            width: 200px;
+            height: 200px;
+            background: #e2e8f0;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎉 ¡Reserva Confirmada!</h1>
+            <div class="discount-badge">Oferta Flash - Descuento Especial</div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p>Hola <strong th:text="${nombreCliente}">Cliente</strong>,</p>
+
+            <div class="success-box">
+                <strong>✅ Tu reserva ha sido confirmada exitosamente</strong><br>
+                Reclamaste una Oferta Flash y obtuviste un descuento especial.
+            </div>
+
+            <!-- Ahorro Destacado -->
+            <div class="ahorro-box">
+                <div style="font-size: 16px; color: #2f855a; margin-bottom: 10px;">
+                    💰 Tu Ahorro Total
+                </div>
+                <div class="ahorro-amount">$<span th:text="${montoAhorrado}">500.00</span></div>
+                <div style="font-size: 14px; color: #2f855a; margin-top: 5px;">
+                    ¡Descuento aplicado!
+                </div>
+            </div>
+
+            <!-- Detalles de la Reserva -->
+            <div class="reserva-details">
+                <h3 style="margin-top: 0;">📋 Detalles de tu Reserva</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Código de Reserva:</span>
+                    <span class="detail-value" style="font-family: monospace; font-weight: bold;"
+                          th:text="${codigoReserva}">RES-12345</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Complejo:</span>
+                    <span class="detail-value" th:text="${nombreComplejo}">Complejo Deportivo</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Dirección:</span>
+                    <span class="detail-value" th:text="${direccionComplejo}">Calle 123</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Fecha:</span>
+                    <span class="detail-value" th:text="${fecha}">01/01/2024</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Hora de inicio:</span>
+                    <span class="detail-value" style="font-size: 1.2em; font-weight: bold;"
+                          th:text="${hora}">10:00</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Espacios reservados:</span>
+                    <div>
+                        <ul class="espacios-list">
+                            <li th:each="espacio : ${espacios}" th:text="${espacio}">
+                                Cancha de Fútbol 5 (2 horas)
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información de Pago -->
+            <div class="reserva-details">
+                <h3 style="margin-top: 0;">💳 Información de Pago</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Precio Original:</span>
+                    <span class="precio-original" th:text="'$' + ${precioOriginal}">$1000</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Descuento Oferta Flash:</span>
+                    <span class="detail-value" style="color: #38a169;"
+                          th:text="'-$' + ${montoAhorrado}">-$500</span>
+                </div>
+                
+                <div class="detail-row" style="border-top: 2px solid #667eea; padding-top: 15px; margin-top: 10px;">
+                    <span class="detail-label">Total Pagado:</span>
+                    <span class="precio-final" th:text="'$' + ${precioFinal}">$500</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Estado:</span>
+                    <span class="detail-value" style="color: #38a169; font-weight: bold;">✅ CONFIRMADA</span>
+                </div>
+            </div>
+
+            <!-- QR Code Placeholder -->
+            <div style="text-align: center; margin: 30px 0;">
+                <h4>Código QR de Reserva</h4>
+                <div class="qr-placeholder">
+                    [QR Code aquí]
+                </div>
+                <p style="font-size: 14px; color: #718096;">
+                    Presenta este código al llegar al complejo
+                </p>
+            </div>
+
+            <!-- Instrucciones Importantes -->
+            <div class="alert-box">
+                <strong>📌 Instrucciones Importantes:</strong>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                    <li>Llega <strong>10 minutos antes</strong> de tu horario reservado</li>
+                    <li>Presenta este correo o el código QR en recepción</li>
+                    <li>Lleva tu DNI para verificación</li>
+                    <li>Revisa la política de cancelación a continuación</li>
+                </ol>
+            </div>
+
+            <!-- Política de Cancelación -->
+            <div class="reserva-details">
+                <h4 style="margin-top: 0;">🔄 Política de Cancelación</h4>
+                <p style="font-size: 14px; color: #4a5568; margin: 10px 0;">
+                    <strong>Cancelación:</strong> <span th:text="${politicaCancelacion}">Consultar con el complejo</span>
+                </p>
+                <p style="font-size: 12px; color: #718096; margin: 5px 0;">
+                    Esta reserva fue adquirida con descuento mediante Oferta Flash. 
+                    Pueden aplicarse condiciones especiales de cancelación.
+                </p>
+            </div>
+
+            <!-- Contacto del Complejo -->
+            <div class="reserva-details">
+                <h4 style="margin-top: 0;">📞 Contacto del Complejo</h4>
+                <p style="margin: 5px 0;">
+                    <strong>Teléfono:</strong> <span th:text="${telefonoComplejo}">(123) 456-7890</span>
+                </p>
+                <p style="margin: 5px 0;" th:if="${emailComplejo}">
+                    <strong>Email:</strong> <span th:text="${emailComplejo}">contacto@complejo.com</span>
+                </p>
+            </div>
+
+            <!-- Call to Action -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a th:href="${urlMisReservas}" class="cta-button">
+                    Ver Todas Mis Reservas
+                </a>
+            </div>
+
+            <div class="success-box">
+                <strong>💚 ¡Gracias por tu compra!</strong><br>
+                Al reclamar esta Oferta Flash, ayudaste a otro usuario a recuperar parte de su seña.
+                Este sistema beneficia a toda la comunidad de TuReserva.
+            </div>
+
+            <p>
+                Si tienes alguna pregunta sobre tu reserva, no dudes en contactarnos.
+            </p>
+
+            <p>
+                ¡Que disfrutes tu reserva!<br>
+                <strong>El equipo de TuReserva</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Este es un correo automático, por favor no respondas a esta dirección.</p>
+            <p>Para consultas sobre tu reserva, contacta directamente al complejo deportivo.</p>
+            <p>&copy; 2024 TuReserva - Sistema de Gestión de Reservas Deportivas</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -41,6 +41,7 @@ public class WebhookController {
     private final ServicioPago servicioPago;
     private final ObjectMapper objectMapper;
     private final com.example.tureserva.repositorio.RepositorioBloqueoTemporal repositorioBloqueoTemporal;
+    private final com.example.tureserva.servicio.ServicioCuentaCorriente servicioCuentaCorriente;
 
     public WebhookController(RepositorioAdministradorComplejo repositorioAdministradorComplejo,
                              RepositorioPago repositorioPago,
@@ -50,7 +51,8 @@ public class WebhookController {
                              ServicioReserva servicioReserva,
                              ServicioPago servicioPago,
                              ObjectMapper objectMapper,
-                             com.example.tureserva.repositorio.RepositorioBloqueoTemporal repositorioBloqueoTemporal) {
+                             com.example.tureserva.repositorio.RepositorioBloqueoTemporal repositorioBloqueoTemporal,
+                             com.example.tureserva.servicio.ServicioCuentaCorriente servicioCuentaCorriente) {
         this.repositorioAdministradorComplejo = repositorioAdministradorComplejo;
         this.repositorioPago = repositorioPago;
         this.repositorioCliente = repositorioCliente;
@@ -60,6 +62,7 @@ public class WebhookController {
         this.servicioPago = servicioPago;
         this.objectMapper = objectMapper;
         this.repositorioBloqueoTemporal = repositorioBloqueoTemporal;
+        this.servicioCuentaCorriente = servicioCuentaCorriente;
     }
 
     @PostMapping("/mercadopago")
@@ -215,25 +218,77 @@ public class WebhookController {
             }
         }
 
-        // Crear la reserva
-        Reserva reserva = servicioReserva.crearReservaDesdeDatosTemp(cliente, datosReserva, serviciosPorItem);
+        // Leer si debe aplicar crédito
+        Boolean aplicarCreditoBool = (Boolean) metadata.get("aplicarCredito");
+        boolean aplicarCredito = aplicarCreditoBool != null && aplicarCreditoBool;
+        
+        // Crear la reserva (NO enviar email todavía si hay crédito a aplicar)
+        Reserva reserva = servicioReserva.crearReservaDesdeDatosTemp(cliente, datosReserva, serviciosPorItem, !aplicarCredito);
         
         // Setear el monto de la seña pagada y recalcular el monto restante
         reserva.setMontoSenia(pago.getMonto());
         reserva.calcularMontoRestante(); // Calcular el monto restante (total - seña)
         
-        // Guardar la reserva actualizada con la seña
+        // Aplicar crédito de cuenta corriente si está marcado
+        java.math.BigDecimal creditoAplicado = java.math.BigDecimal.ZERO;
+        if (aplicarCredito) {
+            try {
+                java.math.BigDecimal saldoDisponible = servicioCuentaCorriente.obtenerSaldo(cliente);
+                log.info("Webhook - Saldo disponible del cliente: {}", saldoDisponible);
+                
+                if (saldoDisponible.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    // Calcular cuánto crédito aplicar (mínimo entre saldo y monto restante)
+                    java.math.BigDecimal montoRestante = reserva.getMontoRestante();
+                    creditoAplicado = saldoDisponible.min(montoRestante);
+                    
+                    log.info("Webhook - Aplicando crédito de {} a reserva {} (saldo: {}, restante: {})", 
+                        creditoAplicado, reserva.getId(), saldoDisponible, montoRestante);
+                    
+                    // Debitar el crédito de la cuenta corriente
+                    servicioCuentaCorriente.debitarSaldo(
+                        cliente, 
+                        creditoAplicado, 
+                        "Crédito aplicado a reserva " + reserva.getCodigoReserva(),
+                        reserva
+                    );
+                    
+                    // Actualizar monto restante de la reserva
+                    java.math.BigDecimal nuevoRestante = montoRestante.subtract(creditoAplicado);
+                    reserva.setMontoRestante(nuevoRestante);
+                    reserva.setCreditoAplicado(creditoAplicado);
+                    
+                    log.info("Webhook - Crédito aplicado exitosamente. Nuevo monto restante: {}", nuevoRestante);
+                } else {
+                    log.warn("Webhook - Cliente {} intentó aplicar crédito pero no tiene saldo disponible", cliente.getEmail());
+                }
+            } catch (Exception e) {
+                log.error("Webhook - Error al aplicar crédito de cuenta corriente: {}", e.getMessage(), e);
+                // No fallar la reserva por error al aplicar crédito, solo registrar
+            }
+        }
+        
+        // Guardar la reserva actualizada con la seña y el crédito
         repositorioReserva.save(reserva);
         
         // Asociar pago a reserva
         servicioPago.asociarPagoAReserva(pago.getId(), reserva);
+        
+        // Enviar email de confirmación con toda la información (seña + crédito si aplica)
+        try {
+            log.info("Webhook - Enviando email de confirmación con creditoAplicado: {}", creditoAplicado);
+            servicioReserva.enviarEmailConfirmacionCompleto(reserva, creditoAplicado);
+            log.info("Webhook - Email de confirmación enviado exitosamente");
+        } catch (Exception emailEx) {
+            log.error("Webhook - Error al enviar email de confirmación: {}", emailEx.getMessage(), emailEx);
+            // No fallar el webhook por error en email
+        }
         
         // ELIMINAR BLOQUEOS TEMPORALES asociados a este pago
         // La reserva se creó exitosamente, por lo que ya no se necesitan los bloqueos
         int bloqueosEliminados = repositorioBloqueoTemporal.eliminarPorPagoId(pago.getId());
         log.info("Eliminados {} bloqueos temporales para el pago {}", bloqueosEliminados, pago.getId());
         
-        log.info("Reserva {} creada automáticamente desde webhook para pago {}. Total: ${}, Seña: ${}, Restante: ${}", 
-            reserva.getId(), pago.getId(), reserva.getMontoTotal(), reserva.getMontoSenia(), reserva.getMontoRestante());
+        log.info("Reserva {} creada automáticamente desde webhook para pago {}. Total: ${}, Seña: ${}, Crédito: ${}, Restante: ${}", 
+            reserva.getId(), pago.getId(), reserva.getMontoTotal(), reserva.getMontoSenia(), creditoAplicado, reserva.getMontoRestante());
     }
 }

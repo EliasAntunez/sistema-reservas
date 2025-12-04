@@ -307,6 +307,7 @@ public class ServicioPago {
         meta.put("clienteEmail", req.getClienteEmail());
         meta.put("complejoId", datos.getComplejoId());
         meta.put("referencia", req.getReferencia());
+        meta.put("aplicarCredito", req.getAplicarCredito() != null ? req.getAplicarCredito() : false);
         // Guardar datos completos de la reserva para poder crearla desde el webhook
         meta.put("datosReserva", datos);
         meta.put("serviciosPorItem", req.getServiciosPorItem());

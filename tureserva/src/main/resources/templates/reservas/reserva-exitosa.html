@@ -221,6 +221,18 @@
                                 </div>
                             </div>
 
+                            <!-- Crédito Aplicado (solo si aplica) -->
+                            <div th:if="${reserva.creditoAplicado != null and reserva.creditoAplicado.compareTo(T(java.math.BigDecimal).ZERO) > 0}" 
+                                 class="row mb-2 text-success">
+                                <div class="col-7">
+                                    <i class="bi bi-piggy-bank-fill"></i> <strong>💰 Crédito Aplicado</strong>
+                                    <small class="d-block text-muted">(de tu cuenta corriente)</small>
+                                </div>
+                                <div class="col-5 text-end">
+                                    <strong>-$<span th:text="${#numbers.formatDecimal(reserva.creditoAplicado, 1, 2)}">0.00</span></strong>
+                                </div>
+                            </div>
+
                             <!-- Seña Pagada (solo si aplica) -->
                             <div th:if="${reserva.requirioSenia()}" class="row mb-2 text-success">
                                 <div class="col-7">
@@ -236,8 +248,16 @@
                             <div class="row mt-3 pt-3 border-top">
                                 <div class="col-7">
                                     <strong class="fs-5">A Pagar al Finalizar la Reserva</strong>
-                                    <small class="d-block text-muted" th:if="${reserva.requirioSenia()}">
-                                        (Incluye: saldo espacios + servicios)
+                                    <small class="d-block text-muted" th:if="${reserva.requirioSenia() or (reserva.creditoAplicado != null and reserva.creditoAplicado.compareTo(T(java.math.BigDecimal).ZERO) > 0)}">
+                                        <span th:if="${reserva.requirioSenia() and reserva.creditoAplicado != null and reserva.creditoAplicado.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                                            (Seña y crédito ya descontados)
+                                        </span>
+                                        <span th:if="${reserva.requirioSenia() and (reserva.creditoAplicado == null or reserva.creditoAplicado.compareTo(T(java.math.BigDecimal).ZERO) == 0)}">
+                                            (Seña ya descontada - Incluye servicios adicionales)
+                                        </span>
+                                        <span th:if="${!reserva.requirioSenia() and reserva.creditoAplicado != null and reserva.creditoAplicado.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                                            (Crédito ya descontado)
+                                        </span>
                                     </small>
                                 </div>
                                 <div class="col-5 text-end">

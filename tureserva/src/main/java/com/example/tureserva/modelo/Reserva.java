@@ -94,12 +94,19 @@ public class Reserva {
     private BigDecimal montoSenia;
 
     /**
-     * Monto restante a pagar (montoTotal - montoSenia)
+     * Monto restante a pagar (montoTotal - montoSenia - creditoAplicado)
      * Se calcula automáticamente
      */
     @DecimalMin(value = "0.0", message = "El monto restante no puede ser negativo")
     @Column(name = "monto_restante", precision = 10, scale = 2)
     private BigDecimal montoRestante;
+
+    /**
+     * Crédito de cuenta corriente aplicado a esta reserva
+     */
+    @DecimalMin(value = "0.0", message = "El crédito aplicado no puede ser negativo")
+    @Column(name = "credito_aplicado", precision = 10, scale = 2)
+    private BigDecimal creditoAplicado = BigDecimal.ZERO;
 
     /**
      * Notas o comentarios adicionales del cliente
@@ -154,6 +161,13 @@ public class Reserva {
     @Column(name = "reserva_origen_id")
     private Long reservaOrigenId;
 
+    /**
+     * Indica si se envió el aviso de vencimiento de plazo de cancelación gratuita.
+     * Se usa para generar ofertas flash cuando el cliente cancela tardíamente.
+     */
+    @Column(name = "aviso_recupero_enviado")
+    private Boolean avisoRecuperoEnviado = false;
+
     // ==================== MÉTODOS DE UTILIDAD ====================
 
     /**
@@ -199,14 +213,22 @@ public class Reserva {
     }
 
     /**
-     * Calcula el monto restante (total - seña)
+     * Calcula el monto restante (total - seña - crédito aplicado)
      */
     public void calcularMontoRestante() {
-        if (montoSenia == null) {
-            this.montoRestante = this.montoTotal;
-        } else {
-            this.montoRestante = this.montoTotal.subtract(montoSenia);
+        BigDecimal restante = this.montoTotal;
+        
+        // Restar seña si existe
+        if (montoSenia != null) {
+            restante = restante.subtract(montoSenia);
         }
+        
+        // Restar crédito aplicado si existe
+        if (creditoAplicado != null && creditoAplicado.compareTo(BigDecimal.ZERO) > 0) {
+            restante = restante.subtract(creditoAplicado);
+        }
+        
+        this.montoRestante = restante;
     }
 
     /**

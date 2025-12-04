@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Oferta No Disponible - TuReserva</title>
+    <style>
+        .no-disponible-container {
+            max-width: 600px;
+            margin: 3rem auto;
+            text-align: center;
+            padding: 2rem;
+        }
+        .warning-icon {
+            font-size: 5rem;
+            color: #ed8936;
+            margin-bottom: 1rem;
+        }
+        .no-disponible-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        .no-disponible-card h2 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+        .no-disponible-card p {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+        .estado-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 1rem 0;
+        }
+        .estado-reclamada {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .estado-expirada {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        .estado-cancelada {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+        .btn-explorar {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            transition: all 0.2s;
+        }
+        .btn-explorar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="no-disponible-container">
+            <div class="warning-icon">⚠️</div>
+            
+            <div class="no-disponible-card">
+                <h2>Oferta No Disponible</h2>
+                
+                <div th:if="${oferta.estado.name() == 'RECLAMADA'}" class="estado-badge estado-reclamada">
+                    Ya fue reclamada
+                </div>
+                <div th:if="${oferta.estado.name() == 'EXPIRADA'}" class="estado-badge estado-expirada">
+                    Expirada
+                </div>
+                <div th:if="${oferta.estado.name() == 'CANCELADA'}" class="estado-badge estado-cancelada">
+                    Cancelada
+                </div>
+                
+                <p th:if="${oferta.estado.name() == 'RECLAMADA'}">
+                    Esta oferta ya fue reclamada por otro usuario.
+                </p>
+                
+                <p th:if="${oferta.estado.name() == 'EXPIRADA'}">
+                    Esta oferta ha expirado. Las Ofertas Flash tienen una validez de 24 horas.
+                </p>
+                
+                <p th:if="${oferta.estado.name() == 'CANCELADA'}">
+                    Esta oferta fue cancelada por el administrador del sistema.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
