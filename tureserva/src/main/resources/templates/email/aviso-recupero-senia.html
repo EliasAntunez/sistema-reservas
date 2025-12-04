@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviso de Recupero de Seña</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .alert-box {
+            background: #fef5e7;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .reserva-details {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .detail-value {
+            color: #2d3748;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .countdown {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .highlight {
+            color: #667eea;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>⏰ Tu Reserva Está Por Expirar</h1>
+            <p>¡Recupera el 50% de tu seña!</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p>Hola <strong th:text="${nombreCliente}">Cliente</strong>,</p>
+
+            <div class="countdown">
+                ⏰ Te quedan <strong th:text="${horasRestantes}">X</strong> horas para cancelar sin penalidad
+            </div>
+
+            <p>
+                Tu reserva está próxima a alcanzar el límite de tiempo de cancelación gratuita.
+                Si necesitas cancelar, <strong>tenemos una excelente noticia</strong>:
+            </p>
+
+            <div class="info-box">
+                <strong>💡 Nuevo: Sistema de Recupero de Señas</strong><br>
+                Si cancelas ahora, generaremos automáticamente una <strong>Oferta Flash</strong> con tu reserva.
+                Si alguien la reclama en las próximas 24 horas, <span class="highlight">recuperarás el 50% de tu seña</span>
+                como crédito para futuras reservas.
+            </div>
+
+            <!-- Detalles de la Reserva -->
+            <div class="reserva-details">
+                <h3 style="margin-top: 0;">📋 Detalles de tu Reserva</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Complejo:</span>
+                    <span class="detail-value" th:text="${nombreComplejo}">Complejo Deportivo</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Fecha:</span>
+                    <span class="detail-value" th:text="${fecha}">01/01/2024</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Hora:</span>
+                    <span class="detail-value" th:text="${hora}">10:00</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Monto Total:</span>
+                    <span class="detail-value" th:text="'$' + ${montoTotal}">$1000</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Seña Pagada:</span>
+                    <span class="detail-value" th:text="'$' + ${montoSenia}">$500</span>
+                </div>
+                
+                <div class="detail-row" style="border-top: 2px solid #667eea; padding-top: 15px; margin-top: 10px;">
+                    <span class="detail-label">Recupero Posible (50%):</span>
+                    <span class="detail-value" style="color: #38a169; font-weight: bold; font-size: 1.2em;"
+                          th:text="'$' + ${montoRecupero}">$250</span>
+                </div>
+            </div>
+
+            <!-- Cómo Funciona -->
+            <div class="alert-box">
+                <strong>¿Cómo funciona?</strong>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                    <li>Si decides cancelar, se genera automáticamente una <strong>Oferta Flash</strong></li>
+                    <li>Tu reserva se ofrece con <strong>50% de descuento</strong> durante 24 horas</li>
+                    <li>Si alguien la reclama, recuperas <strong>$<span th:text="${montoRecupero}">250</span></strong> como crédito</li>
+                    <li>El crédito queda disponible en tu cuenta para futuras reservas</li>
+                </ol>
+            </div>
+
+            <!-- Call to Action -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a th:href="${urlReserva}" class="cta-button">
+                    Ver Mi Reserva
+                </a>
+            </div>
+
+            <p style="font-size: 14px; color: #718096;">
+                <strong>Nota:</strong> Si no cancelas dentro de las próximas 
+                <strong th:text="${horasRestantes}">X</strong> horas, 
+                se aplicará la política de cancelación del complejo y podrías perder tu seña completa.
+            </p>
+
+            <p>
+                Si tienes alguna pregunta, no dudes en contactarnos.
+            </p>
+
+            <p>
+                Saludos,<br>
+                <strong>El equipo de TuReserva</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Este es un correo automático, por favor no respondas a esta dirección.</p>
+            <p>&copy; 2024 TuReserva - Sistema de Gestión de Reservas Deportivas</p>
+        </div>
+    </div>
+</body>
+</html>

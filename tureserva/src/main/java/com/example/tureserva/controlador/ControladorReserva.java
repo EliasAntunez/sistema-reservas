@@ -10,6 +10,7 @@ import com.example.tureserva.servicio.ServicioEspacioReservable;
 import com.example.tureserva.servicio.ServicioDeporte;
 import com.example.tureserva.servicio.ServicioReserva;
 import com.example.tureserva.servicio.ServicioServicioAdicional;
+import com.example.tureserva.servicio.ServicioCuentaCorriente;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -54,6 +56,7 @@ public class ControladorReserva {
     private final RepositorioCliente repositorioCliente;
     private final RepositorioReserva repositorioReserva;
     private final RepositorioPago repositorioPago;
+    private final ServicioCuentaCorriente servicioCuentaCorriente;
     
     public ControladorReserva(ServicioComplejoDeportivo servicioComplejo,
                               ServicioEspacioReservable servicioEspacio,
@@ -62,7 +65,8 @@ public class ControladorReserva {
                               ServicioServicioAdicional servicioServicioAdicional,
                               RepositorioCliente repositorioCliente,
                               RepositorioReserva repositorioReserva,
-                              RepositorioPago repositorioPago) {
+                              RepositorioPago repositorioPago,
+                              ServicioCuentaCorriente servicioCuentaCorriente) {
         this.servicioComplejo = servicioComplejo;
         this.servicioEspacio = servicioEspacio;
         this.servicioDeporte = servicioDeporte;
@@ -71,6 +75,7 @@ public class ControladorReserva {
         this.repositorioCliente = repositorioCliente;
         this.repositorioReserva = repositorioReserva;
         this.repositorioPago = repositorioPago;
+        this.servicioCuentaCorriente = servicioCuentaCorriente;
     }
 
     /**
@@ -83,6 +88,26 @@ public class ControladorReserva {
         } catch (NumberFormatException e) {
             // No es numérico, buscar por código
             return repositorioReserva.findByCodigoReservaWithDetalles(idOrCodigo);
+        }
+    }
+    
+    /**
+     * Obtiene el email del usuario autenticado (OAuth2 o tradicional).
+     */
+    private String obtenerEmailAutenticado(Authentication authentication) {
+        if (authentication == null) {
+            throw new IllegalStateException("Usuario no autenticado");
+        }
+        
+        if (authentication.getPrincipal() instanceof OAuth2User) {
+            OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+            String email = oauth2User.getAttribute("email");
+            if (email == null || email.isEmpty()) {
+                throw new IllegalStateException("No se pudo obtener el email del usuario OAuth2");
+            }
+            return email;
+        } else {
+            return authentication.getName();
         }
     }
 
@@ -377,6 +402,22 @@ public class ControladorReserva {
             model.addAttribute("serviciosAdicionalesDisponibles", java.util.Collections.emptyList());
         }
         
+        // Obtener saldo disponible de cuenta corriente del cliente autenticado
+        try {
+            String email = obtenerEmailAutenticado(authentication);
+            Optional<Cliente> clienteOpt = repositorioCliente.findByEmail(email);
+            if (clienteOpt.isPresent()) {
+                BigDecimal saldoDisponible = servicioCuentaCorriente.obtenerSaldo(clienteOpt.get());
+                model.addAttribute("saldoCuentaCorriente", saldoDisponible);
+                logger.debug("Saldo disponible para cliente {}: {}", email, saldoDisponible);
+            } else {
+                model.addAttribute("saldoCuentaCorriente", BigDecimal.ZERO);
+            }
+        } catch (Exception ex) {
+            logger.warn("No se pudo obtener saldo de cuenta corriente: {}", ex.getMessage());
+            model.addAttribute("saldoCuentaCorriente", BigDecimal.ZERO);
+        }
+        
         return "reservas/confirmar-reserva";
     }
     
@@ -527,15 +568,73 @@ public class ControladorReserva {
                     logger.warn("Parámetro de servicio con formato inesperado: {}", key);
                 }
             }
+            
+            // Verificar si se debe aplicar crédito de cuenta corriente
+            boolean aplicarCredito = "true".equalsIgnoreCase(allRequestParams.get("aplicarCredito"));
+            logger.debug("¿Aplicar crédito de cuenta corriente?: {}", aplicarCredito);
 
             // Crear la reserva usando el servicio (procesa múltiples items y servicios)
-            Reserva reserva = servicioReserva.crearReservaDesdeDatosTemp(cliente, datosReserva, serviciosPorItem);
+            // Si se va a aplicar crédito, NO enviar email todavía (se enviará después con toda la info)
+            Reserva reserva = servicioReserva.crearReservaDesdeDatosTemp(cliente, datosReserva, serviciosPorItem, !aplicarCredito);
+            
+            // Aplicar crédito de cuenta corriente si está marcado
+            BigDecimal creditoAplicado = BigDecimal.ZERO;
+            logger.info("=== DEBUG INICIO === aplicarCredito: {}, Reserva ID: {}, MontoTotal: {}, MontoRestante INICIAL: {}, MontoSeña: {}",
+                aplicarCredito, reserva.getId(), reserva.getMontoTotal(), reserva.getMontoRestante(), reserva.getMontoSenia());
+            
+            if (aplicarCredito) {
+                try {
+                    BigDecimal saldoDisponible = servicioCuentaCorriente.obtenerSaldo(cliente);
+                    logger.info("=== DEBUG === Saldo disponible del cliente: {}", saldoDisponible);
+                    
+                    if (saldoDisponible.compareTo(BigDecimal.ZERO) > 0) {
+                        // Calcular cuánto crédito aplicar (mínimo entre saldo y monto restante)
+                        BigDecimal montoRestante = reserva.getMontoRestante();
+                        creditoAplicado = saldoDisponible.min(montoRestante);
+                        
+                        logger.info("Aplicando crédito de {} a reserva {} (saldo: {}, restante: {})", 
+                            creditoAplicado, reserva.getId(), saldoDisponible, montoRestante);
+                        
+                        // Debitar el crédito de la cuenta corriente
+                        servicioCuentaCorriente.debitarSaldo(
+                            cliente, 
+                            creditoAplicado, 
+                            "Crédito aplicado a reserva " + reserva.getCodigoReserva(),
+                            reserva
+                        );
+                        
+                        // Actualizar monto restante de la reserva
+                        BigDecimal nuevoRestante = montoRestante.subtract(creditoAplicado);
+                        reserva.setMontoRestante(nuevoRestante);
+                        reserva.setCreditoAplicado(creditoAplicado);
+                        reserva = repositorioReserva.saveAndFlush(reserva);
+                        
+                        logger.info("Crédito aplicado exitosamente. Nuevo monto restante: {} (guardado: {}, crédito en entidad: {})", 
+                            nuevoRestante, reserva.getMontoRestante(), reserva.getCreditoAplicado());
+                    } else {
+                        logger.warn("Cliente {} intentó aplicar crédito pero no tiene saldo disponible", email);
+                    }
+                } catch (Exception e) {
+                    logger.error("Error al aplicar crédito de cuenta corriente: {}", e.getMessage(), e);
+                    // No fallar la reserva por error al aplicar crédito, solo registrar
+                }
+                
+                // Enviar email ÚNICO con toda la información (crédito aplicado incluido)
+                try {
+                    logger.info("DEBUG - Enviando email con creditoAplicado: {} (Reserva ID: {}, Monto Restante: {})", 
+                        creditoAplicado, reserva.getId(), reserva.getMontoRestante());
+                    servicioReserva.enviarEmailConfirmacionCompleto(reserva, creditoAplicado);
+                    logger.info("Email de confirmación completo enviado con crédito aplicado: {}", creditoAplicado);
+                } catch (Exception emailEx) {
+                    logger.error("Error al enviar email de confirmación: {}", emailEx.getMessage(), emailEx);
+                }
+            }
             
             // Limpiar sesión
             session.removeAttribute("datosReserva");
             
-            logger.info("Reserva {} creada exitosamente para cliente {} con {} espacios", 
-                reserva.getId(), cliente.getId(), reserva.getDetalles().size());
+            logger.info("Reserva {} creada exitosamente para cliente {} con {} espacios (Crédito aplicado: {})", 
+                reserva.getId(), cliente.getId(), reserva.getDetalles().size(), creditoAplicado);
             
             // Redirigir a vista de éxito
             return "redirect:/reservas/exitosa/" + reserva.getId();
@@ -561,7 +660,11 @@ public class ControladorReserva {
             return "redirect:/reservas/nueva";
         }
         
-        model.addAttribute("reserva", reservaOpt.get());
+        Reserva reserva = reservaOpt.get();
+        logger.info("DEBUG VISTA - Reserva {}: MontoTotal={}, CreditoAplicado={}, MontoRestante={}",
+            reserva.getId(), reserva.getMontoTotal(), reserva.getCreditoAplicado(), reserva.getMontoRestante());
+        
+        model.addAttribute("reserva", reserva);
         return "reservas/reserva-exitosa";
     }
     
@@ -819,23 +922,33 @@ public class ControladorReserva {
                 Long complejoId = primerDetalle.getEspacioReservable().getComplejoDeportivo().getId_complejo();
                 return "redirect:/admin-complejo/reservas/" + complejoId;
             } else {
-                // Cancelación por cliente (aplicar reglas de política)
+                // Cancelación por cliente (siempre permitir, generando oferta flash si corresponde)
                 ServicioReserva.ResultadoCancelacion resultado = servicioReserva.cancelarReserva(
                     reserva.getId(), cliente, motivo
                 );
 
-                if (!resultado.isPuedeSerCancelada()) {
-                    redirectAttributes.addFlashAttribute("error", resultado.getMensaje());
-                    return "redirect:/reservas/mis-reservas";
-                }
-
                 String mensajeExito = "Reserva cancelada exitosamente";
-                if (resultado.getPorcentajeDevolucion() != null && resultado.getPorcentajeDevolucion() < 100) {
+                
+                // Si se generó una Oferta Flash (cancelación tardía)
+                if (resultado.getOfertaFlashGenerada() != null) {
+                    mensajeExito = "⚠️ Ya no podés recuperar el 100% de tu seña, pero generamos una Oferta Flash. " +
+                                  "Si alguien la reclama, recuperarás el 50% de tu seña (" + 
+                                  resultado.getOfertaFlashGenerada().getMontoRecuperoCliente() + 
+                                  "). La oferta estará disponible por 24 horas.";
+                } else if (resultado.getPorcentajeDevolucion() != null && resultado.getPorcentajeDevolucion() < 100) {
                     mensajeExito += String.format(". Se devolverá el %.0f%% del monto pagado",
                         resultado.getPorcentajeDevolucion());
                 }
 
                 redirectAttributes.addFlashAttribute("mensaje", mensajeExito);
+                
+                // Si hay oferta flash, agregar info adicional
+                if (resultado.getOfertaFlashGenerada() != null) {
+                    redirectAttributes.addFlashAttribute("ofertaGenerada", true);
+                    redirectAttributes.addFlashAttribute("montoRecuperable", 
+                        resultado.getOfertaFlashGenerada().getMontoRecuperoCliente());
+                }
+                
                 logger.info("Reserva {} cancelada exitosamente por cliente {}", reserva.getId(), reserva.getCliente() != null ? reserva.getCliente().getId() : "-" );
                 return "redirect:/reservas/mis-reservas";
             }

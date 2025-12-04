@@ -14,6 +14,8 @@ public class EmailReservaDTO {
     private BigDecimal montoSenia;
     private BigDecimal montoRestante;
     private boolean requirioSenia;
+    private BigDecimal creditoAplicado;
+    private BigDecimal descuentoOfertaFlash;
     private java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detalles = new java.util.ArrayList<>();
     private java.util.List<String> recordatorios = new java.util.ArrayList<>();
     private String politicaCancelacionResumen;
@@ -57,6 +59,12 @@ public class EmailReservaDTO {
 
     public boolean isRequirioSenia() { return requirioSenia; }
     public void setRequirioSenia(boolean requirioSenia) { this.requirioSenia = requirioSenia; }
+
+    public BigDecimal getCreditoAplicado() { return creditoAplicado; }
+    public void setCreditoAplicado(BigDecimal creditoAplicado) { this.creditoAplicado = creditoAplicado; }
+
+    public BigDecimal getDescuentoOfertaFlash() { return descuentoOfertaFlash; }
+    public void setDescuentoOfertaFlash(BigDecimal descuentoOfertaFlash) { this.descuentoOfertaFlash = descuentoOfertaFlash; }
 
     public java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> getDetalles() { return detalles; }
     public void setDetalles(java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detalles) { this.detalles = detalles; }

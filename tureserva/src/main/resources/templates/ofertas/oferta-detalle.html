@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Oferta Flash - TuReserva</title>
+    <style>
+        .oferta-card {
+            max-width: 800px;
+            margin: 2rem auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .oferta-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .oferta-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .oferta-header .descuento {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+        .oferta-body {
+            padding: 2rem;
+            background: white;
+        }
+        .detalle-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detalle-item:last-child {
+            border-bottom: none;
+        }
+        .detalle-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .detalle-value {
+            color: #2d3748;
+        }
+        .precio-original {
+            text-decoration: line-through;
+            color: #a0aec0;
+            font-size: 1.2rem;
+        }
+        .precio-oferta {
+            color: #38a169;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        .alert-warning {
+            background-color: #fef5e7;
+            border-left: 4px solid #f39c12;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .btn-reclamar {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn-reclamar:hover {
+            transform: scale(1.02);
+        }
+        .btn-reclamar:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .countdown {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 1rem;
+            text-align: center;
+            font-weight: bold;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .espacios-list {
+            list-style: none;
+            padding: 0;
+        }
+        .espacios-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+        }
+        .espacios-list li:before {
+            content: "✓";
+            color: #38a169;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="oferta-card">
+            <!-- Cabecera de la oferta -->
+            <div class="oferta-header">
+                <h1>🔥 ¡Oferta Flash! 🔥</h1>
+                <div class="descuento" th:text="'$' + ${#numbers.formatDecimal(oferta.montoDescuentoOferta, 1, 2)} + ' OFF'">$1000 OFF</div>
+                <p>Reserva cancelada - Última oportunidad</p>
+            </div>
+
+            <!-- Cuerpo de la oferta -->
+            <div class="oferta-body">
+                <!-- Countdown timer -->
+                <div class="countdown" th:if="${oferta.estaDisponible()}">
+                    ⏰ Esta oferta expira el 
+                    <span th:text="${#temporals.format(oferta.fechaExpiracion, 'dd/MM/yyyy HH:mm')}"></span>
+                </div>
+
+                <!-- Detalles de la reserva -->
+                <h3>Detalles de la Reserva</h3>
+                
+                <div class="detalle-item">
+                    <span class="detalle-label">Complejo:</span>
+                    <span class="detalle-value" th:text="${nombreComplejo}"></span>
+                </div>
+
+                <div class="detalle-item">
+                    <span class="detalle-label">Fecha:</span>
+                    <span class="detalle-value" 
+                          th:text="${#temporals.format(fecha, 'dd/MM/yyyy')}"></span>
+                </div>
+
+                <div class="detalle-item">
+                    <span class="detalle-label">Hora de inicio:</span>
+                    <span class="detalle-value" 
+                          th:text="${#temporals.format(horaInicio, 'HH:mm')}"></span>
+                </div>
+
+                <div class="detalle-item">
+                    <span class="detalle-label">Espacios incluidos:</span>
+                    <div>
+                        <ul class="espacios-list">
+                            <li th:each="detalle : ${detalles}"
+                                th:text="${detalle.espacioReservable.nombre + ' (' + detalle.duracionHoras + 'h)'}">
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Precios -->
+                <div class="detalle-item" style="border-top: 2px solid #e2e8f0; margin-top: 1rem; padding-top: 1rem;">
+                    <span class="detalle-label">Precio original:</span>
+                    <span class="precio-original" 
+                          th:text="'$' + ${#numbers.formatDecimal(montoTotal, 1, 2)}"></span>
+                </div>
+
+                <div class="detalle-item">
+                    <span class="detalle-label">Descuento aplicado:</span>
+                    <span class="precio-oferta" 
+                          th:text="'-$' + ${#numbers.formatDecimal(oferta.montoDescuentoOferta, 1, 2)}"></span>
+                </div>
+
+                <div class="detalle-item">
+                    <span class="detalle-label">Precio final a pagar:</span>
+                    <span class="precio-oferta" 
+                          th:text="'$' + ${#numbers.formatDecimal(precioConDescuento, 1, 2)}"></span>
+                </div>
+
+                <!-- Advertencia si es el cliente original -->
+                <div class="alert-warning" th:if="${esClienteOriginal}">
+                    ⚠️ Esta es tu reserva cancelada. No puedes reclamar tu propia oferta.
+                    Si se vende, recuperarás automáticamente el 50% de tu seña como crédito.
+                </div>
+
+                <!-- Botón de reclamo -->
+                <form th:action="@{/ofertas/{token}/reclamar(token=${oferta.token})}" 
+                      method="post"
+                      th:if="${oferta.estaDisponible() and !esClienteOriginal}">
+                    <button type="submit" class="btn-reclamar">
+                        🎯 Reclamar esta Oferta
+                    </button>
+                </form>
+
+                <!-- Mensaje si no está disponible -->
+                <div class="alert-warning" th:unless="${oferta.estaDisponible()}">
+                    Esta oferta ya no está disponible.
+                </div>
+
+                <!-- Información adicional -->
+                <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                    <h4>¿Cómo funciona?</h4>
+                    <ul>
+                        <li>Al reclamar esta oferta, obtienes un <strong>descuento fijo</strong> sobre el precio original</li>
+                        <li>Tu reserva queda <strong>confirmada inmediatamente sin pagar seña</strong></li>
+                        <li>Pagarás el total con descuento al finalizar la reserva</li>
+                        <li>Recibirás un correo de confirmación con todos los detalles</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

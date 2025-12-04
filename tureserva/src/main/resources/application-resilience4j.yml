@@ -1,0 +1,135 @@
+# ============================================================================
+# Configuración de Resilience4j para Ofertas Flash
+# ============================================================================
+# Este archivo contiene la configuración de patrones de resiliencia:
+# - Retry: Reintentos automáticos ante fallos transitorios
+# - Circuit Breaker: Protección contra cascadas de fallos
+# - Rate Limiter: Control de tasa de operaciones
+# - Time Limiter: Timeouts configurables
+# - Bulkhead: Aislamiento de recursos
+#
+# IMPORTANTE: Para activar estas configuraciones, debes incluir este perfil
+# en application.properties:
+#   spring.profiles.include=resilience4j
+# ============================================================================
+
+resilience4j:
+  # ========================================
+  # RETRY: Reintentos automáticos
+  # ========================================
+  retry:
+    instances:
+      # Configuración para reclamarOferta()
+      # Maneja OptimisticLockException y deadlocks en SERIALIZABLE
+      reclamarOferta:
+        max-attempts: 3                    # 3 intentos totales (1 original + 2 reintentos)
+        wait-duration: 100ms               # Espera inicial entre reintentos
+        exponential-backoff-multiplier: 2  # Multiplicador exponencial (100ms → 200ms → 400ms)
+        retry-exceptions:
+          - org.springframework.orm.ObjectOptimisticLockingFailureException
+          - org.springframework.dao.CannotAcquireLockException
+          - org.springframework.dao.PessimisticLockingFailureException
+          - org.hibernate.exception.LockAcquisitionException
+        ignore-exceptions:
+          - java.lang.IllegalStateException  # No reintentar en errores de lógica de negocio
+          - java.lang.IllegalArgumentException
+
+      # Configuración para crearOferta()
+      crearOferta:
+        max-attempts: 2
+        wait-duration: 50ms
+        retry-exceptions:
+          - org.springframework.dao.DataIntegrityViolationException
+          - org.springframework.dao.TransientDataAccessException
+
+  # ========================================
+  # CIRCUIT BREAKER: Protección anti-cascada
+  # ========================================
+  circuitbreaker:
+    instances:
+      # Protección para ServicioEmail
+      # Si el email server falla, no colapsar todo el sistema
+      emailService:
+        failure-rate-threshold: 50              # Abrir circuit si 50% de llamadas fallan
+        slow-call-rate-threshold: 80            # Considerar "slow" si 80% tardan más del threshold
+        slow-call-duration-threshold: 5s        # Llamadas >5s son "lentas"
+        wait-duration-in-open-state: 60s        # Esperar 60s antes de pasar a half-open
+        permitted-number-of-calls-in-half-open-state: 3  # Probar con 3 llamadas en half-open
+        sliding-window-type: COUNT_BASED        # Ventana basada en cantidad
+        sliding-window-size: 10                 # Evaluar últimas 10 llamadas
+        minimum-number-of-calls: 5              # Mínimo 5 llamadas antes de calcular rate
+        automatic-transition-from-open-to-half-open-enabled: true
+
+      # Protección para MercadoPago (si se integra en el futuro)
+      mercadoPago:
+        failure-rate-threshold: 60
+        slow-call-duration-threshold: 10s
+        wait-duration-in-open-state: 120s
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+
+  # ========================================
+  # RATE LIMITER: Control de tasa
+  # ========================================
+  ratelimiter:
+    instances:
+      # Limitar tasa de notificaciones para evitar spam
+      enviarNotificaciones:
+        limit-for-period: 100           # 100 operaciones permitidas
+        limit-refresh-period: 1m        # Por cada minuto
+        timeout-duration: 1s            # Esperar máximo 1s si se alcanzó el límite
+
+      # Limitar creación de ofertas (anti-abuse)
+      crearOferta:
+        limit-for-period: 50
+        limit-refresh-period: 1m
+        timeout-duration: 500ms
+
+  # ========================================
+  # TIME LIMITER: Timeouts
+  # ========================================
+  timelimiter:
+    instances:
+      # Timeout para operaciones de email
+      emailService:
+        timeout-duration: 10s
+        cancel-running-future: true
+
+      # Timeout para operaciones de reclamo
+      reclamarOferta:
+        timeout-duration: 15s
+        cancel-running-future: false  # No cancelar si ya inició transacción
+
+  # ========================================
+  # BULKHEAD: Aislamiento de recursos
+  # ========================================
+  bulkhead:
+    instances:
+      # Limitar llamadas concurrentes a email service
+      emailService:
+        max-concurrent-calls: 10
+        max-wait-duration: 500ms
+
+      # Limitar llamadas concurrentes a scheduler
+      enviarNotificaciones:
+        max-concurrent-calls: 5
+        max-wait-duration: 1s
+
+# ============================================================================
+# FEATURE FLAGS (control de funcionalidades)
+# ============================================================================
+app:
+  features:
+    ofertas-flash:
+      enabled: true                     # Activar/desactivar ofertas flash sin redeploy
+      crear-enabled: true               # Permitir creación de nuevas ofertas
+      reclamar-enabled: true            # Permitir reclamo de ofertas
+      notificaciones-enabled: true      # Enviar notificaciones automáticas
+
+# ============================================================================
+# CONFIGURACIÓN DE LOGGING PARA RESILIENCE4J
+# ============================================================================
+logging:
+  level:
+    io.github.resilience4j: DEBUG       # Ver eventos de Resilience4j en desarrollo
+    com.example.tureserva.servicio.ServicioOfertas: DEBUG

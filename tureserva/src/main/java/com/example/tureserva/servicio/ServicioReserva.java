@@ -10,6 +10,7 @@ import com.example.tureserva.repositorio.RepositorioReserva;
 import com.example.tureserva.repositorio.RepositorioPago;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
@@ -53,6 +54,7 @@ public class ServicioReserva {
     private final com.example.tureserva.repositorio.RepositorioDetalleServicioAdicional repositorioDetalleServicioAdicional;
     private final EntityManager entityManager;
     private final ServicioEmail servicioEmail;
+    private final ServicioOfertas servicioOfertas; // Lazy injection para evitar ciclo
 
     // Helper key para agrupar por franja horaria
     private static class FranjaKey {
@@ -87,7 +89,8 @@ public class ServicioReserva {
                          ServicioServicioAdicional servicioServicioAdicional,
                          com.example.tureserva.repositorio.RepositorioDetalleServicioAdicional repositorioDetalleServicioAdicional,
                          EntityManager entityManager,
-                         ServicioEmail servicioEmail) {
+                         ServicioEmail servicioEmail,
+                         @Lazy ServicioOfertas servicioOfertas) {
         this.repositorioDetalleReserva = repositorioDetalleReserva;
         this.repositorioEspacioReservable = repositorioEspacioReservable;
         this.repositorioReserva = repositorioReserva;
@@ -96,6 +99,7 @@ public class ServicioReserva {
         this.repositorioDetalleServicioAdicional = repositorioDetalleServicioAdicional;
         this.entityManager = entityManager;
         this.servicioEmail = servicioEmail;
+        this.servicioOfertas = servicioOfertas;
     }
 
     /**
@@ -370,6 +374,20 @@ public class ServicioReserva {
      */
     @Transactional
     public Reserva crearReservaDesdeDatosTemp(Cliente cliente, DatosReservaTemp datosReserva, Map<Integer, Map<Long, Integer>> serviciosPorItem) {
+        return crearReservaDesdeDatosTemp(cliente, datosReserva, serviciosPorItem, true);
+    }
+    
+    /**
+     * Crea una reserva desde los datos temporales con control sobre el envío de email.
+     * 
+     * @param cliente Cliente que realiza la reserva
+     * @param datosReserva Datos temporales de la reserva
+     * @param serviciosPorItem Servicios adicionales por item
+     * @param enviarEmail Si es true, envía el email de confirmación inmediatamente
+     * @return Reserva creada y guardada
+     */
+    @Transactional
+    public Reserva crearReservaDesdeDatosTemp(Cliente cliente, DatosReservaTemp datosReserva, Map<Integer, Map<Long, Integer>> serviciosPorItem, boolean enviarEmail) {
         
         logger.info("Creando reserva para cliente {} con {} espacios para fecha {}", 
             cliente.getId(), datosReserva.cantidadEspacios(), datosReserva.getFecha());
@@ -655,9 +673,14 @@ public class ServicioReserva {
                 dto.setPoliticaCancelacionResumen("Política de cancelación por defecto: reembolso completo si cancela con al menos 1 hora de anticipación.");
             }
 
-            servicioEmail.enviarConfirmacionReserva(dto, destinatario);
+            if (enviarEmail) {
+                servicioEmail.enviarConfirmacionReserva(dto, destinatario);
+                logger.debug("Email de confirmación enviado para reserva {}", reservaGuardada.getCodigoReserva());
+            } else {
+                logger.debug("Email de confirmación omitido para reserva {} (será enviado posteriormente)", reservaGuardada.getCodigoReserva());
+            }
         } catch (Exception e) {
-            logger.error("Error al disparar envío de correo para reserva {}: {}", reservaGuardada.getCodigoReserva(), e.getMessage(), e);
+            logger.error("Error al preparar/enviar correo para reserva {}: {}", reservaGuardada.getCodigoReserva(), e.getMessage(), e);
         }
 
         return reservaGuardada;
@@ -733,8 +756,10 @@ public class ServicioReserva {
      * @return ResultadoCancelacion con información sobre el resultado
      * @throws IllegalStateException si la reserva no puede ser cancelada
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ResultadoCancelacion cancelarReserva(Long reservaId, Cliente cliente, String motivo) {
+        
+        logger.info("🔄 Iniciando cancelación de reserva {} por cliente {}", reservaId, cliente.getEmail());
         
         // 1. Obtener la reserva con sus detalles
         Reserva reserva = repositorioReserva.findByIdWithDetalles(reservaId)
@@ -765,13 +790,76 @@ public class ServicioReserva {
         // 6. Cancelar la reserva: marcar como CANCELADA pero mantener los detalles
         // para conservar el historial y evitar inconsistencias en validaciones (montoTotal > 0)
         reserva.cancelar(motivo);
-        repositorioReserva.save(reserva);
+        reserva = repositorioReserva.save(reserva);
         
         logger.info("Reserva {} cancelada por cliente {}. Motivo: {}", reservaId, cliente.getId(), motivo);
         
-        // 7. Retornar resultado exitoso
+        // 7. ESTRATEGIA 50/50: Verificar si debe generar Oferta Flash (cancelación tardía con seña)
+        boolean ofertaGenerada = false;
+        
+        // Verificar si la cancelación está fuera del plazo de la política
+        boolean esCancelacionTardia = false;
+        if (reserva.getDetalles() != null && !reserva.getDetalles().isEmpty()) {
+            DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+            PoliticaCancelacion politica = primerDetalle.getEspacioReservable().getPoliticaCancelacion();
+            
+            if (politica != null) {
+                LocalDateTime fechaHoraReserva = LocalDateTime.of(
+                    primerDetalle.getFechaReserva(),
+                    primerDetalle.getHoraInicio()
+                );
+                LocalDateTime ahora = LocalDateTime.now();
+                long horasRestantes = java.time.Duration.between(ahora, fechaHoraReserva).toHours();
+                
+                // Es cancelación tardía si quedan menos horas que las requeridas por la política
+                esCancelacionTardia = horasRestantes <= politica.getHorasAnticipacionMinima();
+            }
+        }
+        
+        // Generar Oferta Flash si es cancelación tardía Y tiene seña pagada
+        if (esCancelacionTardia && 
+            reserva.getMontoSenia() != null && 
+            reserva.getMontoSenia().compareTo(BigDecimal.ZERO) > 0) {
+            
+            logger.info("🎯 Generando Oferta Flash para reserva {} (cancelación tardía)", reservaId);
+            
+            // CRÍTICO: Si falla la generación de la oferta, debe hacer rollback de toda la cancelación
+            // El cliente cancela para recuperar su seña mediante la oferta
+            if (this.servicioOfertas == null) {
+                logger.error("❌ ServicioOfertas es null, no se puede generar oferta");
+                throw new IllegalStateException("No se puede generar Oferta Flash: servicio no disponible");
+            }
+            
+            try {
+                com.example.tureserva.modelo.OfertaFlash oferta = 
+                    this.servicioOfertas.generarOferta(reserva);
+                
+                resultado.setOfertaFlashGenerada(oferta);
+                ofertaGenerada = true;
+                
+                logger.info("✅ Oferta Flash {} generada exitosamente. Token: {}", 
+                        oferta.getId(), oferta.getToken());
+                        
+            } catch (Exception e) {
+                // Si falla la generación de oferta, hacer rollback explícito
+                logger.error("❌ Error al generar Oferta Flash: {}", e.getMessage(), e);
+                throw new IllegalStateException(
+                    "No se pudo completar la cancelación: Error al generar la Oferta Flash. " + e.getMessage(), e);
+            }
+        } else {
+            logger.info("ℹ️  No se genera Oferta Flash: esCancelacionTardia={}, tieneSeña={}", 
+                    esCancelacionTardia, 
+                    reserva.getMontoSenia() != null && reserva.getMontoSenia().compareTo(BigDecimal.ZERO) > 0);
+        }
+        
+        // 8. Retornar resultado exitoso
         resultado.setReservaCancelada(true);
-        resultado.setMensaje("Reserva cancelada exitosamente");
+        if (ofertaGenerada) {
+            resultado.setMensaje("Reserva cancelada exitosamente. " +
+                "Se generó una Oferta Flash. Si se vende, recuperarás el 50% de tu seña.");
+        } else {
+            resultado.setMensaje("Reserva cancelada exitosamente");
+        }
         
         return resultado;
     }
@@ -811,39 +899,51 @@ public class ServicioReserva {
         EspacioReservable espacio = primerDetalle.getEspacioReservable();
         PoliticaCancelacion politica = espacio.getPoliticaCancelacion();
         
-        // Si NO hay política de cancelación, se puede cancelar hasta 1 hora antes
+        // Si NO hay política de cancelación, usar política por defecto (1 hora)
         if (politica == null) {
             LocalDateTime limiteDefault = fechaHoraReserva.minusHours(1);
+            long horasRestantes = java.time.Duration.between(ahora, fechaHoraReserva).toHours();
+            
+            resultado.setPuedeSerCancelada(true); // ✅ Siempre permitir
+            resultado.setHorasRestantes(horasRestantes);
+            
             if (ahora.isAfter(limiteDefault)) {
-                resultado.setMensaje("No puedes cancelar con menos de 1 hora de anticipación");
-                return resultado;
+                // Menos de 1 hora: cancelación tardía
+                resultado.setPorcentajeDevolucion(0.0);
+                resultado.setMensaje("Cancelación tardía (menos de 1 hora). Se generará Oferta Flash.");
+            } else {
+                // Más de 1 hora: devolución completa
+                resultado.setPorcentajeDevolucion(100.0);
+                resultado.setMensaje("Cancelación dentro del plazo");
             }
             
-            resultado.setPuedeSerCancelada(true);
-            resultado.setHorasRestantes(java.time.Duration.between(ahora, fechaHoraReserva).toHours());
-            resultado.setPorcentajeDevolucion(100.0);
             return resultado;
         }
         
-        // Si hay política, validar las horas de anticipación mínima
+        // Si hay política, calcular horas restantes
         int horasAnticipacion = politica.getHorasAnticipacionMinima();
         LocalDateTime tiempoLimite = fechaHoraReserva.minusHours(horasAnticipacion);
+        long horasRestantes = java.time.Duration.between(ahora, fechaHoraReserva).toHours();
         
+        // SIEMPRE permitir cancelar, pero informar sobre el estado
+        resultado.setPuedeSerCancelada(true); // ✅ Siempre TRUE
+        resultado.setHorasRestantes(horasRestantes);
+        
+        // Si está fuera del plazo, será cancelación tardía (generará oferta flash)
         if (ahora.isAfter(tiempoLimite)) {
+            // Cancelación tardía: no recupera el 100%, pero se genera oferta flash
+            resultado.setPorcentajeDevolucion(0.0); // 0% de devolución inmediata
             resultado.setMensaje(String.format(
-                "No puedes cancelar esta reserva. Se requieren al menos %d hora(s) de anticipación",
+                "Cancelación tardía (menos de %d horas). Se generará Oferta Flash.",
                 horasAnticipacion
             ));
-            return resultado;
+        } else {
+            // Cancelación dentro del plazo: recupera según política
+            double porcentajeDevolucion = politica.getPorcentajeDevolucion();
+            resultado.setPorcentajeDevolucion(porcentajeDevolucion);
+            resultado.setMensaje("Cancelación dentro del plazo");
         }
         
-        // Calcular horas restantes y porcentaje de devolución
-        long horasRestantes = java.time.Duration.between(ahora, fechaHoraReserva).toHours();
-        double porcentajeDevolucion = politica.getPorcentajeDevolucion();
-        
-        resultado.setPuedeSerCancelada(true);
-        resultado.setHorasRestantes(horasRestantes);
-        resultado.setPorcentajeDevolucion(porcentajeDevolucion);
         resultado.setPoliticaNombre(politica.getNombre());
         
         return resultado;
@@ -1079,6 +1179,7 @@ public class ServicioReserva {
         private Long horasRestantes;
         private Double porcentajeDevolucion;
         private String politicaNombre;
+        private OfertaFlash ofertaFlashGenerada;
         
         // Getters y setters
         public boolean isPuedeSerCancelada() { return puedeSerCancelada; }
@@ -1098,6 +1199,9 @@ public class ServicioReserva {
         
         public String getPoliticaNombre() { return politicaNombre; }
         public void setPoliticaNombre(String politicaNombre) { this.politicaNombre = politicaNombre; }
+        
+        public OfertaFlash getOfertaFlashGenerada() { return ofertaFlashGenerada; }
+        public void setOfertaFlashGenerada(OfertaFlash ofertaFlashGenerada) { this.ofertaFlashGenerada = ofertaFlashGenerada; }
     }
     
     // ==================== MÉTODOS PARA ADMINISTRADOR DE COMPLEJO ====================
@@ -1448,5 +1552,132 @@ public class ServicioReserva {
                 nuevaHora);
         
         return reservaGuardada;
+    }
+    
+    /**
+     * Envía el email de confirmación de una reserva existente, incluyendo el crédito aplicado si corresponde.
+     * Este método recarga la reserva desde la BD para obtener todos los datos actualizados.
+     * 
+     * @param reserva Reserva ya creada y guardada
+     * @param creditoAplicado Monto del crédito aplicado (puede ser null o ZERO si no se aplicó)
+     */
+    @Transactional(readOnly = true)
+    public void enviarEmailConfirmacionCompleto(Reserva reserva, BigDecimal creditoAplicado) {
+        try {
+            // Recargar la reserva desde la BD para obtener el montoRestante actualizado
+            Reserva reservaActualizada = repositorioReserva.findByIdWithDetalles(reserva.getId())
+                .orElse(reserva);
+            
+            String nombreCliente = reservaActualizada.getCliente() != null ? reservaActualizada.getCliente().getNombre() : null;
+            String destinatario = reservaActualizada.getCliente() != null ? reservaActualizada.getCliente().getEmail() : null;
+            String nombreComplejo = "";
+            
+            if (!reservaActualizada.getDetalles().isEmpty()) {
+                var d = reservaActualizada.getDetalles().get(0);
+                if (d.getEspacioReservable() != null && d.getEspacioReservable().getComplejoDeportivo() != null) {
+                    nombreComplejo = d.getEspacioReservable().getComplejoDeportivo().getNombre_complejo();
+                }
+            }
+
+            // DEBUG: Ver valores de la entidad Reserva antes de crear el DTO
+            logger.info("DEBUG ENTITY - Reserva {} antes de crear DTO: montoTotal={}, montoSenia={}, montoRestante={}, creditoAplicado={}, requirioSenia={}",
+                reservaActualizada.getCodigoReserva(), reservaActualizada.getMontoTotal(), 
+                reservaActualizada.getMontoSenia(), reservaActualizada.getMontoRestante(), 
+                reservaActualizada.getCreditoAplicado(), reservaActualizada.requirioSenia());
+
+            com.example.tureserva.servicio.dto.EmailReservaDTO dto = new com.example.tureserva.servicio.dto.EmailReservaDTO(
+                nombreCliente,
+                reservaActualizada.getCodigoReserva(),
+                reservaActualizada.getFechaReserva(),
+                nombreComplejo,
+                reservaActualizada.getMontoTotal()
+            );
+
+            // Agregar información de seña y subtotales
+            dto.setSubtotalEspacios(reservaActualizada.calcularSubtotalEspacios());
+            dto.setSubtotalServicios(reservaActualizada.calcularSubtotalServicios());
+            dto.setMontoSenia(reservaActualizada.getMontoSenia());
+            dto.setMontoRestante(reservaActualizada.getMontoRestante());
+            dto.setRequirioSenia(reservaActualizada.requirioSenia());
+            
+            // Agregar crédito aplicado si existe
+            logger.info("DEBUG EMAIL - creditoAplicado recibido: {} (null? {})", 
+                creditoAplicado, creditoAplicado == null);
+            if (creditoAplicado != null && creditoAplicado.compareTo(BigDecimal.ZERO) > 0) {
+                dto.setCreditoAplicado(creditoAplicado);
+                logger.info("DEBUG EMAIL - creditoAplicado seteado en DTO: {}", creditoAplicado);
+            } else {
+                logger.warn("DEBUG EMAIL - creditoAplicado NO seteado en DTO (null o <= 0)");
+            }
+
+            // Llenar detalles y servicios adicionales
+            java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detallesDto = new java.util.ArrayList<>();
+            java.util.Set<String> politicas = new java.util.HashSet<>();
+
+            for (DetalleReserva det : reservaActualizada.getDetalles()) {
+                com.example.tureserva.servicio.dto.EmailDetalleDTO detDto = new com.example.tureserva.servicio.dto.EmailDetalleDTO();
+                detDto.setId(det.getId());
+                detDto.setEspacioNombre(det.getEspacioReservable() != null ? det.getEspacioReservable().getNombre() : "");
+                detDto.setFecha(det.getFechaReserva());
+                detDto.setHoraInicio(det.getHoraInicio());
+                detDto.setHoraFin(det.getHoraFin());
+                detDto.setDuracionHoras(det.getDuracionHoras());
+                detDto.setPrecioPorHora(det.getPrecioPorHora());
+                detDto.setSubtotal(det.getSubtotal());
+
+                // Politica de cancelación del espacio (si aplica)
+                if (det.getEspacioReservable() != null && det.getEspacioReservable().getPoliticaCancelacion() != null) {
+                    PoliticaCancelacion pc = det.getEspacioReservable().getPoliticaCancelacion();
+                    detDto.setPoliticaCancelacionNombre(pc.getNombre());
+                    detDto.setPoliticaHorasAnticipacion(pc.getHorasAnticipacionMinima());
+                    detDto.setPoliticaPorcentajeDevolucion(pc.getPorcentajeDevolucion());
+                    politicas.add(pc.getNombre() + " (" + pc.getHorasAnticipacionMinima() + "h antes, " + pc.getPorcentajeDevolucion() + "% devolución)");
+                }
+
+                // Servicios adicionales asociados al detalle
+                if (det.getServiciosAdicionales() != null) {
+                    for (DetalleServicioAdicional s : det.getServiciosAdicionales()) {
+                        var svc = s.getServicioAdicional();
+                        com.example.tureserva.servicio.dto.EmailServicioAdicionalDTO svcDto = new com.example.tureserva.servicio.dto.EmailServicioAdicionalDTO();
+                        svcDto.setId(svc != null ? svc.getId() : null);
+                        svcDto.setNombre(svc != null ? svc.getNombre() : "");
+                        svcDto.setCantidad(s.getCantidad());
+                        svcDto.setPrecioUnitario(s.getPrecioUnitario());
+                        svcDto.setSubtotal(s.getSubtotal());
+                        detDto.getServicios().add(svcDto);
+                    }
+                }
+
+                detallesDto.add(detDto);
+            }
+
+            dto.setDetalles(detallesDto);
+
+            // Recordatorios
+            dto.getRecordatorios().add("Por favor presentarse 10 minutos antes del horario reservado.");
+            if (creditoAplicado != null && creditoAplicado.compareTo(BigDecimal.ZERO) > 0) {
+                dto.getRecordatorios().add("💰 Se aplicó un crédito de $" + creditoAplicado + " de tu cuenta corriente.");
+            }
+            
+            if (!politicas.isEmpty()) {
+                dto.setPoliticaCancelacionResumen(String.join("; ", politicas));
+            } else {
+                dto.setPoliticaCancelacionResumen("Política de cancelación por defecto: reembolso completo si cancela con al menos 1 hora de anticipación.");
+            }
+
+            servicioEmail.enviarConfirmacionReserva(dto, destinatario);
+            
+            if (creditoAplicado != null && creditoAplicado.compareTo(BigDecimal.ZERO) > 0) {
+                logger.info("Email de confirmación enviado con crédito aplicado ({}) y monto restante actualizado ({}) para reserva {}", 
+                    creditoAplicado, reservaActualizada.getMontoRestante(), reservaActualizada.getCodigoReserva());
+            } else {
+                logger.info("Email de confirmación enviado para reserva {} - Monto restante: {}", 
+                    reservaActualizada.getCodigoReserva(), reservaActualizada.getMontoRestante());
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error al enviar email de confirmación para reserva {}: {}", 
+                reserva.getCodigoReserva(), e.getMessage(), e);
+        }
     }
 }

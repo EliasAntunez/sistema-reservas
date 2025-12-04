@@ -132,8 +132,9 @@ public class ServicioEmail {
             if (dto != null) {
                 // Debug: registrar contenido del DTO para inspección antes de renderizar la plantilla
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Email DTO - reserva: {} montoTotal: {} detallesCount: {}",
-                            dto.getCodigoReserva(), dto.getMontoTotal(), dto.getDetalles() == null ? 0 : dto.getDetalles().size());
+                    logger.debug("Email DTO - reserva: {} montoTotal: {} montoSenia: {} creditoAplicado: {} montoRestante: {} requirioSenia: {} detallesCount: {}",
+                            dto.getCodigoReserva(), dto.getMontoTotal(), dto.getMontoSenia(), dto.getCreditoAplicado(), 
+                            dto.getMontoRestante(), dto.isRequirioSenia(), dto.getDetalles() == null ? 0 : dto.getDetalles().size());
                     if (dto.getDetalles() != null) {
                         for (com.example.tureserva.servicio.dto.EmailDetalleDTO d : dto.getDetalles()) {
                             logger.debug(" - Detalle id={} espacio='{}' subtotal={} serviciosCount={}",
@@ -157,11 +158,15 @@ public class ServicioEmail {
                 ctx.setVariable("montoSenia", dto.getMontoSenia());
                 ctx.setVariable("montoRestante", dto.getMontoRestante());
                 ctx.setVariable("requirioSenia", dto.isRequirioSenia());
+                ctx.setVariable("creditoAplicado", dto.getCreditoAplicado());
                 // Pasar detalles completos y metadata para la plantilla
                 ctx.setVariable("detalles", dto.getDetalles());
                 ctx.setVariable("recordatorios", dto.getRecordatorios());
                 ctx.setVariable("politicaCancelacionResumen", dto.getPoliticaCancelacionResumen());
             }
+            
+            // Agregar baseUrl para enlaces en el template
+            ctx.setVariable("baseUrl", baseUrl);
 
             String html = templateEngine.process("email/confirmacion", ctx);
 
@@ -179,6 +184,46 @@ public class ServicioEmail {
             logger.error("Error enviando email de confirmación para reserva {}: {}", dto != null ? dto.getCodigoReserva() : "<unknown>", ex.getMessage(), ex);
         } catch (Exception ex) {
             logger.error("Error inesperado al enviar email de confirmación para reserva {}: {}", dto != null ? dto.getCodigoReserva() : "<unknown>", ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Envía un email usando una plantilla Thymeleaf personalizada.
+     * 
+     * @param destinatario Email del destinatario
+     * @param asunto Asunto del email
+     * @param templateName Nombre de la plantilla (ej: "email/aviso-recupero-senia")
+     * @param variables Mapa de variables para la plantilla
+     */
+    @Async
+    public void enviarEmailConTemplate(String destinatario, String asunto, String templateName, java.util.Map<String, Object> variables) {
+        try {
+            if (destinatario == null || destinatario.isBlank()) {
+                logger.warn("No se envía email: destinatario vacío para template {}", templateName);
+                return;
+            }
+
+            Context ctx = new Context();
+            if (variables != null) {
+                variables.forEach(ctx::setVariable);
+            }
+
+            String html = templateEngine.process(templateName, ctx);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, StandardCharsets.UTF_8.name());
+            helper.setTo(destinatario);
+            helper.setFrom(mailFrom);
+            helper.setSubject(asunto);
+            helper.setText(html, true);
+
+            mailSender.send(message);
+            logger.info("Email enviado a {} usando template {}", destinatario, templateName);
+
+        } catch (MessagingException ex) {
+            logger.error("Error enviando email con template {} a {}: {}", templateName, destinatario, ex.getMessage(), ex);
+        } catch (Exception ex) {
+            logger.error("Error inesperado al enviar email con template {} a {}: {}", templateName, destinatario, ex.getMessage(), ex);
         }
     }
 }

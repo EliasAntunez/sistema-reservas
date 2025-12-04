@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Oferta Flash Disponible!</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .flash-badge {
+            background: #FFD700;
+            color: #D32F2F;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-block;
+            margin-top: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .offer-box {
+            background: #FFF3E0;
+            border-left: 4px solid #FF9800;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        .offer-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #E65100;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .offer-title::before {
+            content: "🎯";
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #FFE0B2;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+        .price-section {
+            background: #E8F5E9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .price-original {
+            color: #999;
+            text-decoration: line-through;
+            font-size: 18px;
+        }
+        .price-discount {
+            color: #2E7D32;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .savings {
+            color: #43A047;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .urgency-box {
+            background: #FFEBEE;
+            border: 2px solid #EF5350;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 25px 0;
+        }
+        .urgency-box .timer {
+            font-size: 42px;
+            font-weight: 700;
+            color: #D32F2F;
+            margin: 10px 0;
+        }
+        .urgency-text {
+            color: #C62828;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .cta-button {
+            display: block;
+            background: linear-gradient(135deg, #FF5252 0%, #D32F2F 100%);
+            color: white;
+            text-align: center;
+            padding: 18px 40px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+            margin: 30px 0;
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+            transition: transform 0.2s;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(211, 47, 47, 0.4);
+        }
+        .features {
+            margin: 30px 0;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            color: #555;
+        }
+        .feature-item::before {
+            content: "✓";
+            color: #43A047;
+            font-weight: 700;
+            font-size: 20px;
+            margin-right: 12px;
+        }
+        .footer {
+            background: #f9f9f9;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+        }
+        .footer a {
+            color: #D32F2F;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔥 ¡OFERTA FLASH! 🔥</h1>
+            <div class="flash-badge">DESCUENTO ESPECIAL</div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">
+                Hola <strong th:text="${nombreCliente}">Cliente</strong>,
+            </p>
+
+            <p style="color: #555; line-height: 1.6;">
+                ¡Tenemos una oportunidad única para vos! Podés aprovechar 
+                un <strong style="color: #D32F2F;">descuento especial</strong> en tu lugar favorito.
+            </p>
+
+            <!-- Offer Details -->
+            <div class="offer-box">
+                <div class="offer-title">Detalles de la Oferta</div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">🏟️ Complejo:</span>
+                    <span class="detail-value" th:text="${nombreComplejo}">Complejo Deportivo</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">📍 Espacio:</span>
+                    <span class="detail-value" th:text="${nombreEspacio}">Cancha 1</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">📅 Fecha:</span>
+                    <span class="detail-value" th:text="${#temporals.format(fecha, 'dd/MM/yyyy')}">15/12/2025</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">⏰ Horario:</span>
+                    <span class="detail-value">
+                        <span th:text="${#temporals.format(horaInicio, 'HH:mm')}">18:00</span> - 
+                        <span th:text="${#temporals.format(horaFin, 'HH:mm')}">20:00</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Price Section -->
+            <div class="price-section">
+                <div class="price-original">
+                    Precio Normal: $<span th:text="${#numbers.formatDecimal(precioOriginal, 1, 2)}">2,000.00</span>
+                </div>
+                <div class="price-discount">
+                    $<span th:text="${#numbers.formatDecimal(precioFinal, 1, 2)}">1,000.00</span>
+                </div>
+                <div class="savings">
+                    ¡Ahorrás $<span th:text="${#numbers.formatDecimal(descuento, 1, 2)}">1,000.00</span>!
+                </div>
+            </div>
+
+            <!-- Urgency Box -->
+            <div class="urgency-box">
+                <div class="urgency-text">⏱️ OFERTA POR TIEMPO LIMITADO</div>
+                <div class="timer" th:text="${horasVigencia} + 'h'">24h</div>
+                <div class="urgency-text">Solo por las próximas horas</div>
+            </div>
+
+            <!-- Features -->
+            <div class="features">
+                <div class="feature-item">Confirmación inmediata de tu reserva</div>
+                <div class="feature-item">Mismo servicio, mejor precio</div>
+                <div class="feature-item">Primera llegada, primera atención</div>
+            </div>
+
+            <!-- CTA Button -->
+            <a th:href="${urlOferta}" class="cta-button">
+                🎯 RECLAMAR MI OFERTA AHORA
+            </a>
+
+            <p style="color: #999; font-size: 13px; text-align: center; margin-top: 20px;">
+                Esta oferta expira en <strong th:text="${horasVigencia}">24</strong> horas.<br>
+                ¡No la dejes pasar!
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                <strong>TuReserva</strong> - Tu plataforma de reservas
+            </p>
+            <p>
+                Este email fue enviado porque reservaste anteriormente en este complejo.<br>
+                Si no querés recibir ofertas, podés <a href="#">actualizar tus preferencias</a>.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
