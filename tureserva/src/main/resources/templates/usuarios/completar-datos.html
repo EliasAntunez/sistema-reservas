@@ -53,11 +53,16 @@
                                        class="form-control" 
                                        id="dni" 
                                        name="dni" 
-                                       placeholder="Ingresa tu DNI"
+                                       placeholder="Ingresa tu DNI (solo números, 7-8 dígitos)"
                                        style="background-color: #fafafa; border: 1px solid #dbdbdb; border-radius: 6px; padding: 14px 16px; font-size: 14px; color: #262626;"
-                                       maxlength="20"
+                                       pattern="[0-9]{7,8}"
+                                       maxlength="8"
+                                       title="El DNI debe contener entre 7 y 8 dígitos numéricos"
                                        required>
-                                <small class="text-muted">Necesitamos tu DNI para completar tu registro</small>
+                                <small class="text-muted" id="dni-ayuda">Necesitamos tu DNI para completar tu registro</small>
+                                <div class="invalid-feedback" id="dni-error" style="display: none; color: #ed4956; font-size: 12px; margin-top: 4px;">
+                                    El DNI debe contener solo números y tener entre 7 y 8 dígitos
+                                </div>
                             </div>
                             
                             <!-- Campo Teléfono (opcional) -->
@@ -74,12 +79,80 @@
                             
                             <!-- Botón de completar -->
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-primary"
+                                <button type="submit" class="btn btn-primary" id="btnCompletar"
                                         style="background-color: #0095f6; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 600; height: 44px;">
                                     Completar registro
                                 </button>
                             </div>
                         </form>
+                        
+                        <!-- Script de validación DNI -->
+                        <script th:inline="javascript">
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const dniInput = document.getElementById('dni');
+                                const dniError = document.getElementById('dni-error');
+                                const dniAyuda = document.getElementById('dni-ayuda');
+                                const form = dniInput.closest('form');
+                                
+                                // Validación en tiempo real mientras escribe
+                                dniInput.addEventListener('input', function(e) {
+                                    // Eliminar cualquier caracter que no sea número
+                                    this.value = this.value.replace(/[^0-9]/g, '');
+                                    
+                                    // Validar en tiempo real
+                                    validarDNI();
+                                });
+                                
+                                // Validación al perder el foco
+                                dniInput.addEventListener('blur', function() {
+                                    if (this.value.length > 0) {
+                                        validarDNI();
+                                    }
+                                });
+                                
+                                // Validación antes de enviar el formulario
+                                form.addEventListener('submit', function(e) {
+                                    if (!validarDNI()) {
+                                        e.preventDefault();
+                                        dniInput.focus();
+                                    }
+                                });
+                                
+                                function validarDNI() {
+                                    const valor = dniInput.value.trim();
+                                    
+                                    // Validar que tenga entre 7 y 8 dígitos
+                                    if (valor.length === 0) {
+                                        mostrarError('El DNI es obligatorio');
+                                        return false;
+                                    }
+                                    
+                                    if (!/^[0-9]{7,8}$/.test(valor)) {
+                                        mostrarError('El DNI debe contener entre 7 y 8 dígitos numéricos');
+                                        return false;
+                                    }
+                                    
+                                    // DNI válido
+                                    ocultarError();
+                                    return true;
+                                }
+                                
+                                function mostrarError(mensaje) {
+                                    dniInput.classList.add('is-invalid');
+                                    dniInput.style.borderColor = '#ed4956';
+                                    dniError.textContent = mensaje;
+                                    dniError.style.display = 'block';
+                                    dniAyuda.style.display = 'none';
+                                }
+                                
+                                function ocultarError() {
+                                    dniInput.classList.remove('is-invalid');
+                                    dniInput.style.borderColor = '#dbdbdb';
+                                    dniError.style.display = 'none';
+                                    dniAyuda.style.display = 'block';
+                                }
+                            });
+                        </script>
                     </div>
                 </div>
                 

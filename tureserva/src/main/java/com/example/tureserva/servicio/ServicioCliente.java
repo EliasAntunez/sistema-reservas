@@ -21,35 +21,25 @@ public class ServicioCliente {
     private final RepositorioCliente repositorioCliente;
     private final RepositorioReserva repositorioReserva;
     private final PasswordEncoder passwordEncoder;
+    private final ServicioNormalizacion servicioNormalizacion;
+    private final ServicioGeneradorCodigos servicioGeneradorCodigos;
     
     // Constructor injection
     public ServicioCliente(RepositorioCliente repositorioCliente,
                            RepositorioReserva repositorioReserva,
-                           PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder,
+                          ServicioNormalizacion servicioNormalizacion,
+                          ServicioGeneradorCodigos servicioGeneradorCodigos) {
         this.repositorioCliente = repositorioCliente;
         this.repositorioReserva = repositorioReserva;
         this.passwordEncoder = passwordEncoder;
+        this.servicioNormalizacion = servicioNormalizacion;
+        this.servicioGeneradorCodigos = servicioGeneradorCodigos;
     }
-
-    // --- Métodos auxiliares de normalización (ubicados después del constructor) ---
-    private String normalizarNombreApellido(String valor) {
-        if (valor == null || valor.isEmpty()) return valor;
-        String[] palabras = valor.trim().toLowerCase().split(" ");
-        StringBuilder sb = new StringBuilder();
-        for (String palabra : palabras) {
-            if (palabra.length() > 0) {
-                sb.append(Character.toUpperCase(palabra.charAt(0))).append(palabra.substring(1));
-            }
-            sb.append(" ");
-        }
-        return sb.toString().trim();
-    }
-
-    private String normalizarDni(String dni) {
-        if (dni == null) return null;
-        String limpio = dni.replaceAll("[ .-]", "");
-        return limpio.toUpperCase();
-    }
+    
+    // ELIMINADO: Métodos de normalización movidos a ServicioNormalizacion
+    // - normalizarNombreApellido() → servicioNormalizacion.normalizarNombreApellido()
+    // - normalizarDni() → servicioNormalizacion.normalizarDni()
 
     // obtener todos los clientes
     public List<Cliente> obtenerTodosLosClientes() {
@@ -78,15 +68,15 @@ public class ServicioCliente {
 
     // guardar cliente
     public Cliente guardarCliente(Cliente cliente) {
-        // normalizar datos antes de guardar
+        // Normalizar datos antes de guardar usando servicio centralizado
         if (cliente.getNombre() != null) {
-            cliente.setNombre(normalizarNombreApellido(cliente.getNombre()));
+            cliente.setNombre(servicioNormalizacion.normalizarNombreApellido(cliente.getNombre()));
         }
         if (cliente.getApellido() != null) {
-            cliente.setApellido(normalizarNombreApellido(cliente.getApellido()));
+            cliente.setApellido(servicioNormalizacion.normalizarNombreApellido(cliente.getApellido()));
         }
         if (cliente.getDni() != null) {
-            cliente.setDni(normalizarDni(cliente.getDni()));
+            cliente.setDni(servicioNormalizacion.normalizarDni(cliente.getDni()));
         }
         
         // encriptar la contraseña antes de guardar
@@ -103,33 +93,10 @@ public class ServicioCliente {
         // marcar como activo por defecto
         cliente.setActivo(true);
         
-        String codigo;
-        int intentos = 0;
-        int maxIntentos = 10; // Límite de seguridad para evitar un bucle infinito
-
-        // --- Bucle de reintento para generar código único ---
-        do {
-            if (intentos > 0) {
-                logger.warn("Colisión de código de Cliente. Reintentando... (Intento {})", intentos);
-            }
-            
-            // 1. Genera un código aleatorio (6 caracteres)
-            codigo = "CLI-" + UUID.randomUUID().toString()
-                                    .substring(0, 6)
-                                    .toUpperCase();
-            
-            intentos++;
-
-            // 2. Seguridad: Si falla 10 veces, es porque 6 caracteres son muy pocos
-            // para tu volumen de reservas y deberías usar 7 o 8.
-            if (intentos > maxIntentos) {
-                throw new RuntimeException("No se pudo generar un código de reserva único después de " + maxIntentos + " intentos.");
-            }
-
-        } while (repositorioReserva.existsByCodigoReserva(codigo)); // 3. Repite si el código ya existe
-        // --- Fin del bucle ---
-
-        // 4. Tenemos un código único, lo asignamos
+        // Generar código único de cliente usando servicio centralizado
+        String codigo = servicioGeneradorCodigos.generarCodigoCliente(
+            codigoGenerado -> repositorioReserva.existsByCodigoReserva(codigoGenerado)
+        );
         cliente.setCodigoUsuario(codigo);
         
         return repositorioCliente.save(cliente);
@@ -139,15 +106,15 @@ public class ServicioCliente {
     public Cliente actualizarCliente(Cliente cliente) {
         Cliente clienteExistente = repositorioCliente.findById(cliente.getId()).orElse(null);
         if (clienteExistente != null) {
-            // normalizar datos antes de actualizar
+            // Normalizar datos antes de actualizar usando servicio centralizado
             if (cliente.getNombre() != null) {
-                clienteExistente.setNombre(normalizarNombreApellido(cliente.getNombre()));
+                clienteExistente.setNombre(servicioNormalizacion.normalizarNombreApellido(cliente.getNombre()));
             }
             if (cliente.getApellido() != null) {
-                clienteExistente.setApellido(normalizarNombreApellido(cliente.getApellido()));
+                clienteExistente.setApellido(servicioNormalizacion.normalizarNombreApellido(cliente.getApellido()));
             }
             if (cliente.getDni() != null) {
-                clienteExistente.setDni(normalizarDni(cliente.getDni()));
+                clienteExistente.setDni(servicioNormalizacion.normalizarDni(cliente.getDni()));
             }
             
             clienteExistente.setEmail(cliente.getEmail());

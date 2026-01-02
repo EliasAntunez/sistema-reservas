@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -22,6 +23,7 @@ import com.example.tureserva.modelo.enums.EstadoOperativo;
 import com.example.tureserva.servicio.ServicioCancha;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.servicio.ServicioCanchaDeporte;
+import com.example.tureserva.servicio.ServicioValidacionPermisos;
 import java.util.Optional;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,13 +41,16 @@ public class ControladorCancha {
     private final ServicioCancha servicioCancha;
     private final ServicioComplejoDeportivo servicioComplejoDeportivo;
     private final ServicioCanchaDeporte servicioCanchaDeporte;
+    private final ServicioValidacionPermisos servicioValidacionPermisos;
     
     public ControladorCancha(ServicioCancha servicioCancha, 
                             ServicioComplejoDeportivo servicioComplejoDeportivo,
-                            ServicioCanchaDeporte servicioCanchaDeporte) {
+                            ServicioCanchaDeporte servicioCanchaDeporte,
+                            ServicioValidacionPermisos servicioValidacionPermisos) {
         this.servicioCancha = servicioCancha;
         this.servicioComplejoDeportivo = servicioComplejoDeportivo;
         this.servicioCanchaDeporte = servicioCanchaDeporte;
+        this.servicioValidacionPermisos = servicioValidacionPermisos;
     }
 
     
@@ -59,8 +64,18 @@ public class ControladorCancha {
     public String listarCanchas(@PathVariable("idComplejo") Long idComplejo,
                                 @RequestParam(value = "page", defaultValue = "1") int page,
                                 @RequestParam(value = "size", defaultValue = "10") int size,
+                                Authentication authentication,
                                 Model model,
-                                HttpServletRequest request) {
+                                HttpServletRequest request,
+                                RedirectAttributes redirectAttributes) {
+        
+        // VALIDACIÓN DE PERMISOS
+        if (!servicioValidacionPermisos.tienePermisoSobreComplejo(authentication, idComplejo)) {
+            servicioValidacionPermisos.registrarIntentoNoAutorizado(authentication, "canchas del complejo", idComplejo);
+            redirectAttributes.addFlashAttribute("error", "No tienes permisos para acceder a este complejo");
+            return "redirect:/admin-complejo/mis-complejos";
+        }
+        
         org.springframework.data.domain.Page<com.example.tureserva.modelo.Cancha> canchasPage = servicioCancha.listarCanchasPorComplejoPaginado(idComplejo, page, size);
         
         // Generar mapa de estados de configuración para cada cancha

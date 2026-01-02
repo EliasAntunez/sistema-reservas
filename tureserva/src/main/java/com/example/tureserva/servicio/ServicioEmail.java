@@ -132,9 +132,9 @@ public class ServicioEmail {
             if (dto != null) {
                 // Debug: registrar contenido del DTO para inspección antes de renderizar la plantilla
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Email DTO - reserva: {} montoTotal: {} montoSenia: {} creditoAplicado: {} montoRestante: {} requirioSenia: {} detallesCount: {}",
+                    logger.debug("Email DTO - reserva: {} montoTotal: {} montoSenia: {} creditoAplicado: {} descuentoOfertaFlash: {} montoRestante: {} requirioSenia: {} detallesCount: {}",
                             dto.getCodigoReserva(), dto.getMontoTotal(), dto.getMontoSenia(), dto.getCreditoAplicado(), 
-                            dto.getMontoRestante(), dto.isRequirioSenia(), dto.getDetalles() == null ? 0 : dto.getDetalles().size());
+                            dto.getDescuentoOfertaFlash(), dto.getMontoRestante(), dto.isRequirioSenia(), dto.getDetalles() == null ? 0 : dto.getDetalles().size());
                     if (dto.getDetalles() != null) {
                         for (com.example.tureserva.servicio.dto.EmailDetalleDTO d : dto.getDetalles()) {
                             logger.debug(" - Detalle id={} espacio='{}' subtotal={} serviciosCount={}",
@@ -159,6 +159,7 @@ public class ServicioEmail {
                 ctx.setVariable("montoRestante", dto.getMontoRestante());
                 ctx.setVariable("requirioSenia", dto.isRequirioSenia());
                 ctx.setVariable("creditoAplicado", dto.getCreditoAplicado());
+                ctx.setVariable("descuentoOfertaFlash", dto.getDescuentoOfertaFlash());
                 // Pasar detalles completos y metadata para la plantilla
                 ctx.setVariable("detalles", dto.getDetalles());
                 ctx.setVariable("recordatorios", dto.getRecordatorios());

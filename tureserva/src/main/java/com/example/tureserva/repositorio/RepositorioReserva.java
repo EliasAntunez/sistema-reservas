@@ -243,6 +243,69 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
     );
     
     /**
+     * Obtiene los IDs de reservas filtradas por código con paginación.
+     */
+    @Query("SELECT DISTINCT r.id FROM Reserva r " +
+           "JOIN r.detalles d " +
+           "JOIN d.espacioReservable e " +
+           "WHERE e.complejoDeportivo.id = :complejoId AND LOWER(r.codigoReserva) LIKE LOWER(CONCAT('%', :codigo, '%'))")
+    Page<Long> findIdsByComplejoDeportivoIdAndCodigoReserva(
+        @Param("complejoId") Long complejoId,
+        @Param("codigo") String codigo,
+        Pageable pageable
+    );
+    
+    /**
+     * Obtiene los IDs de reservas filtradas por código, fecha y estado con paginación.
+     */
+    @Query("SELECT DISTINCT r.id FROM Reserva r " +
+           "JOIN r.detalles d " +
+           "JOIN d.espacioReservable e " +
+           "WHERE e.complejoDeportivo.id = :complejoId " +
+           "AND LOWER(r.codigoReserva) LIKE LOWER(CONCAT('%', :codigo, '%')) " +
+           "AND r.fechaReserva = :fecha " +
+           "AND r.estado = :estado")
+    Page<Long> findIdsByComplejoDeportivoIdAndCodigoAndFechaAndEstado(
+        @Param("complejoId") Long complejoId,
+        @Param("codigo") String codigo,
+        @Param("fecha") LocalDate fecha,
+        @Param("estado") EstadoReserva estado,
+        Pageable pageable
+    );
+    
+    /**
+     * Obtiene los IDs de reservas filtradas por código y fecha con paginación.
+     */
+    @Query("SELECT DISTINCT r.id FROM Reserva r " +
+           "JOIN r.detalles d " +
+           "JOIN d.espacioReservable e " +
+           "WHERE e.complejoDeportivo.id = :complejoId " +
+           "AND LOWER(r.codigoReserva) LIKE LOWER(CONCAT('%', :codigo, '%')) " +
+           "AND r.fechaReserva = :fecha")
+    Page<Long> findIdsByComplejoDeportivoIdAndCodigoAndFecha(
+        @Param("complejoId") Long complejoId,
+        @Param("codigo") String codigo,
+        @Param("fecha") LocalDate fecha,
+        Pageable pageable
+    );
+    
+    /**
+     * Obtiene los IDs de reservas filtradas por código y estado con paginación.
+     */
+    @Query("SELECT DISTINCT r.id FROM Reserva r " +
+           "JOIN r.detalles d " +
+           "JOIN d.espacioReservable e " +
+           "WHERE e.complejoDeportivo.id = :complejoId " +
+           "AND LOWER(r.codigoReserva) LIKE LOWER(CONCAT('%', :codigo, '%')) " +
+           "AND r.estado = :estado")
+    Page<Long> findIdsByComplejoDeportivoIdAndCodigoAndEstado(
+        @Param("complejoId") Long complejoId,
+        @Param("codigo") String codigo,
+        @Param("estado") EstadoReserva estado,
+        Pageable pageable
+    );
+    
+    /**
      * Carga reservas completas por IDs con todos los datos necesarios.
      */
     @Query("SELECT DISTINCT r FROM Reserva r " +

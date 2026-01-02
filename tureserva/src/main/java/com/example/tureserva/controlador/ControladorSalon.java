@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.ui.Model;
+import org.springframework.security.core.Authentication;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,6 +21,7 @@ import java.util.Optional;
 
 import com.example.tureserva.servicio.ServicioSalon;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
+import com.example.tureserva.servicio.ServicioValidacionPermisos;
 import com.example.tureserva.modelo.Salon;
 import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.modelo.enums.EstadoOperativo;
@@ -34,18 +36,31 @@ public class ControladorSalon {
 
 	private final ServicioSalon servicioSalon;
 	private final ServicioComplejoDeportivo servicioComplejoDeportivo;
+	private final ServicioValidacionPermisos servicioValidacionPermisos;
 
-	public ControladorSalon(ServicioSalon servicioSalon, ServicioComplejoDeportivo servicioComplejoDeportivo) {
+	public ControladorSalon(ServicioSalon servicioSalon, 
+							ServicioComplejoDeportivo servicioComplejoDeportivo,
+							ServicioValidacionPermisos servicioValidacionPermisos) {
 		this.servicioSalon = servicioSalon;
 		this.servicioComplejoDeportivo = servicioComplejoDeportivo;
+		this.servicioValidacionPermisos = servicioValidacionPermisos;
 	}
 
 	@GetMapping("/listar/{idComplejo}")
 	public String listarSalones(@PathVariable("idComplejo") Long idComplejo,
 								@RequestParam(value = "page", defaultValue = "1") int page,
 								@RequestParam(value = "size", defaultValue = "10") int size,
+								Authentication authentication,
 								Model model,
-								HttpServletRequest request) {
+								HttpServletRequest request,
+								RedirectAttributes redirectAttributes) {
+		
+		// VALIDACIÓN DE PERMISOS
+		if (!servicioValidacionPermisos.tienePermisoSobreComplejo(authentication, idComplejo)) {
+			servicioValidacionPermisos.registrarIntentoNoAutorizado(authentication, "salones del complejo", idComplejo);
+			redirectAttributes.addFlashAttribute("error", "No tienes permisos para acceder a este complejo");
+			return "redirect:/admin-complejo/mis-complejos";
+		}
 
 		org.springframework.data.domain.Page<Salon> salonesPage = servicioSalon.listarSalonesPorComplejoPaginado(idComplejo, page, size);
 		

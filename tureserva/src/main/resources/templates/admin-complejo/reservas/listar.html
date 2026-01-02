@@ -249,10 +249,28 @@
         <!-- Filtros -->
         <div class="filters-section">
             <h5><i class="bi bi-funnel me-2"></i>Filtros</h5>
-            <form th:action="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo})}" method="get">
+            <form th:action="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo})}" method="get" id="formFiltros">
                 <div class="filter-row">
                     <div class="filter-group">
-                        <label for="fecha">Fecha</label>
+                        <label for="codigo">Código de Reserva</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="codigo" 
+                               name="codigo" 
+                               th:value="${codigoFiltro}"
+                               placeholder="Buscar por código...">
+                    </div>
+                    <div class="filter-group">
+                        <label for="fecha">
+                            Fecha
+                            <button type="button" 
+                                    class="btn btn-sm btn-link text-danger p-0 ms-2" 
+                                    id="limpiarFecha"
+                                    style="text-decoration: none; font-size: 0.8rem;"
+                                    title="Limpiar fecha para ver todas">
+                                <i class="bi bi-x-circle"></i> Todas
+                            </button>
+                        </label>
                         <input type="date" 
                                class="form-control" 
                                id="fecha" 
@@ -262,7 +280,7 @@
                     <div class="filter-group">
                         <label for="estado">Estado</label>
                         <select class="form-select" id="estado" name="estado">
-                            <option value="">Todos los estados</option>
+                            <option value="TODOS">Todos los estados</option>
                             <option th:each="est : ${estadosDisponibles}" 
                                     th:value="${est}" 
                                     th:text="${est}"
@@ -308,7 +326,9 @@
                         th:data-codigo-reserva="${reserva.codigoReserva}"
                         th:data-estado="${reserva.estado}"
                         th:data-complejo-id="${complejo.id_complejo}"
-                        th:data-monto="${reserva.montoTotal}">
+                        th:data-monto="${reserva.montoTotal}"
+                        th:data-fecha-reserva="${reserva.fechaReserva}"
+                        th:data-hora-inicio="${reserva.detalles[0].horaInicio}">
                         <td th:text="${reserva.codigoReserva}">#1</td>
                         <td th:text="${#temporals.format(reserva.fechaCreacion, 'dd/MM/yyyy')}">10/11/2025</td>
                         <td th:text="${#temporals.format(reserva.fechaReserva, 'dd/MM/yyyy')}">14/11/2025</td>
@@ -369,7 +389,7 @@
                     <!-- Botón Primera página -->
                     <li class="page-item" th:classappend="${paginaActual == 0} ? 'disabled'">
                         <a class="page-link" 
-                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=0, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
+                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=0, codigo=${codigoFiltro}, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
                             <i class="bi bi-chevron-double-left"></i>
                         </a>
                     </li>
@@ -377,7 +397,7 @@
                     <!-- Botón Anterior -->
                     <li class="page-item" th:classappend="${paginaActual == 0} ? 'disabled'">
                         <a class="page-link" 
-                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${paginaActual - 1}, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
+                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${paginaActual - 1}, codigo=${codigoFiltro}, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
                             <i class="bi bi-chevron-left"></i>
                         </a>
                     </li>
@@ -388,14 +408,14 @@
                         th:if="${i >= (paginaActual - 2) && i <= (paginaActual + 2)}"
                         th:classappend="${i == paginaActual} ? 'active'">
                         <a class="page-link" 
-                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${i}, fecha=${fechaFiltro}, estado=${estadoFiltro})}"
+                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${i}, codigo=${codigoFiltro}, fecha=${fechaFiltro}, estado=${estadoFiltro})}"
                            th:text="${i + 1}">1</a>
                     </li>
 
                     <!-- Botón Siguiente -->
                     <li class="page-item" th:classappend="${paginaActual >= totalPaginas - 1} ? 'disabled'">
                         <a class="page-link" 
-                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${paginaActual + 1}, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
+                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${paginaActual + 1}, codigo=${codigoFiltro}, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
                             <i class="bi bi-chevron-right"></i>
                         </a>
                     </li>
@@ -403,7 +423,7 @@
                     <!-- Botón Última página -->
                     <li class="page-item" th:classappend="${paginaActual >= totalPaginas - 1} ? 'disabled'">
                         <a class="page-link" 
-                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${totalPaginas - 1}, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
+                           th:href="@{/admin-complejo/reservas/{id}(id=${complejo.id_complejo}, page=${totalPaginas - 1}, codigo=${codigoFiltro}, fecha=${fechaFiltro}, estado=${estadoFiltro})}">
                             <i class="bi bi-chevron-double-right"></i>
                         </a>
                     </li>
@@ -558,10 +578,17 @@
                 const finalizarButton = document.getElementById('finalizar-button');
                 const cancelarButton = document.getElementById('cancelar-button');
 
+                // Si no existen los botones (tabla vacía), no hacer nada
+                if (!verDetallesButton || !confirmarButton || !finalizarButton || !cancelarButton) {
+                    return;
+                }
+
                 let selectedReservaId = null;
                 let selectedEstado = null;
                 let selectedComplejoId = null;
                 let selectedMonto = null;
+                let selectedFechaReserva = null;
+                let selectedHoraInicio = null;
 
                 rows.forEach(row => {
                     row.addEventListener('click', () => {
@@ -574,6 +601,8 @@
                             selectedEstado = null;
                             selectedComplejoId = null;
                             selectedMonto = null;
+                            selectedFechaReserva = null;
+                            selectedHoraInicio = null;
                         } else {
                             rows.forEach(r => r.classList.remove('selected'));
                             row.classList.add('selected');
@@ -581,6 +610,8 @@
                             selectedEstado = row.getAttribute('data-estado');
                             selectedComplejoId = row.getAttribute('data-complejo-id');
                             selectedMonto = row.getAttribute('data-monto');
+                            selectedFechaReserva = row.getAttribute('data-fecha-reserva');
+                            selectedHoraInicio = row.getAttribute('data-hora-inicio');
                         }
 
                         updateActionButtons();
@@ -633,7 +664,7 @@
                         if (selectedEstado === 'CONFIRMADA') {
                             finalizarButton.disabled = false;
                             finalizarButton.onclick = () => {
-                                mostrarModalFinalizar(selectedReservaId, selectedComplejoId, selectedMonto);
+                                mostrarModalFinalizar(selectedReservaId, selectedComplejoId, selectedMonto, selectedFechaReserva, selectedHoraInicio);
                             };
                         } else {
                             finalizarButton.disabled = true;
@@ -669,6 +700,39 @@
             document.addEventListener('DOMContentLoaded', () => {
                 initGridBehavior();
 
+                // Botón para limpiar fecha
+                const btnLimpiarFecha = document.getElementById('limpiarFecha');
+                const inputFecha = document.getElementById('fecha');
+                if (btnLimpiarFecha && inputFecha) {
+                    btnLimpiarFecha.addEventListener('click', function() {
+                        inputFecha.value = '';
+                        inputFecha.focus();
+                    });
+                }
+
+                // Prevenir que el formulario envíe valores vacíos innecesarios
+                const formFiltros = document.getElementById('formFiltros');
+                if (formFiltros) {
+                    formFiltros.addEventListener('submit', function(e) {
+                        const codigo = document.getElementById('codigo');
+                        const fecha = document.getElementById('fecha');
+                        const estado = document.getElementById('estado');
+                        
+                        // Si código está vacío, no enviarlo
+                        if (codigo && !codigo.value.trim()) {
+                            codigo.removeAttribute('name');
+                        }
+                        
+                        // Si fecha está vacía, enviar explícitamente "TODAS"
+                        if (fecha && !fecha.value.trim()) {
+                            fecha.value = 'TODAS';
+                        }
+                        
+                        // Estado siempre se envía (incluso si es "TODOS")
+                        // No hacer nada con estado
+                    });
+                }
+
                 // Delegación para enlaces de paginación dentro de la grilla
                 const grid = document.getElementById('reservas-grid');
                 if (grid) {
@@ -682,12 +746,13 @@
                         const page = params.get('page') || '0';
 
                         // Obtener filtros actuales desde inputs
+                        const codigo = document.getElementById('codigo') ? document.getElementById('codigo').value : '';
                         const fecha = document.getElementById('fecha') ? document.getElementById('fecha').value : '';
                         const estado = document.getElementById('estado') ? document.getElementById('estado').value : '';
 
                         const complejoId = grid.getAttribute('data-complejo-id') || url.pathname.split('/').pop();
 
-                        const fetchUrl = `/admin-complejo/reservas/${complejoId}/fragment?page=${encodeURIComponent(page)}&fecha=${encodeURIComponent(fecha)}&estado=${encodeURIComponent(estado)}`;
+                        const fetchUrl = `/admin-complejo/reservas/${complejoId}/fragment?page=${encodeURIComponent(page)}&codigo=${encodeURIComponent(codigo)}&fecha=${encodeURIComponent(fecha)}&estado=${encodeURIComponent(estado)}`;
 
                         fetch(fetchUrl, {
                             credentials: 'same-origin',
@@ -731,7 +796,18 @@
             }
 
             // Modal de finalizar con pago
-            function mostrarModalFinalizar(reservaId, complejoId, monto) {
+            function mostrarModalFinalizar(reservaId, complejoId, monto, fechaReserva, horaInicio) {
+                // Validar que la fecha/hora de la reserva haya pasado
+                const ahora = new Date();
+                const fechaHoraReserva = new Date(fechaReserva + 'T' + horaInicio);
+                
+                if (fechaHoraReserva > ahora) {
+                    alert('No se puede finalizar esta reserva porque la fecha y hora de la reserva aún no han ocurrido.\n\n' +
+                          'Fecha/Hora de la reserva: ' + fechaHoraReserva.toLocaleString('es-AR') + '\n' +
+                          'Fecha/Hora actual: ' + ahora.toLocaleString('es-AR'));
+                    return;
+                }
+
                 const form = document.getElementById('formFinalizar');
                 form.action = `/admin-complejo/reservas/${reservaId}/finalizar`;
 

@@ -33,6 +33,7 @@
             transition: all 0.2s ease;
             border: none;
             padding: 0.5rem 0.75rem;
+            position: relative;
         }
         .horario-badge:hover {
             transform: scale(1.05);
@@ -43,11 +44,22 @@
         }
         .horario-badge.disponible:hover {
             background-color: #157347 !important;
+            box-shadow: 0 0 10px rgba(21, 115, 71, 0.5);
         }
         .horario-badge.ocupado {
             background-color: #6c757d !important;
             color: white;
             cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .horario-badge.seleccionado {
+            background-color: #0d6efd !important;
+            box-shadow: 0 0 15px rgba(13, 110, 253, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
         .empty-state {
             padding: 3rem;
@@ -58,6 +70,49 @@
             font-size: 4rem;
             margin-bottom: 1rem;
             opacity: 0.5;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            display: none;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        .spinner-custom {
+            width: 3rem;
+            height: 3rem;
+            border: 0.4rem solid #e9ecef;
+            border-top-color: #0d6efd;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .fecha-selector-sticky {
+            position: sticky;
+            top: 70px;
+            z-index: 100;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        @media (max-width: 768px) {
+            .espacio-card {
+                margin-bottom: 1rem;
+            }
+            .horario-badge {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.875rem;
+            }
         }
     </style>
 </head>
@@ -104,9 +159,12 @@
                 </div>
 
                 <!-- Selector de fecha -->
-                <div class="card mb-4">
+                <div class="card mb-4 fecha-selector-sticky">
                     <div class="card-body">
-                        <form th:action="@{/reservas/complejo/{id}(id=${complejo.id_complejo})}" method="get" class="row g-3 align-items-end">
+                        <form th:action="@{/reservas/complejo/{id}(id=${complejo.id_complejo})}" 
+                              method="get" 
+                              class="row g-3 align-items-end"
+                              id="formFecha">
                             <div class="col-md-4">
                                 <label for="fechaInput" class="form-label">
                                     <i class="bi bi-calendar3"></i> Seleccionar fecha
@@ -117,10 +175,11 @@
                                        class="form-control form-control-lg" 
                                        th:value="${fecha}"
                                        th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
+                                       onchange="document.getElementById('formFecha').submit()"
                                        required>
                             </div>
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                <button type="submit" class="btn btn-primary btn-lg w-100" id="btnBuscar">
                                     <i class="bi bi-search"></i> Buscar
                                 </button>
                             </div>
@@ -214,8 +273,8 @@
                                 </div>
 
                                 <!-- Lista de canchas -->
-                                <div class="row g-4" th:if="${!#lists.isEmpty(canchas)}">
-                                    <div class="col-md-6 col-lg-4" th:each="cancha : ${canchas}">
+                                <div class="row g-3" th:if="${!#lists.isEmpty(canchas)}">
+                                    <div class="col-12 col-md-6 col-lg-4" th:each="cancha : ${canchas}">
                                         <div class="card espacio-card h-100">
                                             <div class="card-header bg-primary text-white">
                                                 <h5 class="mb-0">
@@ -258,13 +317,15 @@
                                                                   th:if="${intervalo.disponible()}"
                                                                   th:action="@{/reservas/seleccionar-horario}" 
                                                                   method="post"
+                                                                  class="form-horario"
                                                                   style="display: inline;">
                                                                 <input type="hidden" name="espacioId" th:value="${cancha.id}">
                                                                 <input type="hidden" name="fecha" th:value="${fecha}">
                                                                 <input type="hidden" name="horaInicio" th:value="${intervalo.horaInicio()}">
                                                                 <button type="submit" 
-                                                                        class="btn horario-badge disponible"
-                                                                        th:title="'Reservar desde las ' + ${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">
+                                                                        class="btn horario-badge disponible btn-horario"
+                                                                        th:title="'Reservar desde las ' + ${#temporals.format(intervalo.horaInicio(), 'HH:mm')}"
+                                                                        onclick="marcarSeleccionado(this)">
                                                                     <span th:text="${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">15:00</span>
                                                                 </button>
                                                             </form>
@@ -308,8 +369,8 @@
                                 </div>
 
                                 <!-- Lista de salones -->
-                                <div class="row g-4" th:if="${!#lists.isEmpty(salones)}">
-                                    <div class="col-md-6 col-lg-4" th:each="salon : ${salones}">
+                                <div class="row g-3" th:if="${!#lists.isEmpty(salones)}">
+                                    <div class="col-12 col-md-6 col-lg-4" th:each="salon : ${salones}">
                                         <div class="card espacio-card h-100">
                                             <div class="card-header bg-success text-white">
                                                 <h5 class="mb-0">
@@ -352,13 +413,15 @@
                                                                   th:if="${intervalo.disponible()}"
                                                                   th:action="@{/reservas/seleccionar-horario}" 
                                                                   method="post"
+                                                                  class="form-horario"
                                                                   style="display: inline;">
                                                                 <input type="hidden" name="espacioId" th:value="${salon.id}">
                                                                 <input type="hidden" name="fecha" th:value="${fecha}">
                                                                 <input type="hidden" name="horaInicio" th:value="${intervalo.horaInicio()}">
                                                                 <button type="submit" 
-                                                                        class="btn horario-badge disponible"
-                                                                        th:title="'Reservar desde las ' + ${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">
+                                                                        class="btn horario-badge disponible btn-horario"
+                                                                        th:title="'Reservar desde las ' + ${#temporals.format(intervalo.horaInicio(), 'HH:mm')}"
+                                                                        onclick="marcarSeleccionado(this)">
                                                                     <span th:text="${#temporals.format(intervalo.horaInicio(), 'HH:mm')}">15:00</span>
                                                                 </button>
                                                             </form>
@@ -395,5 +458,96 @@
             </div>
         </div>
     </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-custom mb-3"></div>
+            <p class="text-muted fw-bold">Procesando tu selección...</p>
+        </div>
+    </div>
+
+    <!-- Scripts adicionales -->
+    <th:block layout:fragment="scripts">
+        <script th:inline="javascript">
+            // Marcar botón como seleccionado y mostrar loading
+            function marcarSeleccionado(btn) {
+                // Remover clase seleccionado de todos los botones
+                document.querySelectorAll('.btn-horario').forEach(b => {
+                    b.classList.remove('seleccionado');
+                });
+                
+                // Agregar clase al botón clickeado
+                btn.classList.add('seleccionado');
+                
+                // Mostrar overlay de carga
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').classList.add('active');
+                }, 100);
+            }
+
+            // Auto-submit cuando cambia la fecha
+            document.addEventListener('DOMContentLoaded', function() {
+                const fechaInput = document.getElementById('fechaInput');
+                const btnBuscar = document.getElementById('btnBuscar');
+                
+                if (fechaInput) {
+                    fechaInput.addEventListener('change', function() {
+                        btnBuscar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Buscando...';
+                        btnBuscar.disabled = true;
+                    });
+                }
+
+                // Interceptar envío de formularios de horarios
+                const formsHorario = document.querySelectorAll('.form-horario');
+                formsHorario.forEach(form => {
+                    form.addEventListener('submit', function(e) {
+                        // Deshabilitar todos los botones para evitar doble click
+                        document.querySelectorAll('.btn-horario').forEach(btn => {
+                            btn.disabled = true;
+                        });
+                    });
+                });
+
+                // Animación suave al cambiar de tab
+                const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+                tabs.forEach(tab => {
+                    tab.addEventListener('shown.bs.tab', function(e) {
+                        const targetPanel = document.querySelector(e.target.dataset.bsTarget);
+                        if (targetPanel) {
+                            targetPanel.style.opacity = '0';
+                            setTimeout(() => {
+                                targetPanel.style.transition = 'opacity 0.3s ease';
+                                targetPanel.style.opacity = '1';
+                            }, 50);
+                        }
+                    });
+                });
+
+                // Efecto hover mejorado en cards
+                const cards = document.querySelectorAll('.espacio-card');
+                cards.forEach(card => {
+                    card.addEventListener('mouseenter', function() {
+                        this.style.borderLeftWidth = '6px';
+                    });
+                    card.addEventListener('mouseleave', function() {
+                        this.style.borderLeftWidth = '4px';
+                    });
+                });
+
+                // Scroll suave al hacer click en tab
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        setTimeout(() => {
+                            window.scrollTo({
+                                top: document.querySelector('.fecha-selector-sticky').offsetTop - 80,
+                                behavior: 'smooth'
+                            });
+                        }, 100);
+                    });
+                });
+            });
+        </script>
+    </th:block>
 </body>
 </html>
