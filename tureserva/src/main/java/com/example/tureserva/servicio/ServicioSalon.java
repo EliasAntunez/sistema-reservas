@@ -14,10 +14,14 @@ public class ServicioSalon {
 
     private final RepositorioSalon repositorioSalon;
     private final RepositorioComplejoDeportivo repositorioComplejo;
+    private final ServicioNormalizacion servicioNormalizacion;
 
-    public ServicioSalon(RepositorioSalon repositorioSalon, RepositorioComplejoDeportivo repositorioComplejo) {
+    public ServicioSalon(RepositorioSalon repositorioSalon, 
+                        RepositorioComplejoDeportivo repositorioComplejo,
+                        ServicioNormalizacion servicioNormalizacion) {
         this.repositorioSalon = repositorioSalon;
         this.repositorioComplejo = repositorioComplejo;
+        this.servicioNormalizacion = servicioNormalizacion;
     }
 
     public org.springframework.data.domain.Page<Salon> listarSalonesPorComplejoPaginado(Long idComplejo, int page, int size) {
@@ -27,18 +31,8 @@ public class ServicioSalon {
         return repositorioSalon.findByComplejoDeportivoAndActivoTrue(complejo, pageable);
     }
 
-    private String normalizarNombre(String valor) {
-        if (valor == null || valor.isEmpty()) return valor;
-        String[] palabras = valor.trim().toLowerCase().split(" ");
-        StringBuilder sb = new StringBuilder();
-        for (String palabra : palabras) {
-            if (palabra.length() > 0) {
-                sb.append(Character.toUpperCase(palabra.charAt(0))).append(palabra.substring(1));
-            }
-            sb.append(" ");
-        }
-        return sb.toString().trim();
-    }
+    // ELIMINADO: Método de normalización movido a ServicioNormalizacion
+    // - normalizarNombre() → servicioNormalizacion.normalizarNombreApellido()
 
     public Optional<Salon> obtenerPorId(Long id) {
         return repositorioSalon.findById(id);
@@ -77,7 +71,7 @@ public class ServicioSalon {
                 throw new IllegalArgumentException("El salón no puede ser nulo");
             }
             if (salon.getNombre() != null) {
-                salon.setNombre(normalizarNombre(salon.getNombre()));
+                salon.setNombre(servicioNormalizacion.normalizarNombreApellido(salon.getNombre()));
             }
 
             if (salon.getPrecioPorHora() < 0) {
@@ -107,7 +101,7 @@ public class ServicioSalon {
     public void actualizarSalon(Salon salon) {
         Salon existente = repositorioSalon.findById(salon.getId()).orElseThrow(() -> new IllegalArgumentException("Salón no encontrado con ID: " + salon.getId()));
         if (salon.getNombre() != null) {
-            existente.setNombre(normalizarNombre(salon.getNombre()));
+            existente.setNombre(servicioNormalizacion.normalizarNombreApellido(salon.getNombre()));
         }
         existente.setCapacidad(salon.getCapacidad());
         existente.setPrecioPorHora(salon.getPrecioPorHora());

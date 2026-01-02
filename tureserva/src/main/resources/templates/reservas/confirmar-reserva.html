@@ -355,7 +355,7 @@
                                             id="btn-pagar-senia"
                                             class="btn btn-warning btn-lg">
                                         <i class="bi bi-credit-card me-2"></i>
-                                        Pagar Seña
+                                        Confirmar Reserva - Pagar Seña
                                     </button>
 
                                     <!-- Botón para confirmar reserva después del pago -->
@@ -366,15 +366,6 @@
                                             style="display:none;">
                                         <i class="bi bi-check-circle me-2"></i>
                                         Confirmar Reserva
-                                    </button>
-
-                                    <!-- Si requiere seña pero no hay MP configurado, mostrar aviso deshabilitado -->
-                                    <button th:if="${requiereSeña and !complejoTieneMp}" 
-                                            type="button" 
-                                            class="btn btn-warning btn-lg" 
-                                            disabled>
-                                        <i class="bi bi-credit-card me-2"></i>
-                                        Pagar Seña (Próximamente)
                                     </button>
                                 </div>
                             </div>

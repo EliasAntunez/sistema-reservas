@@ -50,6 +50,7 @@ public class ServicioOfertas {
     private final ServicioReserva servicioReserva;
     private final ServicioEmail servicioEmail;
     private final RepositorioCliente repositorioCliente;
+    private final ServicioGeneradorCodigos servicioGeneradorCodigos;
     
     public ServicioOfertas(
             RepositorioOfertaFlash repositorioOferta,
@@ -57,13 +58,15 @@ public class ServicioOfertas {
             ServicioCuentaCorriente servicioCuentaCorriente,
             ServicioReserva servicioReserva,
             ServicioEmail servicioEmail,
-            RepositorioCliente repositorioCliente) {
+            RepositorioCliente repositorioCliente,
+            ServicioGeneradorCodigos servicioGeneradorCodigos) {
         this.repositorioOferta = repositorioOferta;
         this.repositorioReserva = repositorioReserva;
         this.servicioCuentaCorriente = servicioCuentaCorriente;
         this.servicioReserva = servicioReserva;
         this.servicioEmail = servicioEmail;
         this.repositorioCliente = repositorioCliente;
+        this.servicioGeneradorCodigos = servicioGeneradorCodigos;
     }
     
     /**
@@ -260,7 +263,7 @@ public class ServicioOfertas {
             enviarEmailVentaExitosa(oferta);
             logger.info("✉️  Email enviado al cliente original");
         } catch (Exception e) {
-            logger.error("❌ Error al enviar email al cliente original: {}", e.getMessage());
+            logger.error("Error al enviar email al cliente original: {}", e.getMessage());
             // Circuit breaker detectará el fallo
         }
         
@@ -268,7 +271,7 @@ public class ServicioOfertas {
             enviarEmailReservaOferta(nuevaReserva, oferta);
             logger.info("✉️  Email enviado al nuevo cliente");
         } catch (Exception e) {
-            logger.error("❌ Error al enviar email al nuevo cliente: {}", e.getMessage());
+            logger.error("Error al enviar email al nuevo cliente: {}", e.getMessage());
             // Circuit breaker detectará el fallo
         }
     }
@@ -331,12 +334,21 @@ public class ServicioOfertas {
         nuevaReserva.setFechaReserva(reservaOriginal.getFechaReserva());
         nuevaReserva.setFechaCreacion(LocalDateTime.now());
         nuevaReserva.setEstado(EstadoReserva.CONFIRMADA); // Confirmada sin pagar seña
-        nuevaReserva.setCodigoReserva(generarCodigoReserva());
+        
+        // Generar código único usando servicio centralizado
+        String codigo = servicioGeneradorCodigos.generarCodigoReserva(
+            codigoGenerado -> repositorioReserva.existsByCodigoReserva(codigoGenerado)
+        );
+        nuevaReserva.setCodigoReserva(codigo);
         
         // 3. CALCULAR MONTOS
         // El descuento es el 50% de la seña del cliente original
-        BigDecimal montoTotalOriginal = reservaOriginal.getMontoTotal();
-        BigDecimal nuevoMontoTotal = montoTotalOriginal.subtract(descuento);
+        // IMPORTANTE: Calcular subtotal original desde los detalles (sin descuentos previos)
+        BigDecimal subtotalOriginal = reservaOriginal.getDetalles().stream()
+            .map(DetalleReserva::getSubtotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        BigDecimal nuevoMontoTotal = subtotalOriginal.subtract(descuento);
         
         // El nuevo cliente NO paga seña (oferta de último momento)
         // Deberá pagar el total con descuento al finalizar
@@ -362,45 +374,22 @@ public class ServicioOfertas {
             nuevaReserva.agregarDetalle(nuevoDetalle);
         }
         
-        // 6. PERSISTIR
+        // 6. MARCAR PARA EVITAR RECÁLCULO AUTOMÁTICO (Oferta Flash con descuento manual)
+        nuevaReserva.setEvitarRecalculoAutomatico(true);
+        
+        // 7. PERSISTIR
         nuevaReserva = repositorioReserva.save(nuevaReserva);
         
         logger.info("✅ Nueva reserva {} creada exitosamente", nuevaReserva.getCodigoReserva());
-        logger.info("   💰 Total a pagar al finalizar: ${} (Original: ${}, Descuento: ${})",
-                nuevoMontoTotal, montoTotalOriginal, descuento);
+        logger.info("   💰 Total a pagar al finalizar: ${} (Subtotal original: ${}, Descuento: ${})",
+                nuevoMontoTotal, subtotalOriginal, descuento);
         logger.info("   🎯 Sin seña requerida (Oferta Flash de último momento)");
         
         return nuevaReserva;
     }
     
-    /**
-     * Genera un código único para la reserva
-     */
-    private String generarCodigoReserva() {
-        // Generar código único compatible con ServicioReserva
-        String codigo;
-        int intentos = 0;
-        int maxIntentos = 10;
-        
-        do {
-            if (intentos > 0) {
-                logger.warn("Colisión de código de reserva. Reintentando... (Intento {})", intentos);
-            }
-            
-            codigo = "RES-" + java.util.UUID.randomUUID().toString()
-                                    .substring(0, 6)
-                                    .toUpperCase();
-            
-            intentos++;
-            
-            if (intentos > maxIntentos) {
-                throw new RuntimeException("No se pudo generar un código de reserva único después de " + maxIntentos + " intentos.");
-            }
-            
-        } while (repositorioReserva.existsByCodigoReserva(codigo));
-        
-        return codigo;
-    }
+    // ELIMINADO: Método generarCodigoReserva() - Ahora usa ServicioGeneradorCodigos
+    // private String generarCodigoReserva() { ... }
     
     /**
      * Busca una oferta por su token
@@ -542,8 +531,15 @@ public class ServicioOfertas {
                 .map(DetalleReserva::getSubtotal)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
             
-            // El monto total ORIGINAL (antes del descuento)
+            // El monto total ORIGINAL (antes del descuento) - para mostrar en el email
             java.math.BigDecimal montoTotalOriginal = subtotalOriginal; // Sin descuento
+            
+            logger.info("📧 EMAIL OFERTA FLASH - Preparando DTO para reserva {}", nuevaReserva.getCodigoReserva());
+            logger.info("   └─ Subtotal original (sin descuento): {}", subtotalOriginal);
+            logger.info("   └─ nuevaReserva.getMontoTotal(): {}", nuevaReserva.getMontoTotal());
+            logger.info("   └─ nuevaReserva.getMontoSenia(): {}", nuevaReserva.getMontoSenia());
+            logger.info("   └─ nuevaReserva.getMontoRestante(): {}", nuevaReserva.getMontoRestante());
+            logger.info("   └─ oferta.getMontoDescuentoOferta(): {}", oferta.getMontoDescuentoOferta());
             
             com.example.tureserva.servicio.dto.EmailReservaDTO dto = 
                 new com.example.tureserva.servicio.dto.EmailReservaDTO(
@@ -551,16 +547,23 @@ public class ServicioOfertas {
                     nuevaReserva.getCodigoReserva(),
                     nuevaReserva.getFechaReserva(),
                     nombreComplejo,
-                    montoTotalOriginal  // Monto ANTES del descuento
+                    montoTotalOriginal  // Monto ANTES del descuento (para mostrar ahorro)
                 );
             
             // Configurar información de la oferta
             dto.setSubtotalEspacios(subtotalOriginal); // Total sin descuento
             dto.setSubtotalServicios(java.math.BigDecimal.ZERO);
             dto.setMontoSenia(nuevaReserva.getMontoSenia()); // $0
-            dto.setMontoRestante(nuevaReserva.getMontoRestante()); // Total CON descuento
+            dto.setMontoRestante(nuevaReserva.getMontoTotal()); // Total CON descuento (monto a pagar)
             dto.setRequirioSenia(false); // NO requiere seña, es oferta flash
             dto.setDescuentoOfertaFlash(oferta.getMontoDescuentoOferta()); // Descuento aplicado
+            
+            logger.info("📧 DTO CONFIGURADO:");
+            logger.info("   └─ dto.getMontoTotal() [mostrar como original]: {}", dto.getMontoTotal());
+            logger.info("   └─ dto.getSubtotalEspacios(): {}", dto.getSubtotalEspacios());
+            logger.info("   └─ dto.getDescuentoOfertaFlash(): {}", dto.getDescuentoOfertaFlash());
+            logger.info("   └─ dto.getMontoRestante() [monto FINAL a pagar]: {}", dto.getMontoRestante());
+            logger.info("   └─ dto.getMontoSenia(): {}", dto.getMontoSenia());
             
             // Agregar detalles
             java.util.List<com.example.tureserva.servicio.dto.EmailDetalleDTO> detallesDto = new java.util.ArrayList<>();

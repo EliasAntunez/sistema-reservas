@@ -107,6 +107,13 @@ public class Reserva {
     @DecimalMin(value = "0.0", message = "El crédito aplicado no puede ser negativo")
     @Column(name = "credito_aplicado", precision = 10, scale = 2)
     private BigDecimal creditoAplicado = BigDecimal.ZERO;
+    
+    /**
+     * Flag para evitar recálculo automático de montos (usado en Ofertas Flash)
+     * No se persiste en base de datos
+     */
+    @Transient
+    private boolean evitarRecalculoAutomatico = false;
 
     /**
      * Notas o comentarios adicionales del cliente
@@ -206,6 +213,10 @@ public class Reserva {
      * Calcula el monto total sumando todos los detalles
      */
     public void calcularMontoTotal() {
+        // Si está marcado para evitar recálculo (Oferta Flash), no recalcular
+        if (evitarRecalculoAutomatico) {
+            return;
+        }
         this.montoTotal = detalles.stream()
             .map(DetalleReserva::getSubtotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -216,6 +227,10 @@ public class Reserva {
      * Calcula el monto restante (total - seña - crédito aplicado)
      */
     public void calcularMontoRestante() {
+        // Si está marcado para evitar recálculo (Oferta Flash), no recalcular
+        if (evitarRecalculoAutomatico) {
+            return;
+        }
         BigDecimal restante = this.montoTotal;
         
         // Restar seña si existe

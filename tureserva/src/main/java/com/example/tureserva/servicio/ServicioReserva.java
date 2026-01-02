@@ -55,6 +55,7 @@ public class ServicioReserva {
     private final EntityManager entityManager;
     private final ServicioEmail servicioEmail;
     private final ServicioOfertas servicioOfertas; // Lazy injection para evitar ciclo
+    private final ServicioGeneradorCodigos servicioGeneradorCodigos;
 
     // Helper key para agrupar por franja horaria
     private static class FranjaKey {
@@ -90,7 +91,8 @@ public class ServicioReserva {
                          com.example.tureserva.repositorio.RepositorioDetalleServicioAdicional repositorioDetalleServicioAdicional,
                          EntityManager entityManager,
                          ServicioEmail servicioEmail,
-                         @Lazy ServicioOfertas servicioOfertas) {
+                         @Lazy ServicioOfertas servicioOfertas,
+                         ServicioGeneradorCodigos servicioGeneradorCodigos) {
         this.repositorioDetalleReserva = repositorioDetalleReserva;
         this.repositorioEspacioReservable = repositorioEspacioReservable;
         this.repositorioReserva = repositorioReserva;
@@ -100,6 +102,7 @@ public class ServicioReserva {
         this.entityManager = entityManager;
         this.servicioEmail = servicioEmail;
         this.servicioOfertas = servicioOfertas;
+        this.servicioGeneradorCodigos = servicioGeneradorCodigos;
     }
 
     /**
@@ -518,28 +521,10 @@ public class ServicioReserva {
             }
         }
 
-        // Generar código único
-        String codigo;
-        int intentos = 0;
-        int maxIntentos = 10;
-        
-        do {
-            if (intentos > 0) {
-                logger.warn("Colisión de código de reserva. Reintentando... (Intento {})", intentos);
-            }
-            
-            codigo = "RES-" + UUID.randomUUID().toString()
-                                    .substring(0, 6)
-                                    .toUpperCase();
-            
-            intentos++;
-            
-            if (intentos > maxIntentos) {
-                throw new RuntimeException("No se pudo generar un código de reserva único después de " + maxIntentos + " intentos.");
-            }
-            
-        } while (repositorioReserva.existsByCodigoReserva(codigo));
-        
+        // Generar código único usando servicio centralizado
+        String codigo = servicioGeneradorCodigos.generarCodigoReserva(
+            codigoGenerado -> repositorioReserva.existsByCodigoReserva(codigoGenerado)
+        );
         reserva.setCodigoReserva(codigo);
         
         // Persistir (cascade guardará también los detalles y los servicios adicionales)
@@ -1453,28 +1438,10 @@ public class ServicioReserva {
         nuevaReserva.setReservaOrigenId(reservaCargada.getId());
         nuevaReserva.setAlertaEnviada(false);
         
-        // Generar nuevo código de reserva único
-        String codigo;
-        int intentos = 0;
-        int maxIntentos = 10;
-        
-        do {
-            if (intentos > 0) {
-                logger.warn("Colisión de código de reserva en reprogramación. Reintentando... (Intento {})", intentos);
-            }
-            
-            codigo = "RES-" + UUID.randomUUID().toString()
-                                    .substring(0, 6)
-                                    .toUpperCase();
-            
-            intentos++;
-            
-            if (intentos > maxIntentos) {
-                throw new RuntimeException("No se pudo generar un código de reserva único después de " + maxIntentos + " intentos.");
-            }
-            
-        } while (repositorioReserva.existsByCodigoReserva(codigo));
-        
+        // Generar nuevo código de reserva único usando servicio centralizado
+        String codigo = servicioGeneradorCodigos.generarCodigoReserva(
+            codigoGenerado -> repositorioReserva.existsByCodigoReserva(codigoGenerado)
+        );
         nuevaReserva.setCodigoReserva(codigo);
         
         // Copiar detalles con nueva fecha/hora

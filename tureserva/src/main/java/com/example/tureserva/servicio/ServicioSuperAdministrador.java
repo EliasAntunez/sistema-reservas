@@ -15,12 +15,15 @@ public class ServicioSuperAdministrador {
 
     private final RepositorioSuperAdministrador repositorioSuperAdministrador;
     private final PasswordEncoder passwordEncoder;
+    private final ServicioNormalizacion servicioNormalizacion;
     
     // Constructor injection
     public ServicioSuperAdministrador(RepositorioSuperAdministrador repositorioSuperAdministrador, 
-                                     PasswordEncoder passwordEncoder) {
+                                     PasswordEncoder passwordEncoder,
+                                     ServicioNormalizacion servicioNormalizacion) {
         this.repositorioSuperAdministrador = repositorioSuperAdministrador;
         this.passwordEncoder = passwordEncoder;
+        this.servicioNormalizacion = servicioNormalizacion;
     }
 
     // Obtener todos los SuperAdministradores
@@ -56,18 +59,18 @@ public class ServicioSuperAdministrador {
     // Guardar SuperAdministrador
     @Transactional
     public SuperAdministrador guardarSuperAdministrador(SuperAdministrador superAdmin) {
-        // Normalizar datos antes de guardar
+        // Normalizar datos antes de guardar usando servicio centralizado
         if (superAdmin.getNombre() != null) {
-            superAdmin.setNombre(superAdmin.getNombre().trim().toUpperCase());
+            superAdmin.setNombre(servicioNormalizacion.normalizarNombreApellido(superAdmin.getNombre()));
         }
         if (superAdmin.getApellido() != null) {
-            superAdmin.setApellido(superAdmin.getApellido().trim().toUpperCase());
+            superAdmin.setApellido(servicioNormalizacion.normalizarNombreApellido(superAdmin.getApellido()));
         }
         if (superAdmin.getEmail() != null) {
-            superAdmin.setEmail(superAdmin.getEmail().trim().toLowerCase());
+            superAdmin.setEmail(servicioNormalizacion.normalizarEmail(superAdmin.getEmail()));
         }
         if (superAdmin.getDni() != null) {
-            superAdmin.setDni(superAdmin.getDni().trim().toUpperCase());
+            superAdmin.setDni(servicioNormalizacion.normalizarDni(superAdmin.getDni()));
         }
         
         // Encriptar la contraseña antes de guardar
@@ -92,18 +95,18 @@ public class ServicioSuperAdministrador {
     public SuperAdministrador actualizarSuperAdministrador(SuperAdministrador superAdmin) {
         SuperAdministrador existente = repositorioSuperAdministrador.findById(superAdmin.getId()).orElse(null);
         if (existente != null) {
-            // Normalizar datos antes de actualizar
+            // Normalizar datos antes de actualizar usando servicio centralizado
             if (superAdmin.getNombre() != null) {
-                existente.setNombre(superAdmin.getNombre().trim().toUpperCase());
+                existente.setNombre(servicioNormalizacion.normalizarNombreApellido(superAdmin.getNombre()));
             }
             if (superAdmin.getApellido() != null) {
-                existente.setApellido(superAdmin.getApellido().trim().toUpperCase());
+                existente.setApellido(servicioNormalizacion.normalizarNombreApellido(superAdmin.getApellido()));
             }
             if (superAdmin.getEmail() != null) {
-                existente.setEmail(superAdmin.getEmail().trim().toLowerCase());
+                existente.setEmail(servicioNormalizacion.normalizarEmail(superAdmin.getEmail()));
             }
             if (superAdmin.getDni() != null) {
-                existente.setDni(superAdmin.getDni().trim().toUpperCase());
+                existente.setDni(servicioNormalizacion.normalizarDni(superAdmin.getDni()));
             }
             
             // Si la contraseña ha cambiado, encriptarla antes de actualizar

@@ -13,6 +13,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.example.tureserva.servicio.ServicioAdministradorComplejo;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
 import com.example.tureserva.servicio.ServicioReserva;
+import com.example.tureserva.servicio.ServicioValidacionPermisos;
 import com.example.tureserva.modelo.AdministradorComplejo;
 import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.modelo.Usuario;
@@ -35,15 +36,18 @@ public class ControladorAdministradorComplejo {
     private final ServicioComplejoDeportivo servicioComplejoDeportivo;
     private final ServicioReserva servicioReserva;
     private final RepositorioReserva repositorioReserva;
+    private final ServicioValidacionPermisos servicioValidacionPermisos;
 
     public ControladorAdministradorComplejo(ServicioAdministradorComplejo servicioAdministradorComplejo,
                                           ServicioComplejoDeportivo servicioComplejoDeportivo,
                                           ServicioReserva servicioReserva,
-                                          RepositorioReserva repositorioReserva) {
+                                          RepositorioReserva repositorioReserva,
+                                          ServicioValidacionPermisos servicioValidacionPermisos) {
         this.servicioAdministradorComplejo = servicioAdministradorComplejo;
         this.servicioComplejoDeportivo = servicioComplejoDeportivo;
         this.servicioReserva = servicioReserva;
         this.repositorioReserva = repositorioReserva;
+        this.servicioValidacionPermisos = servicioValidacionPermisos;
     }
 
     // ===== DASHBOARD ADMINISTRADOR COMPLEJO =====
@@ -289,6 +293,7 @@ public class ControladorAdministradorComplejo {
     @GetMapping("/reservas/{complejoId}")
     public String verReservasComplejo(
             @PathVariable("complejoId") Long complejoId,
+            @RequestParam(value = "codigo", required = false) String codigoReserva,
             @RequestParam(value = "fecha", required = false) String fechaStr,
             @RequestParam(value = "estado", required = false) String estadoStr,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -297,25 +302,41 @@ public class ControladorAdministradorComplejo {
             RedirectAttributes redirectAttributes) {
         
         try {
-            // Validar que el complejo pertenece al administrador
-            String emailUsuario = authentication.getName();
-            AdministradorComplejo administrador = servicioAdministradorComplejo.obtenerAdministradorActivoPorEmail(emailUsuario);
-            
-            if (administrador == null) {
-                ManejadorMensajes.agregarMensajeError(redirectAttributes, "No se encontró el administrador");
+            // VALIDACIÓN DE PERMISOS usando servicio centralizado
+            if (!servicioValidacionPermisos.tienePermisoSobreComplejo(authentication, complejoId)) {
+                servicioValidacionPermisos.registrarIntentoNoAutorizado(authentication, "reservas del complejo", complejoId);
+                ManejadorMensajes.agregarMensajeError(redirectAttributes, "No tiene permisos para ver este complejo");
                 return "redirect:/admin-complejo/mis-complejos";
             }
             
             ComplejoDeportivo complejo = servicioComplejoDeportivo.obtenerPorId(complejoId)
                 .orElseThrow(() -> new RuntimeException("Complejo no encontrado"));
             
-            if (!complejo.getAdministradorComplejo().getId().equals(administrador.getId())) {
-                ManejadorMensajes.agregarMensajeError(redirectAttributes, "No tiene permisos para ver este complejo");
-                return "redirect:/admin-complejo/mis-complejos";
+            // Establecer valores por defecto SOLO si no hay ningún filtro aplicado
+            boolean tieneCodigo = codigoReserva != null && !codigoReserva.trim().isEmpty();
+            boolean usuarioSeleccionoFecha = fechaStr != null && !fechaStr.trim().isEmpty();
+            boolean usuarioSeleccionoEstado = estadoStr != null && !estadoStr.trim().isEmpty();
+            
+            // Solo aplicar defaults si es la primera carga (sin ningún parámetro de filtro)
+            boolean esPrimeraCarga = !tieneCodigo && !usuarioSeleccionoFecha && !usuarioSeleccionoEstado;
+            
+            if (esPrimeraCarga) {
+                // Primera carga: mostrar reservas de HOY en estado CONFIRMADA
+                fechaStr = LocalDate.now().toString();
+                estadoStr = "CONFIRMADA";
+            } else {
+                // El usuario está filtrando: respetar sus elecciones
+                // Si eligió "TODAS" o "TODOS", convertir a null para buscar sin filtrar
+                if ("TODAS".equals(fechaStr)) {
+                    fechaStr = null;
+                }
+                if ("TODOS".equals(estadoStr)) {
+                    estadoStr = null;
+                }
             }
             
             // Delegar llenado del modelo y renderizado
-            cargarDatosReservas(complejo, fechaStr, estadoStr, page, model);
+            cargarDatosReservas(complejo, codigoReserva, fechaStr, estadoStr, page, model);
             return "admin-complejo/reservas/listar";
             
         } catch (Exception e) {
@@ -332,6 +353,7 @@ public class ControladorAdministradorComplejo {
     @GetMapping("/reservas/{complejoId}/fragment")
     public String verReservasFragment(
             @PathVariable("complejoId") Long complejoId,
+            @RequestParam(value = "codigo", required = false) String codigoReserva,
             @RequestParam(value = "fecha", required = false) String fechaStr,
             @RequestParam(value = "estado", required = false) String estadoStr,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -340,23 +362,17 @@ public class ControladorAdministradorComplejo {
             RedirectAttributes redirectAttributes) {
 
         try {
-            String emailUsuario = authentication.getName();
-            AdministradorComplejo administrador = servicioAdministradorComplejo.obtenerAdministradorActivoPorEmail(emailUsuario);
-
-            if (administrador == null) {
-                ManejadorMensajes.agregarMensajeError(redirectAttributes, "No se encontró el administrador");
-                return "admin-complejo/reservas/listar :: grid"; // devolver fragment vacío/consistente
+            // VALIDACIÓN DE PERMISOS usando servicio centralizado
+            if (!servicioValidacionPermisos.tienePermisoSobreComplejo(authentication, complejoId)) {
+                servicioValidacionPermisos.registrarIntentoNoAutorizado(authentication, "fragment de reservas del complejo", complejoId);
+                ManejadorMensajes.agregarMensajeError(redirectAttributes, "No tiene permisos para ver este complejo");
+                return "admin-complejo/reservas/listar :: grid";
             }
 
             ComplejoDeportivo complejo = servicioComplejoDeportivo.obtenerPorId(complejoId)
                 .orElseThrow(() -> new RuntimeException("Complejo no encontrado"));
 
-            if (!complejo.getAdministradorComplejo().getId().equals(administrador.getId())) {
-                ManejadorMensajes.agregarMensajeError(redirectAttributes, "No tiene permisos para ver este complejo");
-                return "admin-complejo/reservas/listar :: grid";
-            }
-
-            cargarDatosReservas(complejo, fechaStr, estadoStr, page, model);
+            cargarDatosReservas(complejo, codigoReserva, fechaStr, estadoStr, page, model);
             // Devolver sólo el fragmento llamado 'grid' del template
             return "admin-complejo/reservas/listar :: grid";
 
@@ -371,6 +387,7 @@ public class ControladorAdministradorComplejo {
      * Extrae la lógica que carga la lista de reservas y estadísticas en el model.
      */
     private void cargarDatosReservas(ComplejoDeportivo complejo,
+                                     String codigoReserva,
                                      String fechaStr,
                                      String estadoStr,
                                      int page,
@@ -382,6 +399,7 @@ public class ControladorAdministradorComplejo {
         Page<Long> paginaIds;
         LocalDate fecha = fechaStr != null && !fechaStr.isEmpty() ? LocalDate.parse(fechaStr) : null;
         EstadoReserva estado = null;
+        boolean tieneCodigo = codigoReserva != null && !codigoReserva.trim().isEmpty();
 
         if (estadoStr != null && !estadoStr.isEmpty()) {
             try {
@@ -393,7 +411,16 @@ public class ControladorAdministradorComplejo {
 
         Long complejoId = complejo.getId_complejo();
 
-        if (fecha != null && estado != null) {
+        // Determinar qué query usar según los filtros activos
+        if (tieneCodigo && fecha != null && estado != null) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndFechaAndEstado(complejoId, codigoReserva.trim(), fecha, estado, pageable);
+        } else if (tieneCodigo && fecha != null) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndFecha(complejoId, codigoReserva.trim(), fecha, pageable);
+        } else if (tieneCodigo && estado != null) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndEstado(complejoId, codigoReserva.trim(), estado, pageable);
+        } else if (tieneCodigo) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoReserva(complejoId, codigoReserva.trim(), pageable);
+        } else if (fecha != null && estado != null) {
             paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndFechaAndEstado(complejoId, fecha, estado, pageable);
         } else if (fecha != null) {
             paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndFecha(complejoId, fecha, pageable);
@@ -421,6 +448,7 @@ public class ControladorAdministradorComplejo {
         model.addAttribute("reservasPendientes", reservasPendientes);
         model.addAttribute("reservasConfirmadas", reservasConfirmadas);
         model.addAttribute("reservasFinalizadas", reservasFinalizadas);
+        model.addAttribute("codigoFiltro", codigoReserva);
         model.addAttribute("fechaFiltro", fechaStr);
         model.addAttribute("estadoFiltro", estadoStr);
         model.addAttribute("estadosDisponibles", EstadoReserva.values());

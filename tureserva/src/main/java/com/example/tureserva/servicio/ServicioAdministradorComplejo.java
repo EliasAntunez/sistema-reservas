@@ -15,33 +15,20 @@ public class ServicioAdministradorComplejo {
 
     private final RepositorioAdministradorComplejo repositorioAdministradorComplejo;
     private final PasswordEncoder passwordEncoder;
+    private final ServicioNormalizacion servicioNormalizacion;
     
     // Constructor injection
     public ServicioAdministradorComplejo(RepositorioAdministradorComplejo repositorioAdministradorComplejo, 
-                                        PasswordEncoder passwordEncoder) {
+                                        PasswordEncoder passwordEncoder,
+                                        ServicioNormalizacion servicioNormalizacion) {
         this.repositorioAdministradorComplejo = repositorioAdministradorComplejo;
         this.passwordEncoder = passwordEncoder;
+        this.servicioNormalizacion = servicioNormalizacion;
     }
 
-    // --- Métodos auxiliares de normalización (ubicados después del constructor) ---
-    private String normalizarNombreApellido(String valor) {
-        if (valor == null || valor.isEmpty()) return valor;
-        String[] palabras = valor.trim().toLowerCase().split(" ");
-        StringBuilder sb = new StringBuilder();
-        for (String palabra : palabras) {
-            if (palabra.length() > 0) {
-                sb.append(Character.toUpperCase(palabra.charAt(0))).append(palabra.substring(1));
-            }
-            sb.append(" ");
-        }
-        return sb.toString().trim();
-    }
-
-    private String normalizarDni(String dni) {
-        if (dni == null) return null;
-        String limpio = dni.replaceAll("[ .-]", "");
-        return limpio.toUpperCase();
-    }
+    // ELIMINADO: Métodos de normalización movidos a ServicioNormalizacion
+    // - normalizarNombreApellido() → servicioNormalizacion.normalizarNombreApellido()
+    // - normalizarDni() → servicioNormalizacion.normalizarDni()
 
     // Obtener todos los AdministradoresComplejo
     public List<AdministradorComplejo> obtenerTodosLosAdministradores() {
@@ -81,18 +68,18 @@ public class ServicioAdministradorComplejo {
     // Guardar AdministradorComplejo
     @Transactional
     public AdministradorComplejo guardarAdministrador(AdministradorComplejo admin) {
-        // Normalizar datos antes de guardar
+        // Normalizar datos antes de guardar usando servicio centralizado
         if (admin.getNombre() != null) {
-            admin.setNombre(normalizarNombreApellido(admin.getNombre()));
+            admin.setNombre(servicioNormalizacion.normalizarNombreApellido(admin.getNombre()));
         }
         if (admin.getApellido() != null) {
-            admin.setApellido(normalizarNombreApellido(admin.getApellido()));
+            admin.setApellido(servicioNormalizacion.normalizarNombreApellido(admin.getApellido()));
         }
         if (admin.getEmail() != null) {
-            admin.setEmail(admin.getEmail().trim().toLowerCase());
+            admin.setEmail(servicioNormalizacion.normalizarEmail(admin.getEmail()));
         }
         if (admin.getDni() != null) {
-            admin.setDni(normalizarDni(admin.getDni()));
+            admin.setDni(servicioNormalizacion.normalizarDni(admin.getDni()));
         }
         
         // Encriptar la contraseña antes de guardar
@@ -117,18 +104,18 @@ public class ServicioAdministradorComplejo {
     public AdministradorComplejo actualizarAdministrador(AdministradorComplejo admin) {
         AdministradorComplejo existente = repositorioAdministradorComplejo.findById(admin.getId()).orElse(null);
         if (existente != null) {
-            // Normalizar datos antes de actualizar
+            // Normalizar datos antes de actualizar usando servicio centralizado
             if (admin.getNombre() != null) {
-                existente.setNombre(normalizarNombreApellido(admin.getNombre()));
+                existente.setNombre(servicioNormalizacion.normalizarNombreApellido(admin.getNombre()));
             }
             if (admin.getApellido() != null) {
-                existente.setApellido(normalizarNombreApellido(admin.getApellido()));
+                existente.setApellido(servicioNormalizacion.normalizarNombreApellido(admin.getApellido()));
             }
             if (admin.getEmail() != null) {
-                existente.setEmail(admin.getEmail().trim().toLowerCase());
+                existente.setEmail(servicioNormalizacion.normalizarEmail(admin.getEmail()));
             }
             if (admin.getDni() != null) {
-                existente.setDni(normalizarDni(admin.getDni()));
+                existente.setDni(servicioNormalizacion.normalizarDni(admin.getDni()));
             }
             
             // Si la contraseña ha cambiado, encriptarla antes de actualizar
