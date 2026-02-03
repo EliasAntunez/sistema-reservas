@@ -313,12 +313,12 @@ public class ControladorAdministradorComplejo {
                 .orElseThrow(() -> new RuntimeException("Complejo no encontrado"));
             
             // Establecer valores por defecto SOLO si no hay ningún filtro aplicado
-            boolean tieneCodigo = codigoReserva != null && !codigoReserva.trim().isEmpty();
             boolean usuarioSeleccionoFecha = fechaStr != null && !fechaStr.trim().isEmpty();
             boolean usuarioSeleccionoEstado = estadoStr != null && !estadoStr.trim().isEmpty();
+            boolean usuarioSeleccionoCodigo = codigoReserva != null && !codigoReserva.trim().isEmpty();
             
             // Solo aplicar defaults si es la primera carga (sin ningún parámetro de filtro)
-            boolean esPrimeraCarga = !tieneCodigo && !usuarioSeleccionoFecha && !usuarioSeleccionoEstado;
+            boolean esPrimeraCarga = !usuarioSeleccionoCodigo && !usuarioSeleccionoFecha && !usuarioSeleccionoEstado;
             
             if (esPrimeraCarga) {
                 // Primera carga: mostrar reservas de HOY en estado CONFIRMADA
@@ -399,7 +399,11 @@ public class ControladorAdministradorComplejo {
         Page<Long> paginaIds;
         LocalDate fecha = fechaStr != null && !fechaStr.isEmpty() ? LocalDate.parse(fechaStr) : null;
         EstadoReserva estado = null;
-        boolean tieneCodigo = codigoReserva != null && !codigoReserva.trim().isEmpty();
+        
+        // Normalizar código de reserva (trim y null-safe)
+        String codigoNormalizado = (codigoReserva != null && !codigoReserva.trim().isEmpty()) 
+                                    ? codigoReserva.trim() 
+                                    : null;
 
         if (estadoStr != null && !estadoStr.isEmpty()) {
             try {
@@ -412,14 +416,14 @@ public class ControladorAdministradorComplejo {
         Long complejoId = complejo.getId_complejo();
 
         // Determinar qué query usar según los filtros activos
-        if (tieneCodigo && fecha != null && estado != null) {
-            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndFechaAndEstado(complejoId, codigoReserva.trim(), fecha, estado, pageable);
-        } else if (tieneCodigo && fecha != null) {
-            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndFecha(complejoId, codigoReserva.trim(), fecha, pageable);
-        } else if (tieneCodigo && estado != null) {
-            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndEstado(complejoId, codigoReserva.trim(), estado, pageable);
-        } else if (tieneCodigo) {
-            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoReserva(complejoId, codigoReserva.trim(), pageable);
+        if (codigoNormalizado != null && fecha != null && estado != null) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndFechaAndEstado(complejoId, codigoNormalizado, fecha, estado, pageable);
+        } else if (codigoNormalizado != null && fecha != null) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndFecha(complejoId, codigoNormalizado, fecha, pageable);
+        } else if (codigoNormalizado != null && estado != null) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoAndEstado(complejoId, codigoNormalizado, estado, pageable);
+        } else if (codigoNormalizado != null) {
+            paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndCodigoReserva(complejoId, codigoNormalizado, pageable);
         } else if (fecha != null && estado != null) {
             paginaIds = repositorioReserva.findIdsByComplejoDeportivoIdAndFechaAndEstado(complejoId, fecha, estado, pageable);
         } else if (fecha != null) {

@@ -16,8 +16,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Servicio para consultar la API de Open-Meteo y obtener pronósticos del clima.
@@ -28,23 +26,6 @@ import java.util.List;
 public class ServicioOpenMeteo {
     
     private static final Logger log = LoggerFactory.getLogger(ServicioOpenMeteo.class);
-    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-    
-    /**
-     * Códigos WMO que indican condiciones climáticas adversas (lluvia, tormenta, nieve).
-     * Referencia: https://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM
-     */
-    private static final List<Integer> CODIGOS_MAL_CLIMA = Arrays.asList(
-        51, 53, 55,  // Llovizna (ligera, moderada, densa)
-        61, 63, 65,  // Lluvia (ligera, moderada, fuerte)
-        66, 67,      // Lluvia helada
-        71, 73, 75,  // Nieve
-        77,          // Granos de nieve
-        80, 81, 82,  // Chubascos de lluvia
-        85, 86,      // Chubascos de nieve
-        95,          // Tormenta eléctrica
-        96, 99       // Tormenta con granizo
-    );
     
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -84,7 +65,8 @@ public class ServicioOpenMeteo {
             
             // Construir URL de la API de forma segura
             String url = UriComponentsBuilder
-                .fromHttpUrl(apiBaseUrl + "/forecast")
+                .fromUriString(apiBaseUrl)
+                .path("/forecast")
                 .queryParam("latitude", latitud)
                 .queryParam("longitude", longitud)
                 .queryParam("start_date", fecha)

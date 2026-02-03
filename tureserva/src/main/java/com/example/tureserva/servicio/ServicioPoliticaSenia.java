@@ -2,6 +2,8 @@ package com.example.tureserva.servicio;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.example.tureserva.anotacion.Auditable;
+import com.example.tureserva.modelo.TipoEvento;
 import com.example.tureserva.repositorio.RepositorioPoliticaSenia;
 import com.example.tureserva.modelo.PoliticaSenia;
 import com.example.tureserva.modelo.ComplejoDeportivo;
@@ -17,6 +19,15 @@ public class ServicioPoliticaSenia {
     private ServicioComplejoDeportivo servicioComplejoDeportivo;
 
     //guardar politica de seña
+    @Auditable(
+        evento = TipoEvento.POLITICA_SENIA_CREADA,
+        descripcion = "Política de seña creada",
+        recursoTipo = "POLITICA_SENIA",
+        complejoIdExpr = "#politicaSenia.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#politicaSenia.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#politicaSenia.id",
+        capturarDatosNuevos = true
+    )
     public void guardarPoliticaSenia(PoliticaSenia politicaSenia) {
         repositorioPoliticaSenia.save(politicaSenia);
     }
@@ -38,6 +49,16 @@ public class ServicioPoliticaSenia {
     }
 
     //actualizar politica de seña
+    @Auditable(
+        evento = TipoEvento.POLITICA_SENIA_MODIFICADA,
+        descripcion = "Política de seña modificada",
+        recursoTipo = "POLITICA_SENIA",
+        complejoIdExpr = "#politicaSenia.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#politicaSenia.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#politicaSenia.id",
+        capturarDatosAnteriores = true,
+        capturarDatosNuevos = true
+    )
     public void actualizarPoliticaSenia(PoliticaSenia politicaSenia) {
         repositorioPoliticaSenia.save(politicaSenia);
     }

@@ -1,5 +1,9 @@
 package com.example.tureserva.servicio;
 
+import com.example.tureserva.evento.ReservaCanceladaEvent;
+import com.example.tureserva.evento.ReservaConfirmadaEvent;
+import com.example.tureserva.evento.ReservaCreadaEvent;
+import com.example.tureserva.evento.ReservaFinalizadaEvent;
 import com.example.tureserva.modelo.*;
 import com.example.tureserva.modelo.enums.EstadoReserva;
 import com.example.tureserva.modelo.enums.MetodoPago;
@@ -8,13 +12,14 @@ import com.example.tureserva.repositorio.RepositorioEspacioReservable;
 import com.example.tureserva.repositorio.RepositorioDetalleReserva;
 import com.example.tureserva.repositorio.RepositorioReserva;
 import com.example.tureserva.repositorio.RepositorioPago;
+import com.example.tureserva.util.AuditoriaContextUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
-import java.util.UUID;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -56,6 +61,7 @@ public class ServicioReserva {
     private final ServicioEmail servicioEmail;
     private final ServicioOfertas servicioOfertas; // Lazy injection para evitar ciclo
     private final ServicioGeneradorCodigos servicioGeneradorCodigos;
+    private final ApplicationEventPublisher eventPublisher;
 
     // Helper key para agrupar por franja horaria
     private static class FranjaKey {
@@ -92,7 +98,8 @@ public class ServicioReserva {
                          EntityManager entityManager,
                          ServicioEmail servicioEmail,
                          @Lazy ServicioOfertas servicioOfertas,
-                         ServicioGeneradorCodigos servicioGeneradorCodigos) {
+                         ServicioGeneradorCodigos servicioGeneradorCodigos,
+                         ApplicationEventPublisher eventPublisher) {
         this.repositorioDetalleReserva = repositorioDetalleReserva;
         this.repositorioEspacioReservable = repositorioEspacioReservable;
         this.repositorioReserva = repositorioReserva;
@@ -103,6 +110,7 @@ public class ServicioReserva {
         this.servicioEmail = servicioEmail;
         this.servicioOfertas = servicioOfertas;
         this.servicioGeneradorCodigos = servicioGeneradorCodigos;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -527,6 +535,18 @@ public class ServicioReserva {
         );
         reserva.setCodigoReserva(codigo);
         
+        // Capturar complejoId del primer espacio ANTES de persistir (para auditoría)
+        Long complejoIdParaAuditoria = null;
+        String complejoNombreParaAuditoria = null;
+        if (!reserva.getDetalles().isEmpty()) {
+            DetalleReserva primerDetalle = reserva.getDetalles().get(0);
+            if (primerDetalle.getEspacioReservable() != null && 
+                primerDetalle.getEspacioReservable().getComplejoDeportivo() != null) {
+                complejoIdParaAuditoria = primerDetalle.getEspacioReservable().getComplejoDeportivo().getId_complejo();
+                complejoNombreParaAuditoria = primerDetalle.getEspacioReservable().getComplejoDeportivo().getNombre_complejo();
+            }
+        }
+        
         // Persistir (cascade guardará también los detalles y los servicios adicionales)
         Reserva reservaGuardada = repositorioReserva.save(reserva);
 
@@ -668,6 +688,34 @@ public class ServicioReserva {
             logger.error("Error al preparar/enviar correo para reserva {}: {}", reservaGuardada.getCodigoReserva(), e.getMessage(), e);
         }
 
+        // Publicar evento para auditoría (se ejecutará después del commit)
+        if (complejoIdParaAuditoria != null) {
+            try {
+                // Recopilar nombres de espacios reservados
+                List<String> espaciosReservados = reservaGuardada.getDetalles().stream()
+                    .map(d -> d.getEspacioReservable() != null ? d.getEspacioReservable().getNombre() : "Sin nombre")
+                    .distinct()
+                    .toList();
+                
+                eventPublisher.publishEvent(new ReservaCreadaEvent(
+                    reservaGuardada.getId(),
+                    reservaGuardada.getCodigoReserva(),
+                    complejoIdParaAuditoria,
+                    complejoNombreParaAuditoria,
+                    reservaGuardada.getCliente().getEmail(),
+                    reservaGuardada.getMontoTotal(),
+                    espaciosReservados
+                ));
+                logger.debug("📢 Evento ReservaCreadaEvent publicado para auditoría (reserva ID: {})", reservaGuardada.getId());
+            } catch (Exception e) {
+                logger.warn("No se pudo publicar evento de auditoría para reserva {}: {}", 
+                           reservaGuardada.getId(), e.getMessage());
+            }
+        } else {
+            logger.warn("No se pudo publicar evento de auditoría: complejoId es null para reserva {}", 
+                       reservaGuardada.getId());
+        }
+
         return reservaGuardada;
     }
     
@@ -734,6 +782,9 @@ public class ServicioReserva {
     
     /**
      * Cancela una reserva validando permisos, tiempo límite y políticas.
+     * 
+     * <p><b>FASE 2 - Migrado a Eventos:</b> Este método ya no usa @Auditable,
+     * sino que publica un {@link ReservaCanceladaEvent} al final de la transacción.
      * 
      * @param reservaId ID de la reserva a cancelar
      * @param cliente Cliente que solicita la cancelación
@@ -845,6 +896,22 @@ public class ServicioReserva {
         } else {
             resultado.setMensaje("Reserva cancelada exitosamente");
         }
+        
+        // FASE 2: Publicar evento de dominio para auditoría
+        // El evento se procesa DESPUÉS de que la transacción se confirma (AFTER_COMMIT)
+        eventPublisher.publishEvent(new ReservaCanceladaEvent(
+            this,
+            reserva,
+            motivo,
+            resultado.getMontoDevolucion(),
+            resultado.getMontoPenalizacion(),
+            resultado.isPuedeSerCancelada(),
+            AuditoriaContextUtil.obtenerUsuarioEmail(),
+            AuditoriaContextUtil.obtenerUsuarioRol(),
+            AuditoriaContextUtil.obtenerIpAddress()
+        ));
+        
+        logger.debug("✅ Evento ReservaCanceladaEvent publicado para reserva {}", reservaId);
         
         return resultado;
     }
@@ -1165,6 +1232,8 @@ public class ServicioReserva {
         private Double porcentajeDevolucion;
         private String politicaNombre;
         private OfertaFlash ofertaFlashGenerada;
+        private BigDecimal montoDevolucion = BigDecimal.ZERO;
+        private BigDecimal montoPenalizacion = BigDecimal.ZERO;
         
         // Getters y setters
         public boolean isPuedeSerCancelada() { return puedeSerCancelada; }
@@ -1187,12 +1256,21 @@ public class ServicioReserva {
         
         public OfertaFlash getOfertaFlashGenerada() { return ofertaFlashGenerada; }
         public void setOfertaFlashGenerada(OfertaFlash ofertaFlashGenerada) { this.ofertaFlashGenerada = ofertaFlashGenerada; }
+        
+        public BigDecimal getMontoDevolucion() { return montoDevolucion; }
+        public void setMontoDevolucion(BigDecimal montoDevolucion) { this.montoDevolucion = montoDevolucion; }
+        
+        public BigDecimal getMontoPenalizacion() { return montoPenalizacion; }
+        public void setMontoPenalizacion(BigDecimal montoPenalizacion) { this.montoPenalizacion = montoPenalizacion; }
     }
     
     // ==================== MÉTODOS PARA ADMINISTRADOR DE COMPLEJO ====================
     
     /**
      * Confirma una reserva pendiente (usado por admin del complejo).
+     * 
+     * <p><b>FASE 2 - Migrado a Eventos:</b> Publica {@link ReservaConfirmadaEvent}
+     * en lugar de usar @Auditable.
      */
     @Transactional
     public void confirmarReservaPendiente(Long reservaId) {
@@ -1207,10 +1285,24 @@ public class ServicioReserva {
         repositorioReserva.save(reserva);
         
         logger.info("Reserva {} confirmada por administrador", reservaId);
+        
+        // FASE 2: Publicar evento de dominio
+        eventPublisher.publishEvent(new ReservaConfirmadaEvent(
+            this,
+            reserva,
+            AuditoriaContextUtil.obtenerUsuarioEmail(),
+            AuditoriaContextUtil.obtenerUsuarioRol(),
+            AuditoriaContextUtil.obtenerIpAddress()
+        ));
+        
+        logger.debug("✅ Evento ReservaConfirmadaEvent publicado para reserva {}", reservaId);
     }
     
     /**
      * Finaliza una reserva confirmada registrando el pago completo (usado por admin del complejo).
+     * 
+     * <p><b>FASE 2 - Migrado a Eventos:</b> Publica {@link ReservaFinalizadaEvent}
+     * en lugar de usar @Auditable.
      */
     @Transactional
     public void finalizarReservaConPago(Long reservaId, MetodoPago metodoPago, 
@@ -1260,6 +1352,21 @@ public class ServicioReserva {
         
         logger.info("Reserva {} finalizada - pago completo registrado por {} con método {}", 
                     reservaId, registradoPor.getEmail(), metodoPago);
+        
+        // FASE 2: Publicar evento de dominio
+        eventPublisher.publishEvent(new ReservaFinalizadaEvent(
+            this,
+            reserva,
+            metodoPago,
+            numeroComprobante,
+            reserva.getMontoRestante(),
+            notas,
+            AuditoriaContextUtil.obtenerUsuarioEmail(),
+            AuditoriaContextUtil.obtenerUsuarioRol(),
+            AuditoriaContextUtil.obtenerIpAddress()
+        ));
+        
+        logger.debug("✅ Evento ReservaFinalizadaEvent publicado para reserva {}", reservaId);
     }
     
     /**
@@ -1303,6 +1410,9 @@ public class ServicioReserva {
     
     /**
      * Cancela una reserva por parte del administrador del complejo.
+     * 
+     * <p><b>FASE 2 - Migrado a Eventos:</b> Publica {@link ReservaCanceladaEvent}
+     * en lugar de usar @Auditable.
      */
     @Transactional
     public void cancelarReservaPorAdmin(Long reservaId, String motivo) {
@@ -1317,14 +1427,31 @@ public class ServicioReserva {
             throw new IllegalStateException("No se puede cancelar una reserva finalizada");
         }
         
-        reserva.cancelar(motivo != null && !motivo.trim().isEmpty() 
+        String motivoFinal = motivo != null && !motivo.trim().isEmpty() 
             ? motivo 
-            : "Cancelada por el administrador del complejo");
+            : "Cancelada por el administrador del complejo";
+        
+        reserva.cancelar(motivoFinal);
 
         // Mantener detalles para auditoría; la lógica de disponibilidad debe ignorar reservas CANCELADAS
         repositorioReserva.save(reserva);
         
-        logger.info("Reserva {} cancelada por administrador. Motivo: {}", reservaId, motivo);
+        logger.info("Reserva {} cancelada por administrador. Motivo: {}", reservaId, motivoFinal);
+        
+        // FASE 2: Publicar evento de dominio
+        eventPublisher.publishEvent(new ReservaCanceladaEvent(
+            this,
+            reserva,
+            motivoFinal,
+            BigDecimal.ZERO,  // No hay devolución cuando es admin quien cancela
+            BigDecimal.ZERO,  // No hay penalización
+            false,            // No aplica "fuera de términos" para admin
+            AuditoriaContextUtil.obtenerUsuarioEmail(),
+            AuditoriaContextUtil.obtenerUsuarioRol(),
+            AuditoriaContextUtil.obtenerIpAddress()
+        ));
+        
+        logger.debug("✅ Evento ReservaCanceladaEvent publicado para reserva {} (admin)", reservaId);
     }
     
     /**
@@ -1383,6 +1510,10 @@ public class ServicioReserva {
      * Crea una nueva reserva por reprogramación de una reserva existente.
      * Mantiene todos los datos de la reserva original (cliente, espacio, monto, pagos)
      * pero con nueva fecha y hora.
+     * 
+     * <p><b>NOTA FASE 2:</b> Este método mantiene @Auditable porque requiere el objeto
+     * de resultado. Podría migrarse a eventos en una futura iteración si es necesario.
+     * Por ahora no causa problemas porque el resultado es una Reserva nueva y limpia.
      * 
      * @param reservaOriginal Reserva original que se está reprogramando
      * @param nuevaFecha Nueva fecha para la reserva

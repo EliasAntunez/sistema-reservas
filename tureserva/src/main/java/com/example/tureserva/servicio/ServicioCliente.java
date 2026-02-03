@@ -2,13 +2,10 @@ package com.example.tureserva.servicio;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.example.tureserva.repositorio.RepositorioCliente;
 import com.example.tureserva.repositorio.RepositorioReserva;
@@ -17,7 +14,6 @@ import com.example.tureserva.modelo.Cliente;
 
 @Service
 public class ServicioCliente {
-    private static final Logger logger = LoggerFactory.getLogger(ServicioCliente.class);
     private final RepositorioCliente repositorioCliente;
     private final RepositorioReserva repositorioReserva;
     private final PasswordEncoder passwordEncoder;

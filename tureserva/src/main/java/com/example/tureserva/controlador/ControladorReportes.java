@@ -2,14 +2,10 @@ package com.example.tureserva.controlador;
 
 import com.example.tureserva.servicio.ServicioReporte;
 import com.example.tureserva.servicio.ServicioReportePdf;
-import com.example.tureserva.servicio.ServicioAdministradorComplejo;
 import com.example.tureserva.servicio.ServicioComplejoDeportivo;
-import com.example.tureserva.servicio.ServicioUsuarioUnificado;
 import com.example.tureserva.servicio.ServicioValidacionPermisos;
 import com.example.tureserva.servicio.dto.OcupacionMatrixDTO;
-import com.example.tureserva.repositorio.RepositorioComplejoDeportivo;
 import com.example.tureserva.modelo.ComplejoDeportivo;
-import com.example.tureserva.modelo.AdministradorComplejo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
