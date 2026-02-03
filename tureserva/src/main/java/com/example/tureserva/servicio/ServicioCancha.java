@@ -1,6 +1,8 @@
 package com.example.tureserva.servicio;
 
 import org.springframework.stereotype.Service;
+import com.example.tureserva.anotacion.Auditable;
+import com.example.tureserva.modelo.TipoEvento;
 import com.example.tureserva.repositorio.RepositorioCancha;
 import com.example.tureserva.repositorio.RepositorioComplejoDeportivo;
 import com.example.tureserva.repositorio.RepositorioDetalleReserva;
@@ -82,6 +84,15 @@ public class ServicioCancha {
         return repositorioCancha.existsByNombreIgnoreCaseAndComplejoDeportivoAndActivoTrueAndIdNot(nombre, complejoDeportivo, idExcluir);
     }
 
+    @Auditable(
+        evento = TipoEvento.CANCHA_CREADA,
+        descripcion = "Cancha creada",
+        recursoTipo = "CANCHA",
+        complejoIdExpr = "#cancha.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#cancha.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#result",
+        capturarDatosNuevos = true
+    )
     public void guardarCancha(Cancha cancha) {
         try {
             if (cancha == null) {
@@ -109,6 +120,16 @@ public class ServicioCancha {
         
     }
 
+    @Auditable(
+        evento = TipoEvento.CANCHA_ELIMINADA,
+        descripcion = "Cancha eliminada",
+        recursoTipo = "CANCHA",
+        complejoIdExpr = "#cancha.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#cancha.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#id",
+        capturarDatosAnteriores = true,
+        capturarDatosNuevos = true
+    )
     public void eliminarCancha(Long id) {
         Cancha cancha = repositorioCancha.findById(id).orElseThrow(() -> new IllegalArgumentException("Cancha no encontrada con ID: " + id));
 
@@ -134,6 +155,16 @@ public class ServicioCancha {
         repositorioCancha.save(cancha);
     }
 
+    @Auditable(
+        evento = TipoEvento.CANCHA_MODIFICADA,
+        descripcion = "Cancha modificada",
+        recursoTipo = "CANCHA",
+        complejoIdExpr = "#cancha.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#cancha.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#cancha.id",
+        capturarDatosAnteriores = true,
+        capturarDatosNuevos = true
+    )
     public void actualizarCancha(Cancha cancha) {
         Cancha existente = repositorioCancha.findById(cancha.getId()).orElseThrow(() -> new IllegalArgumentException("Cancha no encontrada con ID: " + cancha.getId()));
         if (cancha.getNombre() != null) {

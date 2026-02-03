@@ -2,6 +2,8 @@ package com.example.tureserva.servicio;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.example.tureserva.anotacion.Auditable;
+import com.example.tureserva.modelo.TipoEvento;
 import com.example.tureserva.repositorio.RepositorioPoliticaCancelacion;
 import com.example.tureserva.modelo.PoliticaCancelacion;
 import com.example.tureserva.modelo.ComplejoDeportivo;
@@ -17,6 +19,15 @@ public class ServicioPoliticaCancelacion {
     private ServicioComplejoDeportivo servicioComplejoDeportivo;
 
     // Guardar política de cancelación
+    @Auditable(
+        evento = TipoEvento.POLITICA_CANCELACION_CREADA,
+        descripcion = "Política de cancelación creada",
+        recursoTipo = "POLITICA_CANCELACION",
+        complejoIdExpr = "#politicaCancelacion.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#politicaCancelacion.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#politicaCancelacion.id",
+        capturarDatosNuevos = true
+    )
     public void guardarPoliticaCancelacion(PoliticaCancelacion politicaCancelacion) {
         repositorioPoliticaCancelacion.save(politicaCancelacion);
     }
@@ -37,6 +48,16 @@ public class ServicioPoliticaCancelacion {
     }
 
     // Actualizar política
+    @Auditable(
+        evento = TipoEvento.POLITICA_CANCELACION_MODIFICADA,
+        descripcion = "Política de cancelación modificada",
+        recursoTipo = "POLITICA_CANCELACION",
+        complejoIdExpr = "#politicaCancelacion.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#politicaCancelacion.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#politicaCancelacion.id",
+        capturarDatosAnteriores = true,
+        capturarDatosNuevos = true
+    )
     public void actualizarPoliticaCancelacion(PoliticaCancelacion politicaCancelacion) {
         repositorioPoliticaCancelacion.save(politicaCancelacion);
     }

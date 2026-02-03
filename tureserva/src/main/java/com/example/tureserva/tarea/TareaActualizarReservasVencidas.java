@@ -1,3 +1,4 @@
+/*
 package com.example.tureserva.tarea;
 
 import com.example.tureserva.modelo.Reserva;
@@ -15,6 +16,8 @@ import java.util.List;
  * Tarea programada para actualizar automáticamente el estado de reservas vencidas y no pagadas.
  * Ejecuta cada hora y marca como FINALIZADA las reservas CONFIRMADA cuyo horario ya pasó y no tienen pago registrado.
  */
+
+/*
 @Component
 public class TareaActualizarReservasVencidas {
     private static final Logger log = LoggerFactory.getLogger(TareaActualizarReservasVencidas.class);
@@ -28,6 +31,8 @@ public class TareaActualizarReservasVencidas {
     /**
      * Ejecuta cada hora para actualizar reservas vencidas y no pagadas.
      */
+
+    /*
     @Scheduled(cron = "0 10 * * * *") // Cada hora, al minuto 10
     @Transactional
     public void actualizarReservasVencidas() {
@@ -46,3 +51,4 @@ public class TareaActualizarReservasVencidas {
         }
     }
 }
+*/

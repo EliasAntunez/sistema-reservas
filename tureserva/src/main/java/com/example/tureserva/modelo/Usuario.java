@@ -37,6 +37,11 @@ public abstract class Usuario {
     @Column(name = "dni", nullable = true, length = 20)
     private String dni;
 
+    /**
+     * Contraseña del usuario (encriptada).
+     * @JsonIgnore evita que se serialice en auditoría o respuestas API.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(name = "contrasena", nullable = true)
     private String contrasena;
 

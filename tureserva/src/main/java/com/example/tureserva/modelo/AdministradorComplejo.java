@@ -30,10 +30,17 @@ public class AdministradorComplejo extends Usuario {
     /**
      * Token de acceso de Mercado Pago (por complejo/admin) para flujos
      * multi-tenant. Guardar en entorno de pruebas o vault en producción.
+     * @JsonIgnore evita que se exponga en auditoría o respuestas API.
      */
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(name = "mp_access_token", length = 1024)
     private String mpAccessToken;
 
+    /**
+     * Clave pública de Mercado Pago.
+     * Aunque es pública, la ocultamos en auditoría por consistencia.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(name = "mp_public_key", length = 512)
     private String mpPublicKey;
 }

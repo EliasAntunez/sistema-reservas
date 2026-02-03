@@ -2,6 +2,8 @@ package com.example.tureserva.servicio;
 
 import org.springframework.stereotype.Service;
 
+import com.example.tureserva.anotacion.Auditable;
+import com.example.tureserva.modelo.TipoEvento;
 import com.example.tureserva.modelo.ComplejoDeportivo;
 import com.example.tureserva.modelo.Salon;
 import com.example.tureserva.repositorio.RepositorioComplejoDeportivo;
@@ -65,6 +67,15 @@ public class ServicioSalon {
         return repositorioSalon.existsByNombreIgnoreCaseAndComplejoDeportivoAndActivoTrueAndIdNot(nombre, complejoDeportivo, idExcluir);
     }
 
+    @Auditable(
+        evento = TipoEvento.SALON_CREADO,
+        descripcion = "Salón creado",
+        recursoTipo = "SALON",
+        complejoIdExpr = "#salon.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#salon.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#result",
+        capturarDatosNuevos = true
+    )
     public void guardarSalon(Salon salon) {
         try {
             if (salon == null) {
@@ -92,12 +103,32 @@ public class ServicioSalon {
         
     }
 
+    @Auditable(
+        evento = TipoEvento.SALON_ELIMINADO,
+        descripcion = "Salón eliminado",
+        recursoTipo = "SALON",
+        complejoIdExpr = "#salon.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#salon.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#id",
+        capturarDatosAnteriores = true,
+        capturarDatosNuevos = true
+    )
     public void eliminarSalon(Long id) {
         Salon salon = repositorioSalon.findById(id).orElseThrow(() -> new IllegalArgumentException("Salón no encontrado con ID: " + id));
         salon.setActivo(false);
         repositorioSalon.save(salon);
     }
 
+    @Auditable(
+        evento = TipoEvento.SALON_MODIFICADO,
+        descripcion = "Salón modificado",
+        recursoTipo = "SALON",
+        complejoIdExpr = "#salon.complejoDeportivo.id_complejo",
+        complejoNombreExpr = "#salon.complejoDeportivo.nombre_complejo",
+        recursoIdExpr = "#salon.id",
+        capturarDatosAnteriores = true,
+        capturarDatosNuevos = true
+    )
     public void actualizarSalon(Salon salon) {
         Salon existente = repositorioSalon.findById(salon.getId()).orElseThrow(() -> new IllegalArgumentException("Salón no encontrado con ID: " + salon.getId()));
         if (salon.getNombre() != null) {

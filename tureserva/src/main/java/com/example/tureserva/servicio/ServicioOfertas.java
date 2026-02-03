@@ -243,7 +243,11 @@ public class ServicioOfertas {
     /**
      * Método fallback cuando reclamarOferta() falla después de reintentos.
      * Se ejecuta cuando Resilience4j agota los 3 intentos configurados.
+     * 
+     * <p><b>NOTA</b>: Invocado por Resilience4j mediante reflexión.
+     * La advertencia "never used locally" es un falso positivo del analizador estático.
      */
+    @SuppressWarnings("unused") // Invocado por @Retry mediante reflexión
     private Reserva reclamarOfertaFallback(String token, String emailClienteReclamante, Exception ex) {
         logger.error("🚨 FALLBACK: No se pudo reclamar la oferta {} después de reintentos. Razón: {}", 
             token, ex.getMessage());
@@ -278,7 +282,11 @@ public class ServicioOfertas {
     
     /**
      * Fallback cuando el servicio de email está caído.
+     * 
+     * <p><b>NOTA</b>: Invocado por Resilience4j mediante reflexión.
+     * La advertencia "never used locally" es un falso positivo del analizador estático.
      */
+    @SuppressWarnings("unused") // Invocado por @CircuitBreaker mediante reflexión
     private void enviarEmailsFallback(OfertaFlash oferta, Reserva nuevaReserva, Exception ex) {
         logger.warn("⚠️  Circuit breaker ABIERTO: No se pudieron enviar emails. Se intentará más tarde.");
         // Los emails se pueden reintentar con un job scheduler posteriormente

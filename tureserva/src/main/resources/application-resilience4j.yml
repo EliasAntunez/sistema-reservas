@@ -118,6 +118,8 @@ resilience4j:
 # ============================================================================
 # FEATURE FLAGS (control de funcionalidades)
 # ============================================================================
+# yaml-language-server: $schema=https://json.schemastore.org/base.json
+# Propiedad custom para feature flags - mappeada por @ConfigurationProperties
 app:
   features:
     ofertas-flash:
@@ -131,5 +133,5 @@ app:
 # ============================================================================
 logging:
   level:
-    io.github.resilience4j: DEBUG       # Ver eventos de Resilience4j en desarrollo
-    com.example.tureserva.servicio.ServicioOfertas: DEBUG
+    '[io.github.resilience4j]': DEBUG       # Ver eventos de Resilience4j en desarrollo
+    '[com.example.tureserva.servicio.ServicioOfertas]': DEBUG

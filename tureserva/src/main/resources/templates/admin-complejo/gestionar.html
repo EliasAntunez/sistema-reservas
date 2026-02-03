@@ -124,6 +124,20 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock-history fa-3x text-primary mb-3"></i>
+                                    <h5 class="card-title">Historial de Auditoría</h5>
+                                    <p class="card-text text-muted">
+                                        Consultar el historial de eventos y cambios realizados en el complejo
+                                    </p>
+                                    <a th:href="@{/admin-complejo/auditoria/{id}(id=${complejo?.id_complejo})}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-clock-history me-2 text-white"></i>Ver Auditoría
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

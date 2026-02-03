@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" 
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
+<head>
+    <title>Auditoría - TuReserva</title>
+    <style>
+        .event-badge {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .event-row:hover {
+            background-color: #f8f9fa;
+        }
+        .json-preview {
+            background-color: #282c34;
+            border: 1px solid #3e4451;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', Consolas, Monaco, monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        .json-preview pre {
+            color: #abb2bf;
+            margin: 0;
+        }
+        
+        .json-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem 0.375rem 0 0;
+            margin: -1rem -1rem 1rem -1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .filter-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .timeline-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .stat-card {
+            border-left: 4px solid;
+        }
+    </style>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="container-fluid mt-4">
+            <!-- Encabezado -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2>
+                                <i class="bi bi-clock-history me-2"></i>
+                                Historial de Auditoría
+                            </h2>
+                            <p class="text-muted mb-0">
+                                Complejo: <strong th:text="${complejo.nombre_complejo}"></strong>
+                            </p>
+                        </div>
+                        <a th:href="@{/admin-complejo/gestionar/{id}(id=${complejo.id_complejo})}" 
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Volver
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card filter-card mb-4">
+                <div class="card-body">
+                    <form th:action="@{/admin-complejo/auditoria/{id}(id=${complejo.id_complejo})}" 
+                          method="get" class="row g-3">
+                        
+                        <div class="col-md-3">
+                            <label for="tipoEvento" class="form-label">Tipo de Evento</label>
+                            <select name="tipoEvento" id="tipoEvento" class="form-select">
+                                <option value="">Todos los eventos</option>
+                                <option th:each="tipo : ${tiposEvento}" 
+                                        th:value="${tipo}" 
+                                        th:text="${tipo.descripcion}"
+                                        th:selected="${tipo == tipoEventoSeleccionado}"></option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="desde" class="form-label">Fecha Desde</label>
+                            <input type="date" name="desde" id="desde" 
+                                   class="form-control" th:value="${desde}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="hasta" class="form-label">Fecha Hasta</label>
+                            <input type="date" name="hasta" id="hasta" 
+                                   class="form-control" th:value="${hasta}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="busqueda" class="form-label">Buscar en Descripción</label>
+                            <input type="text" name="busqueda" id="busqueda" 
+                                   class="form-control" placeholder="Buscar..."
+                                   th:value="${busqueda}">
+                        </div>
+
+                        <div class="col-md-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Filtrar
+                            </button>
+                            <a th:href="@{/admin-complejo/auditoria/{id}(id=${complejo.id_complejo})}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Limpiar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Resultados -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-list-ul me-2"></i>
+                        Eventos Registrados
+                        <span class="badge bg-secondary" th:text="${totalElementos}"></span>
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    
+                    <!-- Mensaje si no hay eventos -->
+                    <div th:if="${eventos.empty}" class="text-center py-5">
+                        <i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>
+                        <p class="text-muted mt-3">No se encontraron eventos con los filtros aplicados</p>
+                    </div>
+
+                    <!-- Tabla de eventos -->
+                    <div th:if="${!eventos.empty}" class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 15%;">Fecha/Hora</th>
+                                    <th style="width: 20%;">Tipo</th>
+                                    <th style="width: 40%;">Descripción</th>
+                                    <th style="width: 15%;">Usuario</th>
+                                    <th style="width: 10%;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="evento : ${eventos}" class="event-row">
+                                    <td>
+                                        <small class="text-muted">
+                                            <span th:text="${#temporals.format(evento.fechaHora, 'dd/MM/yyyy')}"></span>
+                                            <br>
+                                            <span th:text="${#temporals.format(evento.fechaHora, 'HH:mm:ss')}"></span>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="event-badge" 
+                                              th:classappend="${evento.tipoEvento.badgeClass}"
+                                              th:text="${evento.tipoEvento.descripcion}"></span>
+                                    </td>
+                                    <td>
+                                        <span th:text="${evento.descripcion}"></span>
+                                        <br>
+                                        <small class="text-muted" th:if="${evento.recursoTipo != null}">
+                                            <span th:text="${evento.recursoTipo}"></span> #<span th:text="${evento.recursoId}"></span>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <span th:text="${evento.usuarioNombre} ?: ${evento.usuarioEmail}"></span>
+                                            <br>
+                                            <span class="badge bg-light text-dark" th:text="${evento.usuarioRol}"></span>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                data-bs-toggle="modal" 
+                                                th:data-bs-target="'#detalleModal' + ${evento.id}"
+                                                th:if="${evento.datosAnteriores != null or evento.datosNuevos != null}">
+                                            <i class="bi bi-eye"></i> Detalles
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Paginación -->
+                <div class="card-footer" th:if="${totalPaginas > 1}">
+                    <nav aria-label="Navegación de auditoría">
+                        <ul class="pagination justify-content-center mb-0">
+                            <!-- Primera página -->
+                            <li class="page-item" th:classappend="${paginaActual == 0} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/admin-complejo/auditoria/{id}(id=${complejo.id_complejo}, page=0, tipoEvento=${tipoEventoSeleccionado}, desde=${desde}, hasta=${hasta}, busqueda=${busqueda})}">
+                                    <i class="bi bi-chevron-double-left"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Página anterior -->
+                            <li class="page-item" th:classappend="${paginaActual == 0} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/admin-complejo/auditoria/{id}(id=${complejo.id_complejo}, page=${paginaActual - 1}, tipoEvento=${tipoEventoSeleccionado}, desde=${desde}, hasta=${hasta}, busqueda=${busqueda})}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+
+                            <!-- Páginas -->
+                            <li class="page-item" 
+                                th:each="pagina : ${#numbers.sequence(0, totalPaginas - 1)}"
+                                th:if="${pagina >= paginaActual - 2 && pagina <= paginaActual + 2}"
+                                th:classappend="${pagina == paginaActual} ? 'active'">
+                                <a class="page-link" 
+                                   th:href="@{/admin-complejo/auditoria/{id}(id=${complejo.id_complejo}, page=${pagina}, tipoEvento=${tipoEventoSeleccionado}, desde=${desde}, hasta=${hasta}, busqueda=${busqueda})}"
+                                   th:text="${pagina + 1}"></a>
+                            </li>
+
+                            <!-- Página siguiente -->
+                            <li class="page-item" th:classappend="${paginaActual >= totalPaginas - 1} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/admin-complejo/auditoria/{id}(id=${complejo.id_complejo}, page=${paginaActual + 1}, tipoEvento=${tipoEventoSeleccionado}, desde=${desde}, hasta=${hasta}, busqueda=${busqueda})}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+
+                            <!-- Última página -->
+                            <li class="page-item" th:classappend="${paginaActual >= totalPaginas - 1} ? 'disabled'">
+                                <a class="page-link" 
+                                   th:href="@{/admin-complejo/auditoria/{id}(id=${complejo.id_complejo}, page=${totalPaginas - 1}, tipoEvento=${tipoEventoSeleccionado}, desde=${desde}, hasta=${hasta}, busqueda=${busqueda})}">
+                                    <i class="bi bi-chevron-double-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted mt-2 mb-0">
+                        Página <span th:text="${paginaActual + 1}"></span> de <span th:text="${totalPaginas}"></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Modales de Detalle (uno por evento) -->
+            <div th:each="evento : ${eventos}" 
+                 th:if="${evento.datosAnteriores != null or evento.datosNuevos != null}">
+                <div class="modal fade" th:id="'detalleModal' + ${evento.id}" tabindex="-1" 
+                     th:aria-labelledby="'detalleModalLabel' + ${evento.id}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" th:id="'detalleModalLabel' + ${evento.id}">
+                                    Detalles del Evento
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Mostrar solo cambios relevantes -->
+                                <div class="row">
+                                    <div class="col-12">
+                                        <!-- Caso: Modificación (mostrar solo diferencias) -->
+                                        <div th:if="${evento.datosAnteriores != null and evento.datosNuevos != null}">
+                                            <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+                                                <i class="bi bi-info-circle-fill me-2"></i>
+                                                <div>
+                                                    <small><strong>Solo se muestran los campos que cambiaron</strong></small>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Ocultar JSON en textarea (más confiable que script tags) -->
+                                            <textarea style="display:none;" th:id="'datos-antes-' + ${evento.id}" th:text="${evento.datosAnteriores}"></textarea>
+                                            <textarea style="display:none;" th:id="'datos-despues-' + ${evento.id}" th:text="${evento.datosNuevos}"></textarea>
+                                            
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered" th:id="'tabla-cambios-' + ${evento.id}">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th style="width: 30%;">Campo</th>
+                                                            <th style="width: 35%;" class="bg-danger bg-opacity-10">Antes</th>
+                                                            <th style="width: 35%;" class="bg-success bg-opacity-10">Después</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr><td colspan="3" class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Procesando...</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Caso: Eliminación -->
+                                        <div th:if="${evento.datosAnteriores != null and evento.datosNuevos == null}">
+                                            <script type="application/json" th:id="'json-eliminado-' + ${evento.id}" th:utext="${evento.datosAnteriores}"></script>
+                                            
+                                            <div class="alert alert-danger d-flex align-items-center mb-3" th:id="'alert-eliminado-' + ${evento.id}" role="alert">
+                                                <i class="bi bi-trash-fill me-2" th:id="'icon-eliminado-' + ${evento.id}"></i>
+                                                <div><strong th:id="'titulo-eliminado-' + ${evento.id}">Elemento Eliminado</strong></div>
+                                            </div>
+                                            <div class="card border-danger" th:id="'card-eliminado-' + ${evento.id}">
+                                                <div class="card-body datos-elemento" th:attr="data-evento-id=${evento.id}, data-tipo='eliminado'">
+                                                    <p class="text-muted"><small>Cargando información...</small></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Caso: Creación -->
+                                        <div th:if="${evento.datosAnteriores == null and evento.datosNuevos != null}">
+                                            <script type="application/json" th:id="'json-creado-' + ${evento.id}" th:utext="${evento.datosNuevos}"></script>
+                                            
+                                            <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+                                                <i class="bi bi-plus-circle-fill me-2"></i>
+                                                <div><strong>Elemento Creado</strong></div>
+                                            </div>
+                                            <div class="card border-success">
+                                                <div class="card-body datos-elemento" th:attr="data-evento-id=${evento.id}, data-tipo='creado'">
+                                                    <p class="text-muted"><small>Cargando información...</small></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                                <dl class="row mb-0">
+                                    <dt class="col-sm-4">Fecha/Hora:</dt>
+                                    <dd class="col-sm-8" th:text="${#temporals.format(evento.fechaHora, 'dd/MM/yyyy HH:mm:ss')}"></dd>
+                                    
+                                    <dt class="col-sm-4">Usuario:</dt>
+                                    <dd class="col-sm-8">
+                                        <span th:text="${evento.usuarioNombre} ?: ${evento.usuarioEmail}"></span>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-4">Recurso:</dt>
+                                    <dd class="col-sm-8" th:if="${evento.recursoTipo != null}">
+                                        <span th:text="${evento.recursoTipo}"></span> #<span th:text="${evento.recursoId}"></span>
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Scripts específicos de esta página -->
+<th:block layout:fragment="scripts">
+    <script>
+    console.log('Script cargado');
+    
+    // Procesar modales cuando se abran
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM listo');
+        
+        // Agregar listener a todos los modales
+        var modales = document.querySelectorAll('[id^="detalleModal"]');
+        console.log('Modales encontrados:', modales.length);
+        
+        modales.forEach(function(modalElement) {
+            modalElement.addEventListener('shown.bs.modal', function() {
+                var eventoId = this.id.replace('detalleModal', '');
+                console.log('Modal abierto, evento ID:', eventoId);
+                procesarEvento(eventoId);
+            });
+        });
+    });
+    
+    function procesarEvento(eventoId) {
+        console.log('Procesando evento:', eventoId);
+        
+        // Verificar si es modificación, eliminación o creación
+        var tabla = document.getElementById('tabla-cambios-' + eventoId);
+        if (tabla) {
+            // Es una modificación
+            procesarCambios(eventoId);
+            return;
+        }
+        
+        // Verificar si es eliminación
+        var elementoEliminado = document.querySelector('[data-evento-id="' + eventoId + '"][data-tipo="eliminado"]');
+        if (elementoEliminado) {
+            procesarEliminacion(eventoId, elementoEliminado);
+            return;
+        }
+        
+        // Verificar si es creación
+        var elementoCreado = document.querySelector('[data-evento-id="' + eventoId + '"][data-tipo="creado"]');
+        if (elementoCreado) {
+            procesarCreacion(eventoId, elementoCreado);
+            return;
+        }
+        
+        console.warn('No se pudo determinar el tipo de evento');
+    }
+    
+    function procesarCambios(eventoId) {
+        var tabla = document.getElementById('tabla-cambios-' + eventoId);
+        if (!tabla) {
+            console.error('Tabla no encontrada');
+            return;
+        }
+        
+        var textareaAntes = document.getElementById('datos-antes-' + eventoId);
+        var textareaDespues = document.getElementById('datos-despues-' + eventoId);
+        
+        if (!textareaAntes || !textareaDespues) {
+            console.error('Textareas no encontradas');
+            tabla.querySelector('tbody').innerHTML = '<tr><td colspan="3" class="text-danger text-center">Error: datos no encontrados</td></tr>';
+            return;
+        }
+        
+        try {
+            var jsonAntes = textareaAntes.value;
+            var jsonDespues = textareaDespues.value;
+            
+            console.log('JSON Antes:', jsonAntes.substring(0, 50));
+            console.log('JSON Despues:', jsonDespues.substring(0, 50));
+            
+            var objetoAntes = JSON.parse(jsonAntes);
+            var objetoDespues = JSON.parse(jsonDespues);
+            
+            var diferencias = compararObjetos(objetoAntes, objetoDespues);
+            console.log('Diferencias:', diferencias.length);
+            
+            var tbody = tabla.querySelector('tbody');
+            
+            if (diferencias.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">No hay cambios</td></tr>';
+            } else {
+                var html = '';
+                diferencias.forEach(function(diff) {
+                    html += '<tr>' +
+                        '<td><strong>' + formatearNombreCampo(diff.campo) + '</strong></td>' +
+                        '<td class="text-danger">' + formatearValor(diff.antes) + '</td>' +
+                        '<td class="text-success">' + formatearValor(diff.despues) + '</td>' +
+                        '</tr>';
+                });
+                tbody.innerHTML = html;
+            }
+            
+        } catch (e) {
+            console.error('Error:', e);
+            tabla.querySelector('tbody').innerHTML = '<tr><td colspan="3" class="text-danger text-center">Error: ' + e.message + '</td></tr>';
+        }
+    }
+    
+    function compararObjetos(antes, despues) {
+        var diferencias = [];
+        
+        // Campos a ignorar (objetos complejos, IDs, metadatos)
+        var camposIgnorar = ['id', 'complejoDeportivo', 'administradorComplejo', 'localidad', 
+                             'provincia', 'pais', 'fechaRegistro', 'codigoUsuario', 'reservas'];
+        
+        // Comparar todos los campos del objeto "despues"
+        for (var key in despues) {
+            // Ignorar campos complejos y metadatos
+            if (camposIgnorar.indexOf(key) >= 0) {
+                continue;
+            }
+            
+            // Si el valor es un objeto o array, comparar como JSON string
+            var valorAntes = antes[key];
+            var valorDespues = despues[key];
+            
+            var esIgual = false;
+            if (typeof valorDespues === 'object' && valorDespues !== null) {
+                esIgual = JSON.stringify(valorAntes) === JSON.stringify(valorDespues);
+            } else {
+                esIgual = valorAntes === valorDespues;
+            }
+            
+            if (!esIgual) {
+                console.log('Campo cambiado:', key, 'De:', valorAntes, 'A:', valorDespues);
+                diferencias.push({
+                    campo: key,
+                    antes: valorAntes,
+                    despues: valorDespues
+                });
+            }
+        }
+        
+        return diferencias;
+    }
+    
+    function formatearNombreCampo(campo) {
+        var traducciones = {
+            'nombre': 'Nombre',
+            'capacidad': 'Capacidad',
+            'precioPorHora': 'Precio por Hora',
+            'activo': 'Estado Activo',
+            'descripcion': 'Descripción',
+            'estadoOperativo': 'Estado Operativo',
+            'esTechada': '¿Es Techada?',
+            'tipoPiso': 'Tipo de Piso',
+            'tipoEspacio': 'Tipo de Espacio',
+            'montoSenia': 'Monto de Seña',
+            'porcentajeSenia': 'Porcentaje de Seña',
+            'porcentajeDevolucion': 'Porcentaje de Devolución',
+            'horasAnticipacion': 'Horas de Anticipación',
+            'diasAnticipacion': 'Días de Anticipación',
+            'metrosCuadrados': 'Metros Cuadrados',
+            'estaClimatizado': '¿Está Climatizado?'
+        };
+        return traducciones[campo] || campo;
+    }
+    
+    function formatearValor(valor) {
+        if (valor === null || valor === undefined) {
+            return '<span class="text-muted">N/A</span>';
+        }
+        if (typeof valor === 'boolean') {
+            return valor ? '<span class="badge bg-success">Sí</span>' : '<span class="badge bg-danger">No</span>';
+        }
+        if (typeof valor === 'number') {
+            if (valor > 100) {
+                return '$' + valor.toLocaleString('es-AR');
+            }
+            return valor.toString();
+        }
+        // Formatear enums comunes
+        var valorStr = String(valor);
+        if (valorStr === 'DISPONIBLE') return '<span class="badge bg-success">Disponible</span>';
+        if (valorStr === 'EN_MANTENIMIENTO') return '<span class="badge bg-warning">En Mantenimiento</span>';
+        if (valorStr === 'FUERA_DE_SERVICIO') return '<span class="badge bg-danger">Fuera de Servicio</span>';
+        if (valorStr === 'CESPED_SINTETICO') return 'Césped Sintético';
+        if (valorStr === 'CESPED_NATURAL') return 'Césped Natural';
+        if (valorStr === 'CEMENTO') return 'Cemento';
+        if (valorStr === 'PARQUET') return 'Parquet';
+        if (valorStr === 'CANCHA') return '<span class="badge bg-primary">Cancha</span>';
+        if (valorStr === 'SALON') return '<span class="badge bg-info">Salón</span>';
+        
+        return valorStr;
+    }
+    
+    function procesarEliminacion(eventoId, elemento) {
+        console.log('Procesando eliminación:', eventoId);
+        
+        try {
+            var scriptElement = document.getElementById('json-eliminado-' + eventoId);
+            if (!scriptElement) {
+                elemento.innerHTML = '<p class="text-danger">Error: No se encontraron datos del elemento eliminado</p>';
+                return;
+            }
+            
+            var jsonText = scriptElement.textContent;
+            var objeto = JSON.parse(jsonText);
+            
+            console.log('=== OBJETO ELIMINADO COMPLETO ===', objeto);
+            console.log('Tiene codigoReserva?', objeto.hasOwnProperty('codigoReserva'));
+            console.log('Tiene estadoReserva?', objeto.hasOwnProperty('estadoReserva'));
+            console.log('Claves del objeto:', Object.keys(objeto));
+            
+            var html = '<dl class="row mb-0">';
+            var esReserva = false;
+            
+            // Detectar si es una RESERVA - múltiples estrategias de detección
+            // 1. Tiene _tipo === "Reserva" (cuando AOP guarda objeto simplificado)
+            if (objeto._tipo === 'Reserva' || objeto.tipo === 'Reserva') {
+                esReserva = true;
+                console.log('✅ Detectado como RESERVA (método 1: campo _tipo)');
+            }
+            // 2. Tiene campos directos de reserva
+            else if (objeto.hasOwnProperty('codigoReserva') || objeto.hasOwnProperty('estadoReserva')) {
+                esReserva = true;
+                console.log('✅ Detectado como RESERVA (método 2: campos directos)');
+            }
+            // 3. Tiene estructura de Reserva (montoTotal + cliente + detalles)
+            else if (objeto.hasOwnProperty('montoTotal') && objeto.hasOwnProperty('cliente') && objeto.hasOwnProperty('detalles')) {
+                esReserva = true;
+                console.log('✅ Detectado como RESERVA (método 3: estructura de entidad)');
+                // Si no tiene codigoReserva directamente, intentar construir desde id
+                if (!objeto.codigoReserva && objeto.id) {
+                    objeto.codigoReservaCalculado = 'ID: ' + objeto.id;
+                }
+            }
+            
+            if (esReserva) {
+                
+                // Cambiar el título y estilo del alert para reservas
+                var tituloElement = document.getElementById('titulo-eliminado-' + eventoId);
+                var alertElement = document.getElementById('alert-eliminado-' + eventoId);
+                var iconElement = document.getElementById('icon-eliminado-' + eventoId);
+                var cardElement = document.getElementById('card-eliminado-' + eventoId);
+                
+                if (tituloElement) tituloElement.textContent = 'Reserva Cancelada';
+                if (alertElement) {
+                    alertElement.classList.remove('alert-danger');
+                    alertElement.classList.add('alert-warning');
+                }
+                if (iconElement) {
+                    iconElement.classList.remove('bi-trash-fill');
+                    iconElement.classList.add('bi-x-circle-fill');
+                }
+                if (cardElement) {
+                    cardElement.classList.remove('border-danger');
+                    cardElement.classList.add('border-warning');
+                }
+                
+                // Campos específicos de RESERVA cancelada/eliminada
+                var reservaId = objeto.id;
+                var codigoReserva = objeto.codigoReserva || objeto.codigoReservaCalculado;
+                var estadoReserva = objeto.estadoReserva || objeto.estado;
+                var clienteEmail = objeto.clienteEmail || 
+                                  (objeto.cliente && objeto.cliente.email) || 
+                                  (objeto.cliente && objeto.cliente.usuario && objeto.cliente.usuario.email);
+                var montoTotal = objeto.montoTotal;
+                var espacios = objeto.espaciosReservados || [];
+                
+                // Si espacios está vacío, intentar extraer de detalles
+                if (espacios.length === 0 && objeto.detalles && Array.isArray(objeto.detalles)) {
+                    espacios = objeto.detalles
+                        .map(function(d) { 
+                            return d.espacioReservable ? d.espacioReservable.nombre : null; 
+                        })
+                        .filter(function(n) { return n != null; });
+                }
+                
+                // Mostrar código de reserva o ID si no está disponible
+                if (codigoReserva) {
+                    html += '<dt class="col-sm-4">Código de Reserva:</dt>';
+                    html += '<dd class="col-sm-8"><strong class="text-primary">' + codigoReserva + '</strong></dd>';
+                } else if (reservaId) {
+                    html += '<dt class="col-sm-4">ID de Reserva:</dt>';
+                    html += '<dd class="col-sm-8"><strong class="text-muted">#' + reservaId + '</strong></dd>';
+                }
+                
+                // Estado si está disponible
+                if (estadoReserva) {
+                    html += '<dt class="col-sm-4">Estado:</dt>';
+                    html += '<dd class="col-sm-8">';
+                    if (estadoReserva === 'PENDIENTE') html += '<span class="badge bg-warning">Pendiente</span>';
+                    else if (estadoReserva === 'CONFIRMADA') html += '<span class="badge bg-success">Confirmada</span>';
+                    else if (estadoReserva === 'CANCELADA') html += '<span class="badge bg-danger">Cancelada</span>';
+                    else if (estadoReserva === 'FINALIZADA') html += '<span class="badge bg-secondary">Finalizada</span>';
+                    else html += '<span class="badge bg-info">' + estadoReserva + '</span>';
+                    html += '</dd>';
+                } else {
+                    // Si no hay estado, asumir cancelada por contexto
+                    html += '<dt class="col-sm-4">Estado:</dt>';
+                    html += '<dd class="col-sm-8"><span class="badge bg-danger">Cancelada</span></dd>';
+                }
+                
+                // Cliente si está disponible
+                if (clienteEmail) {
+                    html += '<dt class="col-sm-4">Cliente:</dt>';
+                    html += '<dd class="col-sm-8"><i class="bi bi-person-circle me-1"></i>' + clienteEmail + '</dd>';
+                }
+                
+                // Monto total si está disponible
+                if (montoTotal && montoTotal !== '0') {
+                    html += '<dt class="col-sm-4">Monto Total:</dt>';
+                    html += '<dd class="col-sm-8"><strong class="text-success">$' + parseFloat(montoTotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</strong></dd>';
+                }
+                
+                // Fecha de reserva si está disponible
+                if (objeto.fechaReserva || (objeto.detalles && objeto.detalles[0] && objeto.detalles[0].fechaReserva)) {
+                    var fechaReserva = objeto.fechaReserva || objeto.detalles[0].fechaReserva;
+                    html += '<dt class="col-sm-4">Fecha Reserva:</dt>';
+                    html += '<dd class="col-sm-8">' + fechaReserva + '</dd>';
+                }
+                
+                // Espacios si están disponibles
+                if (espacios.length > 0) {
+                    html += '<dt class="col-sm-4">Espacios:</dt>';
+                    html += '<dd class="col-sm-8">';
+                    html += '<ul class="mb-0">';
+                    espacios.forEach(function(espacio) {
+                        html += '<li>' + (typeof espacio === 'string' ? espacio : espacio.nombre || 'Sin nombre') + '</li>';
+                    });
+                    html += '</ul>';
+                    html += '</dd>';
+                }
+                
+                // Motivo de cancelación si está disponible
+                if (objeto.motivoCancelacion) {
+                    html += '<dt class="col-sm-4">Motivo Cancelación:</dt>';
+                    html += '<dd class="col-sm-8"><em class="text-danger">' + objeto.motivoCancelacion + '</em></dd>';
+                }
+                
+                // Nota informativa si solo tenemos el ID
+                if (!codigoReserva && !clienteEmail && espacios.length === 0) {
+                    html += '<dt class="col-sm-12 mt-3"><hr></dt>';
+                    html += '<dd class="col-sm-12">';
+                    html += '<div class="alert alert-info mb-0" role="alert">';
+                    html += '<i class="bi bi-info-circle me-2"></i>';
+                    html += '<strong>Información limitada:</strong> Solo se guardó la referencia de la reserva. ';
+                    html += 'Los detalles completos pueden consultarse en el historial de reservas.';
+                    html += '</div>';
+                    html += '</dd>';
+                }
+            } else {
+                // Campos genéricos de CANCHA/SALÓN/otros recursos eliminados
+                var camposRelevantes = ['nombre', 'capacidad', 'precioPorHora', 'descripcion', 
+                                        'estadoOperativo', 'esTechada', 'tipoPiso', 'activo',
+                                        'montoSenia', 'porcentajeSenia', 'metrosCuadrados', 'estaClimatizado'];
+                
+                camposRelevantes.forEach(function(campo) {
+                    if (objeto.hasOwnProperty(campo) && objeto[campo] !== null && objeto[campo] !== undefined) {
+                        html += '<dt class="col-sm-4">' + formatearNombreCampo(campo) + ':</dt>';
+                        html += '<dd class="col-sm-8">' + formatearValor(objeto[campo]) + '</dd>';
+                    }
+                });
+            }
+            
+            html += '</dl>';
+            elemento.innerHTML = html;
+            
+        } catch (e) {
+            console.error('Error procesando eliminación:', e);
+            elemento.innerHTML = '<p class="text-danger">Error al procesar datos: ' + e.message + '</p>';
+        }
+    }
+    
+    function procesarCreacion(eventoId, elemento) {
+        console.log('Procesando creación:', eventoId);
+        
+        try {
+            var scriptElement = document.getElementById('json-creado-' + eventoId);
+            if (!scriptElement) {
+                elemento.innerHTML = '<p class="text-danger">Error: No se encontraron datos del elemento creado</p>';
+                return;
+            }
+            
+            var jsonText = scriptElement.textContent;
+            var objeto = JSON.parse(jsonText);
+            
+            console.log('Objeto creado:', objeto);
+            
+            var html = '<dl class="row mb-0">';
+            
+            // Detectar si es una RESERVA (tiene codigoReserva)
+            if (objeto.hasOwnProperty('codigoReserva')) {
+                // Campos específicos de RESERVA
+                if (objeto.codigoReserva) {
+                    html += '<dt class="col-sm-4">Código de Reserva:</dt>';
+                    html += '<dd class="col-sm-8"><strong class="text-primary">' + objeto.codigoReserva + '</strong></dd>';
+                }
+                
+                // Nota: NO se muestra el ID numérico, solo el código de reserva
+                
+                if (objeto.clienteEmail) {
+                    html += '<dt class="col-sm-4">Cliente:</dt>';
+                    html += '<dd class="col-sm-8"><i class="bi bi-person-circle me-1"></i>' + objeto.clienteEmail + '</dd>';
+                }
+                
+                if (objeto.montoTotal) {
+                    html += '<dt class="col-sm-4">Monto Total:</dt>';
+                    html += '<dd class="col-sm-8"><strong class="text-success">$' + parseFloat(objeto.montoTotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</strong></dd>';
+                }
+                
+                if (objeto.cantidadEspacios) {
+                    html += '<dt class="col-sm-4">Cantidad de Espacios:</dt>';
+                    html += '<dd class="col-sm-8"><span class="badge bg-info">' + objeto.cantidadEspacios + '</span></dd>';
+                }
+                
+                if (objeto.espaciosReservados && objeto.espaciosReservados.length > 0) {
+                    html += '<dt class="col-sm-4">Espacios Reservados:</dt>';
+                    html += '<dd class="col-sm-8">';
+                    html += '<ul class="mb-0">';
+                    objeto.espaciosReservados.forEach(function(espacio) {
+                        html += '<li><i class="bi bi-check-circle-fill text-success me-1"></i>' + espacio + '</li>';
+                    });
+                    html += '</ul>';
+                    html += '</dd>';
+                }
+            } else {
+                // Campos genéricos de CANCHA/SALÓN/otros recursos
+                var camposRelevantes = ['nombre', 'capacidad', 'precioPorHora', 'descripcion', 
+                                        'estadoOperativo', 'esTechada', 'tipoPiso', 'activo',
+                                        'montoSenia', 'porcentajeSenia', 'metrosCuadrados', 'estaClimatizado'];
+                
+                camposRelevantes.forEach(function(campo) {
+                    if (objeto.hasOwnProperty(campo) && objeto[campo] !== null && objeto[campo] !== undefined) {
+                        html += '<dt class="col-sm-4">' + formatearNombreCampo(campo) + ':</dt>';
+                        html += '<dd class="col-sm-8">' + formatearValor(objeto[campo]) + '</dd>';
+                    }
+                });
+            }
+            
+            html += '</dl>';
+            elemento.innerHTML = html;
+            
+        } catch (e) {
+            console.error('Error procesando creación:', e);
+            elemento.innerHTML = '<p class="text-danger">Error al procesar datos: ' + e.message + '</p>';
+        }
+    }
+    </script>
+    </th:block>
+</body>
+</html>
