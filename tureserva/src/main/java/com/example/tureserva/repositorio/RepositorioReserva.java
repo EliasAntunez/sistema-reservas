@@ -451,7 +451,8 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
 
        /**
         * Consulta nativa para obtener la ocupación horaria (cantidad de detalles de reserva)
-        * agrupada por día ISO (1=Lunes .. 7=Domingo) y hora (0..23).
+        * agrupada por fecha, día ISO (1=Lunes .. 7=Domingo) y hora (0..23).
+        * Incluye la fecha para permitir vistas adaptativas.
         */
                       @Query(value = """
                                                   WITH details AS (
@@ -467,7 +468,8 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
                                                                 AND (:complejoId IS NULL OR c.id_complejo = :complejoId)
                                                                 AND r.estado IN ('CONFIRMADA','FINALIZADA')
                                                   )
-                                                  SELECT EXTRACT(ISODOW FROM slot) AS day_of_week,
+                                                  SELECT CAST(DATE(slot) AS DATE) AS fecha,
+                                                                             EXTRACT(ISODOW FROM slot) AS day_of_week,
                                                                              EXTRACT(HOUR FROM slot) AS hour,
                                                                              COUNT(DISTINCT detalle_id) AS count
                                                   FROM (
@@ -477,8 +479,8 @@ public interface RepositorioReserva extends JpaRepository<Reserva, Long> {
                                                                 SELECT generate_series(0, GREATEST(0, (floor(EXTRACT(EPOCH FROM (end_ts - start_ts))/3600)::int - 1))) AS g
                                                          ) gen ON true
                                                   ) s
-                                                  GROUP BY day_of_week, hour
-                                                  ORDER BY day_of_week, hour
+                                                  GROUP BY fecha, day_of_week, hour
+                                                  ORDER BY fecha, hour
                                                   """, nativeQuery = true)
        List<OcupacionHorariaDTO> obtenerOcupacionHoraria(
                      @Param("complejoId") Long complejoId,

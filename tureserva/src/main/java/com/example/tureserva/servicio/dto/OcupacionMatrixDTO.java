@@ -16,6 +16,9 @@ public class OcupacionMatrixDTO {
     private long totalGeneral;
     private java.util.List<DiaResumenDTO> resumenPorDia;
     private List<Long> totalesPorHora; // paralelo a horas
+    private java.util.Map<String, Object> analisisHorarios; // análisis inteligente de patrones
+    private List<String> nombresColumnas; // nombres dinámicos de columnas (fechas, semanas, meses)
+    private String tipoVista; // "especifica", "semanal", "mensual"
 
     public OcupacionMatrixDTO(List<Integer> horas, List<List<Long>> matrix, long maxCount) {
         this.horas = horas;
@@ -54,6 +57,15 @@ public class OcupacionMatrixDTO {
 
     public List<Long> getTotalesPorHora() { return totalesPorHora; }
     public void setTotalesPorHora(List<Long> totalesPorHora) { this.totalesPorHora = totalesPorHora; }
+
+    public java.util.Map<String, Object> getAnalisisHorarios() { return analisisHorarios; }
+    public void setAnalisisHorarios(java.util.Map<String, Object> analisisHorarios) { this.analisisHorarios = analisisHorarios; }
+
+    public List<String> getNombresColumnas() { return nombresColumnas; }
+    public void setNombresColumnas(List<String> nombresColumnas) { this.nombresColumnas = nombresColumnas; }
+    
+    public String getTipoVista() { return tipoVista; }
+    public void setTipoVista(String tipoVista) { this.tipoVista = tipoVista; }
 
     public java.util.List<java.util.List<String>> getCellClasses() { return cellClasses; }
     public void setCellClasses(java.util.List<java.util.List<String>> cellClasses) { this.cellClasses = cellClasses; }

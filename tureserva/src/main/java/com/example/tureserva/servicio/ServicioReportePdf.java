@@ -1,6 +1,6 @@
 package com.example.tureserva.servicio;
 
-import com.example.tureserva.servicio.dto.ReporteFinancieroDTO;
+import com.example.tureserva.servicio.dto.ReporteFinancieroTemporalDTO;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPTable;
 // PdfWriter imported fully-qualified where needed
@@ -41,9 +41,12 @@ import java.util.List;
 public class ServicioReportePdf {
     private final Logger logger = LoggerFactory.getLogger(ServicioReportePdf.class);
 
-    public void generarReporteFinancieroPdf(List<ReporteFinancieroDTO> datos, HttpServletResponse response,
+    public void generarReporteFinancieroPdf(List<ReporteFinancieroTemporalDTO> datos, HttpServletResponse response,
                                             String generadoPor, String nombreComplejo,
-                                            java.time.LocalDate inicio, java.time.LocalDate fin) {
+                                            java.time.LocalDate inicio, java.time.LocalDate fin,
+                                            BigDecimal totalIngresos, Long totalReservas,
+                                            BigDecimal promedioIngresoDiario, BigDecimal ticketPromedio,
+                                            long diasConDatos, long diasPeriodo) {
         response.setContentType("application/pdf");
         response.setHeader("Content-Disposition", "attachment; filename=\"reporte_financiero.pdf\"");
 
@@ -136,22 +139,109 @@ public class ServicioReportePdf {
             fechaPar.setSpacingAfter(12f);
             document.add(fechaPar);
 
-            // Gráfico: generar imagen del gráfico de barras y añadirla al documento
+            // ══════════════════════════════════════════════════════════════════════════════
+            // RESUMEN EJECUTIVO - MÉTRICAS CLAVE
+            // ══════════════════════════════════════════════════════════════════════════════
+            java.text.NumberFormat currency = java.text.NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-AR"));
+            
+            Font sectionFont = new Font(Font.HELVETICA, 13, Font.BOLD, new Color(37, 99, 235));
+            Paragraph resumenTitle = new Paragraph("Resumen Ejecutivo", sectionFont);
+            resumenTitle.setSpacingAfter(8f);
+            document.add(resumenTitle);
+
+            // Crear tabla de 4 columnas para las métricas (como tarjetas)
+            PdfPTable kpiTable = new PdfPTable(4);
+            kpiTable.setWidthPercentage(100f);
+            kpiTable.setSpacingAfter(12f);
+
+            Font kpiLabelFont = new Font(Font.HELVETICA, 9, Font.NORMAL, Color.DARK_GRAY);
+            Font kpiValueFont = new Font(Font.HELVETICA, 14, Font.BOLD, new Color(37, 99, 235));
+
+            // KPI 1: Total Ingresos
+            com.lowagie.text.pdf.PdfPCell cell1 = new com.lowagie.text.pdf.PdfPCell();
+            cell1.setBorder(com.lowagie.text.Rectangle.BOX);
+            cell1.setBorderColor(new Color(220, 220, 220));
+            cell1.setPadding(8f);
+            cell1.setBackgroundColor(new Color(248, 250, 252));
+            Paragraph kpi1Label = new Paragraph("Total Ingresos", kpiLabelFont);
+            kpi1Label.setAlignment(Element.ALIGN_CENTER);
+            Paragraph kpi1Value = new Paragraph(currency.format(totalIngresos), kpiValueFont);
+            kpi1Value.setAlignment(Element.ALIGN_CENTER);
+            cell1.addElement(kpi1Label);
+            cell1.addElement(kpi1Value);
+            kpiTable.addCell(cell1);
+
+            // KPI 2: Total Reservas
+            com.lowagie.text.pdf.PdfPCell cell2 = new com.lowagie.text.pdf.PdfPCell();
+            cell2.setBorder(com.lowagie.text.Rectangle.BOX);
+            cell2.setBorderColor(new Color(220, 220, 220));
+            cell2.setPadding(8f);
+            cell2.setBackgroundColor(new Color(248, 250, 252));
+            Paragraph kpi2Label = new Paragraph("Total Reservas", kpiLabelFont);
+            kpi2Label.setAlignment(Element.ALIGN_CENTER);
+            Paragraph kpi2Value = new Paragraph(String.valueOf(totalReservas), kpiValueFont);
+            kpi2Value.setAlignment(Element.ALIGN_CENTER);
+            cell2.addElement(kpi2Label);
+            cell2.addElement(kpi2Value);
+            kpiTable.addCell(cell2);
+
+            // KPI 3: Promedio Diario
+            com.lowagie.text.pdf.PdfPCell cell3 = new com.lowagie.text.pdf.PdfPCell();
+            cell3.setBorder(com.lowagie.text.Rectangle.BOX);
+            cell3.setBorderColor(new Color(220, 220, 220));
+            cell3.setPadding(8f);
+            cell3.setBackgroundColor(new Color(248, 250, 252));
+            Paragraph kpi3Label = new Paragraph("Promedio Diario", kpiLabelFont);
+            kpi3Label.setAlignment(Element.ALIGN_CENTER);
+            Paragraph kpi3Value = new Paragraph(currency.format(promedioIngresoDiario), kpiValueFont);
+            kpi3Value.setAlignment(Element.ALIGN_CENTER);
+            cell3.addElement(kpi3Label);
+            cell3.addElement(kpi3Value);
+            kpiTable.addCell(cell3);
+
+            // KPI 4: Ticket Promedio
+            com.lowagie.text.pdf.PdfPCell cell4 = new com.lowagie.text.pdf.PdfPCell();
+            cell4.setBorder(com.lowagie.text.Rectangle.BOX);
+            cell4.setBorderColor(new Color(220, 220, 220));
+            cell4.setPadding(8f);
+            cell4.setBackgroundColor(new Color(248, 250, 252));
+            Paragraph kpi4Label = new Paragraph("Ticket Promedio", kpiLabelFont);
+            kpi4Label.setAlignment(Element.ALIGN_CENTER);
+            Paragraph kpi4Value = new Paragraph(currency.format(ticketPromedio), kpiValueFont);
+            kpi4Value.setAlignment(Element.ALIGN_CENTER);
+            cell4.addElement(kpi4Label);
+            cell4.addElement(kpi4Value);
+            kpiTable.addCell(cell4);
+
+            document.add(kpiTable);
+
+            // Información adicional de cobertura
+            Font infoFont = new Font(Font.HELVETICA, 9, Font.ITALIC, Color.DARK_GRAY);
+            Paragraph infoCoverage = new Paragraph(
+                String.format("Cobertura: %d días con datos de %d días totales en el periodo (%.1f%%)", 
+                    diasConDatos, diasPeriodo, diasPeriodo > 0 ? (diasConDatos * 100.0 / diasPeriodo) : 0.0),
+                infoFont
+            );
+            infoCoverage.setAlignment(Element.ALIGN_CENTER);
+            infoCoverage.setSpacingAfter(12f);
+            document.add(infoCoverage);
+
+            // Gráfico: generar imagen del gráfico de líneas temporal y añadirla al documento
             try {
                 DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-                for (ReporteFinancieroDTO r : datos) {
+                for (ReporteFinancieroTemporalDTO r : datos) {
                     double val = r.getIngresos() == null ? 0.0 : r.getIngresos().doubleValue();
-                    String label = r.getEspacioNombre() == null ? "-" : r.getEspacioNombre();
-                    dataset.addValue(val, "Ingresos", label);
+                    String label = r.getFecha() == null ? "-" : r.getFecha().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM"));
+                    dataset.addValue(val, "Ingresos Diarios", label);
                 }
 
-                JFreeChart chart = ChartFactory.createBarChart(
+                JFreeChart chart = ChartFactory.createLineChart(
                     null,
-                    "",
-                    "",
+                    "Fecha (día/mes)",
+                    "Ingresos ($)",
                     dataset,
                     PlotOrientation.VERTICAL,
-                    false,
+                    true,
                     true,
                     false
                 );
@@ -228,12 +318,9 @@ public class ServicioReportePdf {
                 img.setSpacingAfter(12f);
                 document.add(img);
 
-                // Total general
-                BigDecimal total = datos.stream()
-                    .map(r -> r.getIngresos() == null ? BigDecimal.ZERO : r.getIngresos())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                java.text.NumberFormat currency = java.text.NumberFormat.getCurrencyInstance(Locale.forLanguageTag("es-AR"));
-                Paragraph totalPar = new Paragraph("Total ingresos: " + currency.format(total), new Font(com.lowagie.text.Font.HELVETICA, 12, com.lowagie.text.Font.BOLD));
+                // Total general (ya calculado en el controlador, usar el parámetro)
+                Paragraph totalPar = new Paragraph("Total ingresos en el periodo: " + currency.format(totalIngresos), 
+                    new Font(com.lowagie.text.Font.HELVETICA, 12, com.lowagie.text.Font.BOLD));
                 totalPar.setAlignment(Element.ALIGN_RIGHT);
                 totalPar.setSpacingAfter(8f);
                 document.add(totalPar);
@@ -241,26 +328,26 @@ public class ServicioReportePdf {
                 logger.warn("No se pudo generar el gráfico en el PDF: {}", chartEx.getMessage());
             }
 
-            // Tabla con columnas: Espacio, Tipo, Cantidad Reservas, Ingresos
-            PdfPTable table = new PdfPTable(4);
+            // Tabla con columnas: Fecha, Cantidad Reservas, Ingresos
+            PdfPTable table = new PdfPTable(3);
             table.setWidthPercentage(100f);
-            table.setWidths(new float[]{4f, 2f, 2f, 2f});
+            table.setWidths(new float[]{3f, 2f, 2f});
 
             // Repetir cabecera en cada página
             table.setHeaderRows(1);
 
             Font headerFont = new Font(Font.HELVETICA, 11, Font.BOLD);
-            table.addCell(new Phrase("Espacio", headerFont));
-            table.addCell(new Phrase("Tipo", headerFont));
+            table.addCell(new Phrase("Fecha", headerFont));
             table.addCell(new Phrase("Cantidad Reservas", headerFont));
             table.addCell(new Phrase("Ingresos", headerFont));
 
             Font cellFont = new Font(Font.HELVETICA, 10, Font.NORMAL);
-            java.text.NumberFormat currency = java.text.NumberFormat.getCurrencyInstance();
+            // Reutilizar la instancia de currency ya definida arriba
+            java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-            for (ReporteFinancieroDTO r : datos) {
-                table.addCell(new Phrase(nullSafe(r.getEspacioNombre()), cellFont));
-                table.addCell(new Phrase(nullSafe(r.getTipoEspacio()), cellFont));
+            for (ReporteFinancieroTemporalDTO r : datos) {
+                String fechaStr = r.getFecha() == null ? "-" : r.getFecha().format(dateFormatter);
+                table.addCell(new Phrase(fechaStr, cellFont));
                 table.addCell(new Phrase(String.valueOf(r.getCantidadReservas() == null ? 0L : r.getCantidadReservas()), cellFont));
                 table.addCell(new Phrase(r.getIngresos() == null ? currency.format(0) : currency.format(r.getIngresos()), cellFont));
             }

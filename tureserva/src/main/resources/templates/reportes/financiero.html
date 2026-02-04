@@ -4,35 +4,170 @@
 <head>
     <title layout:fragment="title">Reporte Financiero</title>
     <th:block layout:fragment="css">
-        <!-- Si hace falta CSS adicional para este reporte, añadir aquí -->
+        <style>
+            /* Estilos minimalistas */
+            .kpi-card {
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                padding: 1.25rem;
+                background: #ffffff;
+                transition: all 0.2s ease;
+                height: 100%;
+            }
+            
+            .kpi-card:hover {
+                border-color: #cbd5e0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            }
+            
+            .kpi-card.total-income {
+                border-left: 4px solid #90caf9;
+            }
+            
+            .kpi-card.total-bookings {
+                border-left: 4px solid #f48fb1;
+            }
+            
+            .kpi-card.daily-avg {
+                border-left: 4px solid #80cbc4;
+            }
+            
+            .kpi-card.avg-ticket {
+                border-left: 4px solid #ce93d8;
+            }
+            
+            .kpi-label {
+                font-size: 0.813rem;
+                color: #6c757d;
+                margin-bottom: 0.5rem;
+                font-weight: 500;
+            }
+            
+            .kpi-value {
+                font-size: 1.75rem;
+                color: #212529;
+                font-weight: 500;
+                line-height: 1.2;
+            }
+            
+            .kpi-icon {
+                font-size: 1.5rem;
+                color: #6c757d;
+                margin-bottom: 0.5rem;
+            }
+            
+            
+            /* Formulario */
+            .form-label {
+                font-weight: 500;
+                color: #495057;
+                margin-bottom: 0.5rem;
+                font-size: 0.875rem;
+            }
+            
+            .form-control, .form-select {
+                border-color: #dee2e6;
+                padding: 0.5rem 0.75rem;
+            }
+            
+            .form-control:focus, .form-select:focus {
+                border-color: #90caf9;
+                box-shadow: 0 0 0 0.2rem rgba(144, 202, 249, 0.15);
+            }
+            
+            /* Estilos de tabla */
+            .table thead th {
+                padding: 0.85rem !important;
+                font-weight: 500;
+                color: #6c757d;
+                background-color: #f8f9fa;
+                border-color: #e9ecef;
+            }
+            
+            .table tbody td {
+                padding: 0.75rem !important;
+                color: #495057;
+                border-color: #e9ecef;
+            }
+            
+            .table tfoot td,
+            .table tfoot th {
+                padding: 0.85rem !important;
+                font-weight: 500;
+                background-color: #f8f9fa;
+                border-color: #e9ecef;
+            }
+            
+            .table.table-bordered {
+                border-color: #dee2e6;
+            }
+            
+            .table.table-bordered td,
+            .table.table-bordered th {
+                border-color: #e9ecef;
+            }
+            
+            /* Card principal */
+            .card.shadow-sm {
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+                border: 1px solid #e9ecef;
+            }
+            
+            .card-header {
+                background-color: #f8f9fa;
+                border-bottom: 1px solid #e9ecef;
+                padding: 1.25rem 1.5rem;
+            }
+            
+            .card-header h4 {
+                font-weight: 500;
+                color: #212529;
+            }
+            
+            .card-body {
+                padding: 1.5rem;
+            }
+            
+            /* Botones */
+            .btn-outline-secondary {
+                border-color: #dee2e6;
+                color: #6c757d;
+            }
+            
+            .btn-outline-secondary:hover {
+                background-color: #f8f9fa;
+                border-color: #cbd5e0;
+                color: #495057;
+            }
+            
+            /* Contenedor de gráfico */
+            .chart-container {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+        </style>
     </th:block>
 </head>
 
 <body>
 <div layout:fragment="content">
-    <div class="container my-4">
-        <div class="card card-unified shadow-sm">
-            <div class="card-header card-header-unified d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Reporte Financiero</h5>
+    <div class="container py-5">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Reporte Financiero</h4>
                 <div>
-                    <a th:href="@{'/reportes/financiero/pdf'(inicio=${inicio},fin=${fin},complejoId=${complejoId})}" class="btn btn-role btn-sm">
-                        <i class="bi bi-download"></i> 📥 Exportar a PDF
+                    <a th:href="@{'/reportes/financiero/pdf'(inicio=${inicio},fin=${fin},complejoId=${complejoId})}" class="btn btn-outline-secondary">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
                     </a>
                 </div>
             </div>
 
             <div class="card-body">
-                <form method="get" th:action="@{/reportes/financiero}" class="row g-2 align-items-end mb-3">
-                    <div class="col-auto">
-                        <label class="form-label small">Inicio</label>
-                        <input type="date" name="inicio" th:value="${inicio}" class="form-control form-control-unified" />
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label small">Fin</label>
-                        <input type="date" name="fin" th:value="${fin}" class="form-control form-control-unified" />
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label small">Complejo</label>
+                <form method="get" th:action="@{/reportes/financiero}" class="row g-3 align-items-end mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label">Complejo</label>
                         <select name="complejoId" class="form-select form-select-unified">
                             <option value="" th:selected="${complejoId == null}">Todos</option>
                             <option th:each="c : ${complejos}"
@@ -42,36 +177,91 @@
                             </option>
                         </select>
                     </div>
-                    <div class="col-auto">
-                        <button type="submit" class="btn btn-outline-role">Filtrar</button>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input type="date" name="inicio" id="fechaInicio" th:value="${inicio}" class="form-control form-control-unified" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Fin</label>
+                        <input type="date" name="fin" id="fechaFin" th:value="${fin}" class="form-control form-control-unified" required />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-search me-1"></i> Generar
+                        </button>
                     </div>
                 </form>
 
-                <div class="mb-4">
+                <!-- MÉTRICAS CLAVE / KPIs -->
+                <div class="row g-3 mb-4" th:if="${totalIngresos != null}">
+                    <div class="col-md-3 col-6">
+                        <div class="kpi-card total-income">
+                            <div class="kpi-icon">
+                                <i class="bi bi-cash-stack"></i>
+                            </div>
+                            <div class="kpi-label">Total Ingresos</div>
+                            <div class="kpi-value" th:text="'$' + ${#numbers.formatDecimal(totalIngresos,1,2)}">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="kpi-card total-bookings">
+                            <div class="kpi-icon">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <div class="kpi-label">Total Reservas</div>
+                            <div class="kpi-value" th:text="${totalReservas}">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="kpi-card daily-avg">
+                            <div class="kpi-icon">
+                                <i class="bi bi-graph-up-arrow"></i>
+                            </div>
+                            <div class="kpi-label">Promedio Diario</div>
+                            <div class="kpi-value" th:text="'$' + ${#numbers.formatDecimal(promedioIngresoDiario,1,2)}">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="kpi-card avg-ticket">
+                            <div class="kpi-icon">
+                                <i class="bi bi-receipt"></i>
+                            </div>
+                            <div class="kpi-label">Ticket Promedio</div>
+                            <div class="kpi-value" th:text="'$' + ${#numbers.formatDecimal(ticketPromedio,1,2)}">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
                     <canvas id="chartIngresos" width="800" height="300"></canvas>
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-hover table-unified">
-                        <thead>
+                    <table class="table table-bordered text-center align-middle">
+                        <thead class="table-light">
                         <tr>
-                            <th>Espacio</th>
-                            <th>Tipo</th>
+                            <th>Fecha</th>
                             <th class="text-end">Cantidad Reservas</th>
                             <th class="text-end">Ingresos</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr th:each="row : ${datos}">
-                            <td th:text="${row.espacioNombre}"></td>
-                            <td th:text="${row.tipoEspacio}"></td>
+                            <td th:text="${#temporals.format(row.fecha, 'dd/MM/yyyy')}"></td>
                             <td class="text-end" th:text="${row.cantidadReservas}"></td>
                             <td class="text-end" th:text="${row.ingresos != null ? #numbers.formatDecimal(row.ingresos,2,2) : '0.00'}"></td>
                         </tr>
                         <tr th:if="${#lists.isEmpty(datos)}">
-                            <td colspan="4" class="text-center text-muted-unified">No hay datos para el periodo seleccionado.</td>
+                            <td colspan="3" class="text-center text-muted">No hay datos para el periodo seleccionado.</td>
                         </tr>
                         </tbody>
+                        <tfoot class="table-light">
+                        <tr th:if="${totalIngresos != null and not #lists.isEmpty(datos)}">
+                            <th>TOTALES</th>
+                            <th class="text-end" th:text="${totalReservas}">0</th>
+                            <th class="text-end" th:text="${#numbers.formatDecimal(totalIngresos,1,2)}">0.00</th>
+                        </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -79,61 +269,115 @@
     </div>
 </div>
 
-<!-- Scripts específicos de la página (versión reducida temporal) -->
+<!-- Scripts específicos de la página -->
 <th:block layout:fragment="scripts">
+    <script>
+        // Validación de fechas en tiempo real
+        const fechaInicio = document.getElementById('fechaInicio');
+        const fechaFin = document.getElementById('fechaFin');
+        
+        function validarFechas() {
+            if (fechaInicio.value && fechaFin.value) {
+                if (new Date(fechaInicio.value) > new Date(fechaFin.value)) {
+                    fechaFin.setCustomValidity('La fecha fin debe ser igual o posterior a la fecha inicio');
+                } else {
+                    fechaFin.setCustomValidity('');
+                }
+            }
+        }
+        
+        fechaInicio.addEventListener('change', validarFechas);
+        fechaFin.addEventListener('change', validarFechas);
+    </script>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script th:inline="javascript">
     /*<![CDATA[*/
         const datos = /*[[${datos}]]*/ [];
-        console.debug('Reporte financiero - datos:', datos);
-        const labels = datos.map(d => d && d.espacioNombre ? d.espacioNombre : '');
+        console.debug('Reporte financiero temporal - datos:', datos);
+        
+        // Eje X: fechas formateadas (DD/MM)
+        const labels = datos.map(d => {
+            if (d && d.fecha) {
+                const fecha = new Date(d.fecha + 'T00:00:00');
+                return fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+            }
+            return '';
+        });
+        
+        // Eje Y: ingresos diarios
         const ingresos = datos.map(d => d && d.ingresos != null ? +d.ingresos : 0);
-
-        // Paleta de colores distintivos (se repite si hay más barras)
-        const COLORS = ['#2563eb','#ef4444','#10b981','#f59e0b','#0ea5e9','#7c3aed','#ff6b6b','#00b894','#ff9f43','#fdcb6e'];
-        const backgroundColors = labels.map((_, i) => COLORS[i % COLORS.length]);
-
-        if (window.Chart && window.ChartDataLabels) {
-            Chart.register(ChartDataLabels);
-        }
 
         const ctx = document.getElementById('chartIngresos') ? document.getElementById('chartIngresos').getContext('2d') : null;
         if (ctx) {
             new Chart(ctx, {
-                type: 'bar',
+                type: 'line', // ✅ Cambiado de 'bar' a 'line' para mostrar evolución temporal
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Ingresos',
+                        label: 'Ingresos Diarios',
                         data: ingresos,
-                        backgroundColor: backgroundColors,
-                        borderRadius: 6,
-                        barThickness: 'flex'
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderColor: '#2563eb',
+                        borderWidth: 3,
+                        tension: 0.3, // Curva suave en la línea
+                        fill: true, // Relleno bajo la línea
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false },
-                        datalabels: {
-                            anchor: 'center',
-                            align: 'center',
-                            color: '#ffffff',
-                            font: { weight: '700', size: 12 },
-                            formatter: function(value) {
-                                try {
-                                    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value);
-                                } catch (e) {
-                                    return value;
+                        legend: { 
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    try {
+                                        label += new Intl.NumberFormat('es-AR', { 
+                                            style: 'currency', 
+                                            currency: 'ARS',
+                                            minimumFractionDigits: 2
+                                        }).format(context.parsed.y);
+                                    } catch (e) {
+                                        label += context.parsed.y;
+                                    }
+                                    return label;
                                 }
                             }
                         }
                     },
                     scales: {
+                        x: {
+                            grid: { display: false },
+                            title: {
+                                display: true,
+                                text: 'Fecha (día/mes)'
+                            }
+                        },
                         y: {
                             beginAtZero: true,
-                            ticks: { callback: function(v){ return v >= 1000 ? (v/1000)+'k' : v; } }
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                            title: {
+                                display: true,
+                                text: 'Ingresos ($)'
+                            },
+                            ticks: { 
+                                callback: function(value) {
+                                    return value >= 1000 ? (value/1000)+'k' : value;
+                                }
+                            }
                         }
                     }
                 }

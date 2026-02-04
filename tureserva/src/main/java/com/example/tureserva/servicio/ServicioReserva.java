@@ -1340,6 +1340,7 @@ public class ServicioReserva {
         pago.setTipoPago(TipoPago.PAGO_COMPLETO);
         pago.setMetodoPago(metodoPago);
         pago.setMonto(reserva.getMontoRestante());
+        pago.setFechaPago(LocalDateTime.now()); // FIX: Asignar fecha de pago para pagos manuales
         pago.setNumeroComprobante(numeroComprobante);
         pago.setNotas(notas);
         pago.setRegistradoPor(registradoPor);

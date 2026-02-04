@@ -109,6 +109,24 @@ public class ServicioComplejoDeportivo {
     public List<ComplejoDeportivo> obtenerComplejosPorAdministradorYActivoTrue(Long administradorId) {
         return repositorioComplejoDeportivo.findByAdministradorComplejo_IdAndActivoTrue(administradorId);
     }
+    
+    /**
+     * Obtener todos los complejos activos CON HORARIOS CARGADOS.
+     * Usa JOIN FETCH para evitar LazyInitializationException.
+     * Útil para reportes.
+     */
+    public List<ComplejoDeportivo> obtenerComplejosActivosConHorarios() {
+        return repositorioComplejoDeportivo.findAllActivosConHorarios();
+    }
+    
+    /**
+     * Obtener complejos por administrador CON HORARIOS CARGADOS.
+     * Usa JOIN FETCH para evitar LazyInitializationException.
+     * Útil para reportes.
+     */
+    public List<ComplejoDeportivo> obtenerComplejosPorAdministradorConHorarios(Long administradorId) {
+        return repositorioComplejoDeportivo.findByAdministradorConHorarios(administradorId);
+    }
 
     /**
      * Dar de baja un complejo (soft delete)
