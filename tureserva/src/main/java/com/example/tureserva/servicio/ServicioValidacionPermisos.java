@@ -80,21 +80,22 @@ public class ServicioValidacionPermisos {
 
     /**
      * Obtiene la lista de complejos a los que el usuario tiene acceso según su rol.
+     * IMPORTANTE: Carga los horarios master con JOIN FETCH para uso en reportes.
      * 
      * @param authentication Autenticación del usuario
-     * @return Lista de complejos permitidos
+     * @return Lista de complejos permitidos con horarios cargados
      */
     public List<ComplejoDeportivo> obtenerComplejosPermitidos(Authentication authentication) {
         if (esSuperAdmin(authentication)) {
-            // Super Admin: todos los complejos activos
-            return servicioComplejoDeportivo.obtenerComplejosActivos();
+            // Super Admin: todos los complejos activos CON HORARIOS
+            return servicioComplejoDeportivo.obtenerComplejosActivosConHorarios();
         }
         
         if (esAdminComplejo(authentication)) {
-            // Admin Complejo: solo sus complejos
+            // Admin Complejo: solo sus complejos CON HORARIOS
             AdministradorComplejo admin = obtenerAdministradorComplejo(authentication);
             if (admin != null) {
-                return servicioComplejoDeportivo.obtenerComplejosPorAdministradorYActivoTrue(admin.getId());
+                return servicioComplejoDeportivo.obtenerComplejosPorAdministradorConHorarios(admin.getId());
             }
         }
         

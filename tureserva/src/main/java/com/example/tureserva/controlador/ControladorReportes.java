@@ -46,12 +46,21 @@ public class ControladorReportes {
             @RequestParam(required = false) Long complejoId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) Integer horaInicio,
+            @RequestParam(required = false) Integer horaFin,
             Authentication authentication,
             Model model,
             RedirectAttributes redirectAttributes) {
 
         if (inicio == null) inicio = LocalDate.now().minusMonths(1);
         if (fin == null) fin = LocalDate.now();
+        
+        // VALIDACIÓN DE FECHAS: inicio debe ser menor o igual que fin
+        if (inicio.isAfter(fin)) {
+            redirectAttributes.addFlashAttribute("error", "La fecha de inicio no puede ser posterior a la fecha fin");
+            redirectAttributes.addAttribute("complejoId", complejoId);
+            return "redirect:/reportes/ocupacion";
+        }
 
         // VALIDACIÓN DE PERMISOS usando servicio centralizado
         if (!servicioValidacionPermisos.tienePermisoSobreComplejo(authentication, complejoId)) {
@@ -71,17 +80,23 @@ public class ControladorReportes {
         }
 
         try {
-            OcupacionMatrixDTO dto = servicioReporte.obtenerOcupacionMatrix(complejoId, inicio, fin);
+            OcupacionMatrixDTO dto = servicioReporte.obtenerOcupacionMatrix(complejoId, inicio, fin, complejosPermitidos, horaInicio, horaFin);
             
             model.addAttribute("complejos", complejosPermitidos);
             model.addAttribute("horas", dto.getHoras());
             model.addAttribute("matrix", dto.getMatrix());
             model.addAttribute("maxCount", dto.getMaxCount());
             model.addAttribute("totalesPorDia", dto.getTotalesPorDia());
+            model.addAttribute("totalesPorHora", dto.getTotalesPorHora());
             model.addAttribute("totalGeneral", dto.getTotalGeneral());
+            model.addAttribute("analisisHorarios", dto.getAnalisisHorarios());
+            model.addAttribute("nombresColumnas", dto.getNombresColumnas());
+            model.addAttribute("tipoVista", dto.getTipoVista());
             model.addAttribute("inicio", inicio);
             model.addAttribute("fin", fin);
             model.addAttribute("complejoId", complejoId);
+            model.addAttribute("horaInicio", horaInicio);
+            model.addAttribute("horaFin", horaFin);
             
             return "reportes/ocupacion";
             
@@ -100,11 +115,19 @@ public class ControladorReportes {
             @RequestParam(required = false) Long complejoId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) Integer horaInicio,
+            @RequestParam(required = false) Integer horaFin,
             Authentication authentication,
             HttpServletResponse response) {
 
         if (inicio == null) inicio = LocalDate.now().minusMonths(1);
         if (fin == null) fin = LocalDate.now();
+        
+        // VALIDACIÓN DE FECHAS: inicio debe ser menor o igual que fin
+        if (inicio.isAfter(fin)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+        }
 
         // VALIDACIÓN DE PERMISOS antes de generar PDF usando servicio centralizado
         if (!servicioValidacionPermisos.tienePermisoSobreComplejo(authentication, complejoId)) {
@@ -112,9 +135,12 @@ public class ControladorReportes {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
+        
+        // Obtener lista de complejos permitidos para cálculo de horarios
+        List<ComplejoDeportivo> complejosPermitidos = servicioValidacionPermisos.obtenerComplejosPermitidos(authentication);
 
         try {
-            OcupacionMatrixDTO dto = servicioReporte.obtenerOcupacionMatrix(complejoId, inicio, fin);
+            OcupacionMatrixDTO dto = servicioReporte.obtenerOcupacionMatrix(complejoId, inicio, fin, complejosPermitidos, horaInicio, horaFin);
             
             // Obtener información del complejo y usuario para el PDF
             String nombreComplejo = null;

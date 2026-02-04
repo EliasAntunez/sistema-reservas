@@ -4,99 +4,269 @@
     <title layout:fragment="title">Reporte de Ocupación Horaria</title>
     <th:block layout:fragment="css">
         <style>
-            .heat-zero { background-color: #ffffff; color: #333 !important; }
-            /* Colores con buen contraste para fondo claro */
-            .heat-low  { background-color: #00ff8c !important; color: #0f5132 !important; } /* verde claro */
-            .heat-mid  { background-color: #ffa600 !important; color: #7a4b00 !important; } /* naranja claro */
-            .heat-high { background-color: #cc0000 !important; color: #fff !important; }
-            .hour-col { font-weight: 700; background: #f8f9fa; }
-            .legend-box { width: 18px; height: 18px; display:inline-block; margin-right:6px; vertical-align:middle; }
-
-            /* Forzar contraste y legibilidad en las celdas de la tabla */
-            .table.table-bordered td {
-                color: #000 !important; /* color por defecto para celdas */
-                font-weight: 600 !important;
+            /* Estilos minimalistas */
+            /* Paleta de colores sutiles */
+            .heat-zero { 
+                background-color: #fafafa; 
+                color: #6c757d !important; 
+                border: 1px solid #e9ecef !important;
+            }
+            .heat-low  { 
+                background-color: #e3f2fd !important; 
+                color: #1565c0 !important;
+                border: 1px solid #bbdefb !important;
+            }
+            .heat-mid  { 
+                background-color: #fff3e0 !important; 
+                color: #e65100 !important;
+                border: 1px solid #ffe0b2 !important;
+            }
+            .heat-high { 
+                background-color: #fce4ec !important; 
+                color: #c2185b !important;
+                border: 1px solid #f8bbd0 !important;
+            }
+            
+            /* Tabla */
+            .hour-col { 
+                font-weight: 500; 
+                background: #f8f9fa; 
+                color: #495057;
+            }
+            
+            .legend-box { 
+                width: 24px; 
+                height: 24px; 
+                display: inline-block; 
+                margin-right: 10px; 
                 vertical-align: middle;
+                border-radius: 4px;
+                border: 1px solid rgba(0,0,0,0.08);
             }
 
-            /* Excepciones: cuando el fondo es oscuro usar texto blanco */
-            .table.table-bordered td.heat-high {
-                color: #fff !important;
-                text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+            /* Estilos de tabla */
+            .table.table-bordered td {
+                color: #495057 !important;
+                font-weight: 500 !important;
+                vertical-align: middle;
+                padding: 0.75rem !important;
+            }
+            
+            .table.table-bordered th {
+                padding: 0.85rem !important;
+                font-weight: 500;
+                color: #6c757d;
+                background-color: #f8f9fa;
+            }
+            
+            .table.table-bordered {
+                border-color: #dee2e6;
+            }
+            
+            .table.table-bordered td,
+            .table.table-bordered th {
+                border-color: #e9ecef;
             }
 
-            /* Para niveles claros asegurar texto específico (evita que la regla genérica lo sobrescriba) */
-            .table.table-bordered td.heat-low {
-                color: #0f5132 !important; /* texto oscuro verdoso */
-                text-shadow: none !important;
+            /* Tarjetas de análisis minimalistas con bordes sutiles */
+            .insight-card {
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                padding: 1rem 1.25rem;
+                background: #ffffff;
+                transition: all 0.2s ease;
             }
-            .table.table-bordered td.heat-mid {
-                color: #7a4b00 !important; /* texto oscuro anaranjado */
-                text-shadow: none !important;
+            
+            .insight-card:hover {
+                border-color: #cbd5e0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             }
-            .table.table-bordered td.heat-zero {
-                color: #333 !important;
-                text-shadow: none !important;
+            
+            .insight-card.high-demand {
+                border-left: 4px solid #f48fb1;
             }
-            /* Eliminar cualquier efecto 3D/gradiente en niveles medios y bajos */
-            .table.table-bordered td.heat-mid,
-            .table.table-bordered td.heat-low,
-            .heat-mid,
-            .heat-low,
-            .legend-box.heat-mid,
-            .legend-box.heat-low {
-                background-image: none !important;
-                background-repeat: no-repeat !important;
-                background-size: cover !important;
-                box-shadow: none !important;
-                filter: none !important;
-                -webkit-text-stroke: 0 !important;
-                text-shadow: none !important;
+            
+            .insight-card.low-demand {
+                border-left: 4px solid #81c784;
             }
-            /* Asegurar bordes suaves para mejor contraste */
-            .table.table-bordered td.heat-low,
-            .table.table-bordered td.heat-mid {
-                border-color: rgba(0,0,0,0.06) !important;
+            
+            .insight-metric {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                padding: 0.75rem 0;
             }
-            /* Grid para el resumen por día */
+            
+            .insight-metric i {
+                font-size: 1.5rem;
+                color: #6c757d;
+            }
+            
+            .insight-metric-content {
+                flex: 1;
+            }
+            
+            .insight-metric-label {
+                font-size: 0.813rem;
+                color: #6c757d;
+                margin-bottom: 0.25rem;
+                font-weight: 400;
+            }
+            
+            .insight-metric-value {
+                font-size: 1.125rem;
+                color: #212529;
+                font-weight: 500;
+            }
+
+            /* Contenedor de análisis con espaciado generoso */
+            .analysis-container {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+            
+            .analysis-title {
+                font-size: 1rem;
+                font-weight: 500;
+                color: #495057;
+                margin-bottom: 1.25rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .analysis-title i {
+                font-size: 1.25rem;
+                color: #6c757d;
+            }
+
+            /* Leyenda mejorada con más espacio */
+            .legend-container {
+                display: flex;
+                gap: 2rem;
+                align-items: center;
+                padding: 1rem 0;
+                margin-bottom: 1.5rem;
+            }
+            
+            .legend-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.875rem;
+                color: #6c757d;
+            }
+
+            
+            /* Formulario */
+            .form-label {
+                font-weight: 500;
+                color: #495057;
+                margin-bottom: 0.5rem;
+                font-size: 0.875rem;
+            }
+            
+            .form-control, .form-select {
+                border-color: #dee2e6;
+                padding: 0.5rem 0.75rem;
+            }
+            
+            .form-control:focus, .form-select:focus {
+                border-color: #90caf9;
+                box-shadow: 0 0 0 0.2rem rgba(144, 202, 249, 0.15);
+            }
+
+            /* Acordeón con estilo sutil */
+            .accordion-button {
+                font-size: 0.938rem;
+                padding: 0.875rem 1.25rem;
+                color: #495057;
+                background-color: #f8f9fa;
+            }
+            
+            .accordion-button:not(.collapsed) {
+                background-color: #e7f3ff;
+                color: #1976d2;
+            }
+            
+            .accordion-body {
+                padding: 1.5rem 1.25rem;
+            }
+
+            /* Card principal */
+            .card.shadow-sm {
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+                border: 1px solid #e9ecef;
+            }
+            
+            .card-header {
+                background-color: #f8f9fa;
+                border-bottom: 1px solid #e9ecef;
+                padding: 1.25rem 1.5rem;
+            }
+            
+            .card-header h4 {
+                font-weight: 500;
+                color: #212529;
+            }
+            
+            .card-body {
+                padding: 1.5rem;
+            }
+            
+            /* Botones */
+            .btn-outline-secondary {
+                border-color: #dee2e6;
+                color: #6c757d;
+            }
+            
+            .btn-outline-secondary:hover {
+                background-color: #f8f9fa;
+                border-color: #cbd5e0;
+                color: #495057;
+            }
+
+            /* Responsive grid mejorado */
             .resumen-grid {
                 display: grid;
-                gap: 12px;
+                gap: 1.25rem;
                 grid-template-columns: repeat(7, 1fr);
                 align-items: start;
             }
+            
             @media (max-width: 992px) {
                 .resumen-grid { grid-template-columns: repeat(4, 1fr); }
             }
+            
             @media (max-width: 576px) {
                 .resumen-grid { grid-template-columns: repeat(2, 1fr); }
             }
-            .resumen-card { padding: 0.5rem; }
-            .resumen-card .card-body { padding: 0.5rem; }
-            .resumen-card table td { padding: 0.2rem 0.4rem; }
         </style>
     </th:block>
 </head>
 
 <body>
 <div layout:fragment="content">
-    <div class="container py-4">
+    <div class="container py-5">
         <div class="card shadow-sm">
-            <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">Mapa de Calor — Ocupación Horaria</h4>
-                    <div>
-                        <a th:href="@{/reportes/ocupacion/pdf(complejoId=${complejoId},inicio=${inicio},fin=${fin},horaInicio=${horaInicio},horaFin=${horaFin})}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Descargar PDF
-                        </a>
-                    </div>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Reporte de Ocupación Horaria</h4>
+                <div>
+                    <a th:href="@{/reportes/ocupacion/pdf(complejoId=${complejoId},inicio=${inicio},fin=${fin},horaInicio=${horaInicio},horaFin=${horaFin})}" class="btn btn-outline-secondary">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
+                    </a>
                 </div>
+            </div>
+
+            <div class="card-body">
                 <!-- Formulario de filtros -->
-                <form class="row g-2 align-items-end mb-3" method="get" th:action="@{/reportes/ocupacion}">
-                    <div class="col-md-3">
+                <form class="row g-3 align-items-end mb-4" method="get" th:action="@{/reportes/ocupacion}">
+                    <div class="col-md-4">
                         <label class="form-label">Complejo</label>
-                        <select name="complejoId" class="form-select">
-                            <option th:value="''" th:text="'Todos'" th:if="${complejos == null || #lists.isEmpty(complejos)}"></option>
+                        <select name="complejoId" class="form-select form-select-unified">
+                            <option value="" th:selected="${complejoId == null}">Todos</option>
                             <option th:each="c : ${complejos}"
                                     th:value="${c.id_complejo}"
                                     th:text="${c.nombre_complejo}"
@@ -104,43 +274,151 @@
                             </option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Inicio</label>
-                        <input type="date" name="inicio" class="form-control" th:value="${inicio}">
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input type="date" name="inicio" id="fechaInicio" class="form-control form-control-unified" th:value="${inicio}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Fin</label>
+                        <input type="date" name="fin" id="fechaFin" class="form-control form-control-unified" th:value="${fin}" required>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Fin</label>
-                        <input type="date" name="fin" class="form-control" th:value="${fin}">
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-search me-1"></i> Generar
+                        </button>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Hora Inicio</label>
-                        <select name="horaInicio" class="form-select">
-                            <option th:value="''" th:text="'--'" th:selected="${horaInicio == null}"></option>
-                            <option th:each="h : ${#numbers.sequence(0,23)}" th:value="${h}"
-                                    th:text="${'' + h + ':00'}"
-                                    th:selected="${horaInicio != null && h == horaInicio}"></option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Hora Fin</label>
-                        <select name="horaFin" class="form-select">
-                            <option th:value="''" th:text="'--'" th:selected="${horaFin == null}"></option>
-                            <option th:each="h : ${#numbers.sequence(0,23)}" th:value="${h}"
-                                    th:text="${'' + h + ':00'}"
-                                    th:selected="${horaFin != null && h == horaFin}"></option>
-                        </select>
-                    </div>
-                    <div class="col-md-1 d-grid">
-                        <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+                    
+                    <!-- Filtros Avanzados (Colapsables) -->
+                    <div class="col-12">
+                        <div class="accordion" id="accordionFiltros">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#collapseAvanzado" 
+                                            aria-expanded="false" aria-controls="collapseAvanzado">
+                                        <i class="bi bi-sliders me-2"></i> Filtros Avanzados
+                                    </button>
+                                </h2>
+                                <div id="collapseAvanzado" class="accordion-collapse collapse" 
+                                     data-bs-parent="#accordionFiltros">
+                                    <div class="accordion-body">
+                                        <div class="row g-2">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Hora Inicio (opcional)</label>
+                                                <select name="horaInicio" class="form-select form-select-unified">
+                                                    <option value="" th:selected="${horaInicio == null}">Por defecto (16:00)</option>
+                                                    <option th:each="h : ${#numbers.sequence(0, 23)}" 
+                                                            th:value="${h}" 
+                                                            th:text="${#strings.toString(h) + ':00'}"
+                                                            th:selected="${horaInicio != null && horaInicio == h}">
+                                                    </option>
+                                                </select>
+                                                <small class="form-text text-muted">
+                                                    Deja vacío para usar horario por defecto (16:00 a 00:00)
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Hora Fin (opcional)</label>
+                                                <select name="horaFin" class="form-select form-select-unified">
+                                                    <option value="" th:selected="${horaFin == null}">Por defecto (00:00)</option>
+                                                    <option th:each="h : ${#numbers.sequence(0, 23)}" 
+                                                            th:value="${h}" 
+                                                            th:text="${#strings.toString(h) + ':00'}"
+                                                            th:selected="${horaFin != null && horaFin == h}">
+                                                    </option>
+                                                </select>
+                                                <small class="form-text text-muted">
+                                                    Usa 0 para medianoche. Admite rangos que cruzan medianoche (ej: 20:00 a 02:00)
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
+                
+                <!-- Análisis de Patrones -->
+                <div class="analysis-container" th:if="${analisisHorarios != null}">
+                    <div class="analysis-title">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span>Análisis de Patrones de Ocupación</span>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <!-- Horarios Pico -->
+                        <div class="col-md-6">
+                            <div class="insight-card high-demand">
+                                <div class="d-flex align-items-start gap-2 mb-2">
+                                    <i class="bi bi-arrow-up-circle" style="color: #f48fb1; font-size: 1.25rem;"></i>
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 0.813rem; color: #6c757d; margin-bottom: 0.25rem;">Mayor demanda</div>
+                                        <div style="font-size: 1.125rem; color: #212529; font-weight: 500;" th:text="${analisisHorarios['horariosPico']}"></div>
+                                        <small class="text-muted" style="font-size: 0.75rem;">Considera ajustar precios o asignar más personal</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Horarios Valle -->
+                        <div class="col-md-6">
+                            <div class="insight-card low-demand">
+                                <div class="d-flex align-items-start gap-2 mb-2">
+                                    <i class="bi bi-arrow-down-circle" style="color: #81c784; font-size: 1.25rem;"></i>
+                                    <div style="flex: 1;">
+                                        <div style="font-size: 0.813rem; color: #6c757d; margin-bottom: 0.25rem;">Menor demanda</div>
+                                        <div style="font-size: 1.125rem; color: #212529; font-weight: 500;" th:text="${analisisHorarios['horariosValle']}"></div>
+                                        <small class="text-muted" style="font-size: 0.75rem;">Oportunidad para promociones o mantenimiento</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <!-- Día/Periodo más ocupado -->
+                        <div class="col-md-4">
+                            <div class="insight-metric">
+                                <i class="bi bi-calendar-check"></i>
+                                <div class="insight-metric-content">
+                                    <div class="insight-metric-label" th:text="${tipoVista == 'especifica' ? 'Día más ocupado' : 'Día semana más ocupado'}">Periodo más ocupado</div>
+                                    <div class="insight-metric-value" th:text="${analisisHorarios['periodoMasOcupado']}"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Día/Periodo menos ocupado -->
+                        <div class="col-md-4">
+                            <div class="insight-metric">
+                                <i class="bi bi-calendar-x"></i>
+                                <div class="insight-metric-content">
+                                    <div class="insight-metric-label" th:text="${tipoVista == 'especifica' ? 'Día menos ocupado' : 'Día semana menos ocupado'}">Periodo menos ocupado</div>
+                                    <div class="insight-metric-value" th:text="${analisisHorarios['periodoMenosOcupado']}"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Promedio de ocupación -->
+                        <div class="col-md-4">
+                            <div class="insight-metric">
+                                <i class="bi bi-speedometer2"></i>
+                                <div class="insight-metric-content">
+                                    <div class="insight-metric-label">Promedio de ocupación</div>
+                                    <div class="insight-metric-value"><span th:text="${analisisHorarios['promedioOcupacion']}"></span> reservas/celda</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Leyenda -->
-                <div class="mb-3">
-                    <span class="me-3"><span class="legend-box heat-zero"></span>0</span>
-                    <span class="me-3"><span class="legend-box heat-low"></span>Bajo</span>
-                    <span class="me-3"><span class="legend-box heat-mid"></span>Medio</span>
-                    <span class="me-3"><span class="legend-box heat-high"></span>Alto</span>
+                <div class="legend-container">
+                    <span style="font-size: 0.875rem; color: #6c757d; font-weight: 500; margin-right: 1rem;">Nivel de ocupación:</span>
+                    <div class="legend-item"><span class="legend-box heat-zero"></span>Sin reservas</div>
+                    <div class="legend-item"><span class="legend-box heat-low"></span>Bajo</div>
+                    <div class="legend-item"><span class="legend-box heat-mid"></span>Medio</div>
+                    <div class="legend-item"><span class="legend-box heat-high"></span>Alto</div>
                 </div>
                 <!-- Tabla responsiva -->
                 <div class="table-responsive">
@@ -148,13 +426,20 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Hora</th>
-                                <th>Lunes</th>
-                                <th>Martes</th>
-                                <th>Miércoles</th>
-                                <th>Jueves</th>
-                                <th>Viernes</th>
-                                <th>Sábado</th>
-                                <th>Domingo</th>
+                                <!-- Columnas dinámicas según tipo de vista -->
+                                <th th:if="${nombresColumnas != null}" 
+                                    th:each="nombreCol : ${nombresColumnas}" 
+                                    th:text="${nombreCol}"></th>
+                                <!-- Fallback: columnas clásicas si no hay nombresColumnas -->
+                                <th:block th:if="${nombresColumnas == null}">
+                                    <th>Lunes</th>
+                                    <th>Martes</th>
+                                    <th>Miércoles</th>
+                                    <th>Jueves</th>
+                                    <th>Viernes</th>
+                                    <th>Sábado</th>
+                                    <th>Domingo</th>
+                                </th:block>
                                 <th>Total</th>
                             </tr>
                         </thead>
@@ -164,7 +449,7 @@
                                 <td th:each="cell, cellStat : ${row}"
                                     th:classappend="${(cellClasses != null && cellClasses.size() > rowStat.index && cellClasses[rowStat.index].size() > cellStat.index) ? cellClasses[rowStat.index][cellStat.index] : ((cell == 0) ? 'heat-zero' : ((cell <= (maxCount * 0.25)) ? 'heat-low' : ((cell <= (maxCount * 0.6)) ? 'heat-mid' : 'heat-high')))}"
                                     th:text="${cell}"></td>
-                                <td class="fw-bold" th:text="${totalesPorHora != null && totalesPorHora.size() > rowStat.index ? totalesPorHora[rowStat.index] : 0}"></td>
+                                <td class="fw-bold" th:text="${totalesPorHora != null && totalesPorHora.size() > rowStat.index ? totalesPorHora[rowStat.index] : #aggregates.sum(row)}"></td>
                             </tr>
                         </tbody>
                         <tfoot class="table-light">
@@ -181,5 +466,27 @@
         </div>
     </div>
 </div>
+
+<th:block layout:fragment="scripts">
+    <script>
+        // Validación de fechas en tiempo real
+        const fechaInicio = document.getElementById('fechaInicio');
+        const fechaFin = document.getElementById('fechaFin');
+        
+        function validarFechas() {
+            if (fechaInicio.value && fechaFin.value) {
+                if (new Date(fechaInicio.value) > new Date(fechaFin.value)) {
+                    fechaFin.setCustomValidity('La fecha fin debe ser igual o posterior a la fecha inicio');
+                } else {
+                    fechaFin.setCustomValidity('');
+                }
+            }
+        }
+        
+        fechaInicio.addEventListener('change', validarFechas);
+        fechaFin.addEventListener('change', validarFechas);
+    </script>
+</th:block>
+
 </body>
 </html>
